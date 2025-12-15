@@ -11,7 +11,6 @@ const Login = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic
     console.log("Login:", { email, password });
   };
 
@@ -19,7 +18,7 @@ const Login = () => {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       {/* Logo */}
       <div className="mb-16">
-        <Logo size="lg" showIcon={true} />
+        <Logo size="lg" />
       </div>
 
       {/* Form */}
