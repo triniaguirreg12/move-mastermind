@@ -9,6 +9,17 @@ import Profesionales from "./pages/Profesionales";
 import Configuracion from "./pages/Configuracion";
 import NotFound from "./pages/NotFound";
 
+// Admin pages
+import { AdminLayout } from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminEjercicios from "./pages/admin/AdminEjercicios";
+import AdminRutinas from "./pages/admin/AdminRutinas";
+import AdminProgramas from "./pages/admin/AdminProgramas";
+import AdminAgenda from "./pages/admin/AdminAgenda";
+import AdminAlianzas from "./pages/admin/AdminAlianzas";
+import AdminSoporte from "./pages/admin/AdminSoporte";
+import AdminUsuarios from "./pages/admin/AdminUsuarios";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -27,10 +38,24 @@ const App = () => (
       />
       <BrowserRouter>
         <Routes>
+          {/* User App Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/entrenamiento" element={<Entrenamiento />} />
           <Route path="/profesionales" element={<Profesionales />} />
           <Route path="/configuracion" element={<Configuracion />} />
+          
+          {/* Admin Panel Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="ejercicios" element={<AdminEjercicios />} />
+            <Route path="rutinas" element={<AdminRutinas />} />
+            <Route path="programas" element={<AdminProgramas />} />
+            <Route path="agenda" element={<AdminAgenda />} />
+            <Route path="alianzas" element={<AdminAlianzas />} />
+            <Route path="soporte" element={<AdminSoporte />} />
+            <Route path="usuarios" element={<AdminUsuarios />} />
+          </Route>
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
