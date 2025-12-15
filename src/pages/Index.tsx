@@ -159,7 +159,7 @@ const Index = () => {
 
           <div className="flex items-center gap-4">
             {/* Radar Chart */}
-            <div className="w-28 h-28 flex-shrink-0">
+            <div className="w-40 h-40 flex-shrink-0">
               <RadarChart data={radarData} />
             </div>
 
