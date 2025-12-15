@@ -28,8 +28,8 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
   const size = 200;
   const centerX = size / 2;
   const centerY = size / 2;
-  const maxRadius = 68;
-  const levels = 3;
+  const maxRadius = 70;
+  const levels = 5;
   const numPoints = data.length;
 
   const getAngle = (index: number) => {
@@ -58,7 +58,7 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
   const pathLength = 1000;
 
   const labelPositions = data.map((item, index) => {
-    const point = getPoint(index, maxRadius + 14);
+    const point = getPoint(index, maxRadius + 16);
     return { ...point, label: item.label };
   });
 
@@ -78,6 +78,21 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
     <div className={cn("relative", className)}>
       <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full">
         <defs>
+          {/* Gradient for the data area */}
+          <linearGradient id="dataGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#4ade80" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#0d9488" stopOpacity="0.3" />
+          </linearGradient>
+          
+          {/* Glow filter for the stroke */}
+          <filter id="glowEffect" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
           <style>
             {`
               @keyframes drawPath {
@@ -88,16 +103,16 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
                 from { opacity: 0; }
                 to { opacity: 1; }
               }
-              .radar-stroke {
+              .data-stroke {
                 stroke-dasharray: ${pathLength};
                 stroke-dashoffset: 0;
                 animation: drawPath 1s ease-out forwards;
               }
-              .radar-fill {
-                animation: fadeIn 0.6s ease-out 0.3s forwards;
+              .data-fill {
+                animation: fadeIn 0.5s ease-out 0.3s forwards;
                 opacity: 0;
               }
-              .radar-point {
+              .data-point {
                 animation: fadeIn 0.2s ease-out forwards;
                 opacity: 0;
               }
@@ -105,19 +120,17 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
           </style>
         </defs>
 
-        {/* Grid circles */}
+        {/* Grid polygons */}
         {Array.from({ length: levels }, (_, i) => {
           const radius = ((i + 1) / levels) * maxRadius;
           return (
-            <circle
+            <path
               key={`level-${i}`}
-              cx={centerX}
-              cy={centerY}
-              r={radius}
+              d={getPolygonPath(radius)}
               fill="none"
               stroke="hsl(var(--muted-foreground))"
-              strokeWidth="0.5"
-              opacity="0.2"
+              strokeWidth="1"
+              opacity="0.15"
             />
           );
         })}
@@ -133,28 +146,28 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
               x2={outerPoint.x}
               y2={outerPoint.y}
               stroke="hsl(var(--muted-foreground))"
-              strokeWidth="0.5"
-              opacity="0.2"
+              strokeWidth="1"
+              opacity="0.15"
             />
           );
         })}
 
-        {/* Data area fill */}
+        {/* Data area fill with gradient */}
         <path
           d={dataPath}
-          fill="hsl(var(--primary))"
-          fillOpacity="0.15"
-          className="radar-fill"
+          fill="url(#dataGradient)"
+          className="data-fill"
         />
 
-        {/* Data stroke */}
+        {/* Data stroke with glow */}
         <path
           d={dataPath}
           fill="none"
-          stroke="hsl(var(--primary))"
+          stroke="#2dd4bf"
           strokeWidth="2"
           strokeLinejoin="round"
-          className="radar-stroke"
+          filter="url(#glowEffect)"
+          className="data-stroke"
         />
 
         {/* Data points */}
@@ -163,7 +176,7 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             <circle
               cx={point.x}
               cy={point.y}
-              r="12"
+              r="14"
               fill="transparent"
               className="cursor-pointer"
               onMouseEnter={(e) => handleMouseEnter(index, e)}
@@ -172,9 +185,10 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             <circle
               cx={point.x}
               cy={point.y}
-              r={hoveredIndex === index ? 4 : 3}
-              fill="hsl(var(--primary))"
-              className="radar-point transition-all duration-150"
+              r={hoveredIndex === index ? 5 : 3}
+              fill="#2dd4bf"
+              filter={hoveredIndex === index ? "url(#glowEffect)" : undefined}
+              className="data-point transition-all duration-150"
               style={{ animationDelay: `${0.6 + index * 0.05}s` }}
               pointerEvents="none"
             />
@@ -190,9 +204,9 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             textAnchor="middle"
             dominantBaseline="middle"
             className={cn(
-              "text-[8px] font-semibold transition-colors duration-150",
+              "text-[10px] font-semibold transition-colors duration-150",
               hoveredIndex === index 
-                ? "fill-primary" 
+                ? "fill-[#2dd4bf]" 
                 : "fill-muted-foreground"
             )}
           >
