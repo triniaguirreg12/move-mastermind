@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/Logo";
 
 const menuItems = [
   { icon: BarChart3, label: "Estadísticas", path: "/admin" },
@@ -38,19 +39,12 @@ export const AdminSidebar = () => {
     >
       {/* Logo */}
       <div className="p-4 border-b border-border flex items-center justify-between">
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">JM</span>
-            </div>
-            <span className="font-heading font-bold text-foreground">JUST MUV</span>
-          </div>
-        )}
+        {!collapsed && <Logo size="sm" showIcon={true} />}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8"
+          className="h-8 w-8 text-muted-foreground"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
