@@ -48,11 +48,14 @@ const activities = [
 ];
 
 const radarData = [
-  { label: "Fu", value: 85 },
-  { label: "Po", value: 70 },
-  { label: "Ag", value: 60 },
-  { label: "Po", value: 75 },
-  { label: "Po", value: 80 },
+  { label: "Fu", value: 85 },  // Fuerza
+  { label: "Po", value: 70 },  // Potencia
+  { label: "Ag", value: 75 },  // Agilidad
+  { label: "Co", value: 60 },  // Coordinación
+  { label: "Es", value: 80 },  // Estabilidad
+  { label: "Ve", value: 65 },  // Velocidad
+  { label: "Re", value: 72 },  // Resistencia
+  { label: "Mo", value: 78 },  // Movilidad
 ];
 
 const Index = () => {
