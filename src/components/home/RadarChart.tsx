@@ -9,95 +9,85 @@ interface RadarChartProps {
 }
 
 export const RadarChart = ({ data, className }: RadarChartProps) => {
-  const centerX = 100;
-  const centerY = 100;
+  const size = 200;
+  const centerX = size / 2;
+  const centerY = size / 2;
   const maxRadius = 70;
   const levels = 3;
+  const numPoints = data.length;
 
-  // Calculate points for each data item
-  const angleStep = (2 * Math.PI) / data.length;
-  
+  // Calculate angle for each axis (starting from top, going clockwise)
+  const getAngle = (index: number) => {
+    return (Math.PI * 2 * index) / numPoints - Math.PI / 2;
+  };
+
+  // Get x,y coordinates for a point at given angle and radius
   const getPoint = (index: number, radius: number) => {
-    const angle = angleStep * index - Math.PI / 2;
+    const angle = getAngle(index);
     return {
       x: centerX + radius * Math.cos(angle),
       y: centerY + radius * Math.sin(angle),
     };
   };
 
-  // Generate polygon points for the data
+  // Generate pentagon path for a given radius
+  const getPentagonPath = (radius: number) => {
+    const points = Array.from({ length: numPoints }, (_, i) => getPoint(i, radius));
+    return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
+  };
+
+  // Generate the data polygon path
   const dataPoints = data.map((item, index) => {
     const radius = (item.value / 100) * maxRadius;
     return getPoint(index, radius);
   });
+  const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
 
-  const dataPath = dataPoints
-    .map((point, i) => `${i === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ") + " Z";
-
-  // Generate level rings
-  const levelPaths = Array.from({ length: levels }, (_, levelIndex) => {
-    const radius = ((levelIndex + 1) / levels) * maxRadius;
-    const points = data.map((_, i) => getPoint(i, radius));
-    return points
-      .map((point, i) => `${i === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-      .join(" ") + " Z";
-  });
-
-  // Generate axis lines
-  const axisLines = data.map((_, index) => {
-    const outerPoint = getPoint(index, maxRadius + 10);
-    return { x1: centerX, y1: centerY, x2: outerPoint.x, y2: outerPoint.y };
-  });
-
-  // Label positions
+  // Label positions (slightly outside the chart)
   const labelPositions = data.map((item, index) => {
-    const point = getPoint(index, maxRadius + 20);
+    const point = getPoint(index, maxRadius + 18);
     return { ...point, label: item.label };
   });
 
   return (
     <div className={cn("relative", className)}>
-      <svg viewBox="0 0 200 200" className="w-full h-full">
-        {/* Level rings */}
-        {levelPaths.map((path, index) => (
-          <path
-            key={`level-${index}`}
-            d={path}
-            fill="none"
-            stroke="hsl(var(--border))"
-            strokeWidth="1"
-            opacity={0.5}
-          />
-        ))}
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full">
+        {/* Grid levels - concentric pentagons */}
+        {Array.from({ length: levels }, (_, i) => {
+          const radius = ((i + 1) / levels) * maxRadius;
+          return (
+            <path
+              key={`level-${i}`}
+              d={getPentagonPath(radius)}
+              fill="none"
+              stroke="hsl(192 30% 25%)"
+              strokeWidth="1"
+            />
+          );
+        })}
 
-        {/* Axis lines */}
-        {axisLines.map((line, index) => (
-          <line
-            key={`axis-${index}`}
-            x1={line.x1}
-            y1={line.y1}
-            x2={line.x2}
-            y2={line.y2}
-            stroke="hsl(var(--border))"
-            strokeWidth="1"
-            opacity={0.3}
-          />
-        ))}
-
-        {/* Data polygon - outer stroke */}
-        <path
-          d={dataPath}
-          fill="none"
-          stroke="hsl(var(--primary))"
-          strokeWidth="2"
-        />
+        {/* Axis lines from center to each vertex */}
+        {Array.from({ length: numPoints }, (_, i) => {
+          const outerPoint = getPoint(i, maxRadius);
+          return (
+            <line
+              key={`axis-${i}`}
+              x1={centerX}
+              y1={centerY}
+              x2={outerPoint.x}
+              y2={outerPoint.y}
+              stroke="hsl(192 30% 25%)"
+              strokeWidth="1"
+            />
+          );
+        })}
 
         {/* Data polygon - filled area */}
         <path
           d={dataPath}
-          fill="hsl(var(--primary))"
-          fillOpacity="0.2"
+          fill="hsl(169 100% 45% / 0.25)"
+          stroke="hsl(169 100% 45%)"
+          strokeWidth="2"
         />
 
         {/* Data points */}
@@ -106,8 +96,8 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             key={`point-${index}`}
             cx={point.x}
             cy={point.y}
-            r="3"
-            fill="hsl(var(--primary))"
+            r="4"
+            fill="hsl(169 100% 45%)"
           />
         ))}
 
@@ -119,7 +109,7 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             y={pos.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-muted-foreground text-[10px] font-medium"
+            className="fill-muted-foreground text-[11px] font-medium"
           >
             {pos.label}
           </text>
