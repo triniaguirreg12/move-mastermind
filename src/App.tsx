@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Entrenamiento from "./pages/Entrenamiento";
 import Profesionales from "./pages/Profesionales";
 import Configuracion from "./pages/Configuracion";
+import Calendario from "./pages/Calendario";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -42,6 +43,7 @@ const App = () => (
           {/* User App Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/calendario" element={<Calendario />} />
           <Route path="/entrenamiento" element={<Entrenamiento />} />
           <Route path="/profesionales" element={<Profesionales />} />
           <Route path="/configuracion" element={<Configuracion />} />
