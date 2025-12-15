@@ -4,7 +4,7 @@ import { useState } from "react";
 interface RadarChartProps {
   data: {
     label: string;
-    value: number; // 0-100
+    value: number;
     fullLabel?: string;
   }[];
   className?: string;
@@ -28,8 +28,8 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
   const size = 200;
   const centerX = size / 2;
   const centerY = size / 2;
-  const maxRadius = 65;
-  const levels = 3;
+  const maxRadius = 70;
+  const levels = 4;
   const numPoints = data.length;
 
   const getAngle = (index: number) => {
@@ -44,7 +44,7 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
     };
   };
 
-  const getPentagonPath = (radius: number) => {
+  const getPolygonPath = (radius: number) => {
     const points = Array.from({ length: numPoints }, (_, i) => getPoint(i, radius));
     return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
   };
@@ -55,11 +55,10 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
   });
   const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
 
-  // Calculate path length for animation
   const pathLength = 1000;
 
   const labelPositions = data.map((item, index) => {
-    const point = getPoint(index, maxRadius + 18);
+    const point = getPoint(index, maxRadius + 16);
     return { ...point, label: item.label };
   });
 
@@ -79,23 +78,43 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
     <div className={cn("relative", className)}>
       <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full">
         <defs>
+          {/* Gradient for the data area */}
+          <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="hsl(169 100% 45%)" stopOpacity="0.15" />
+          </linearGradient>
+          
+          {/* Glow filter */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* Point glow */}
+          <filter id="pointGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
           <style>
             {`
               @keyframes drawPath {
-                from {
-                  stroke-dashoffset: ${pathLength};
-                }
-                to {
-                  stroke-dashoffset: 0;
-                }
+                from { stroke-dashoffset: ${pathLength}; }
+                to { stroke-dashoffset: 0; }
               }
               @keyframes fillIn {
-                from {
-                  opacity: 0;
-                }
-                to {
-                  opacity: 1;
-                }
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes pulse {
+                0%, 100% { opacity: 0.4; }
+                50% { opacity: 0.7; }
               }
               .radar-path {
                 stroke-dasharray: ${pathLength};
@@ -110,20 +129,35 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
                 animation: fillIn 0.3s ease-out forwards;
                 opacity: 0;
               }
+              .center-pulse {
+                animation: pulse 3s ease-in-out infinite;
+              }
             `}
           </style>
         </defs>
 
+        {/* Background glow */}
+        <circle
+          cx={centerX}
+          cy={centerY}
+          r={maxRadius * 0.6}
+          fill="hsl(var(--primary))"
+          opacity="0.08"
+          className="center-pulse"
+        />
+
         {/* Grid levels */}
         {Array.from({ length: levels }, (_, i) => {
           const radius = ((i + 1) / levels) * maxRadius;
+          const opacity = 0.15 + (i * 0.1);
           return (
             <path
               key={`level-${i}`}
-              d={getPentagonPath(radius)}
+              d={getPolygonPath(radius)}
               fill="none"
-              stroke="hsl(192 30% 25%)"
+              stroke="hsl(var(--primary))"
               strokeWidth="1"
+              opacity={opacity}
             />
           );
         })}
@@ -138,8 +172,9 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
               y1={centerY}
               x2={outerPoint.x}
               y2={outerPoint.y}
-              stroke="hsl(192 30% 25%)"
+              stroke="hsl(var(--primary))"
               strokeWidth="1"
+              opacity="0.2"
             />
           );
         })}
@@ -147,16 +182,17 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
         {/* Data polygon - filled area */}
         <path
           d={dataPath}
-          fill="hsl(169 100% 45% / 0.25)"
+          fill="url(#radarGradient)"
           className="radar-fill"
         />
 
-        {/* Data polygon - stroke */}
+        {/* Data polygon - stroke with glow */}
         <path
           d={dataPath}
           fill="none"
-          stroke="hsl(169 100% 45%)"
-          strokeWidth="2"
+          stroke="hsl(var(--primary))"
+          strokeWidth="2.5"
+          filter="url(#glow)"
           className="radar-path"
         />
 
@@ -167,20 +203,41 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             <circle
               cx={point.x}
               cy={point.y}
-              r="12"
+              r="14"
               fill="transparent"
               className="cursor-pointer"
               onMouseEnter={(e) => handleMouseEnter(index, e)}
               onMouseLeave={() => setHoveredIndex(null)}
             />
+            {/* Outer glow ring on hover */}
+            {hoveredIndex === index && (
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="10"
+                fill="hsl(var(--primary))"
+                opacity="0.2"
+              />
+            )}
             {/* Visible point */}
             <circle
               cx={point.x}
               cy={point.y}
-              r={hoveredIndex === index ? 6 : 4}
-              fill="hsl(169 100% 45%)"
+              r={hoveredIndex === index ? 5 : 3.5}
+              fill="hsl(var(--primary))"
+              filter={hoveredIndex === index ? "url(#pointGlow)" : undefined}
               className="radar-point transition-all duration-200"
               style={{ animationDelay: `${0.8 + index * 0.1}s` }}
+              pointerEvents="none"
+            />
+            {/* Inner white dot */}
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r={hoveredIndex === index ? 2 : 1.5}
+              fill="hsl(var(--background))"
+              className="radar-point"
+              style={{ animationDelay: `${0.85 + index * 0.1}s` }}
               pointerEvents="none"
             />
           </g>
@@ -195,8 +252,10 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
             textAnchor="middle"
             dominantBaseline="middle"
             className={cn(
-              "text-[10px] font-medium transition-all duration-200",
-              hoveredIndex === index ? "fill-primary" : "fill-muted-foreground"
+              "text-[9px] font-bold uppercase tracking-wider transition-all duration-200",
+              hoveredIndex === index 
+                ? "fill-primary" 
+                : "fill-muted-foreground/70"
             )}
           >
             {pos.label}
@@ -207,16 +266,16 @@ export const RadarChart = ({ data, className }: RadarChartProps) => {
       {/* Tooltip */}
       {hoveredIndex !== null && (
         <div
-          className="absolute z-10 px-3 py-2 bg-card border border-border rounded-lg shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full"
+          className="absolute z-10 px-3 py-2 bg-card/95 backdrop-blur-sm border border-primary/20 rounded-xl shadow-lg shadow-primary/10 pointer-events-none transform -translate-x-1/2 -translate-y-full"
           style={{
             left: tooltipPos.x,
-            top: tooltipPos.y - 8,
+            top: tooltipPos.y - 10,
           }}
         >
           <p className="text-xs font-semibold text-foreground">
             {fullLabels[data[hoveredIndex].label] || data[hoveredIndex].label}
           </p>
-          <p className="text-xs text-primary font-bold">
+          <p className="text-sm text-primary font-bold">
             {data[hoveredIndex].value}%
           </p>
         </div>
