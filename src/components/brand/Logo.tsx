@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logoImage from "@/assets/logo-just-muv.jpeg";
+import logoImage from "@/assets/logo-just-muv.png";
 
 interface LogoProps {
   className?: string;
@@ -10,7 +10,7 @@ export const Logo = ({ className, size = "md" }: LogoProps) => {
   const sizeClasses = {
     sm: "h-6",
     md: "h-8",
-    lg: "h-12",
+    lg: "h-16",
   };
 
   return (
