@@ -2,96 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
-    /* Just MUV Dark Theme - Deep Teals & Cyans */
-    --background: 195 30% 8%;
-    --foreground: 180 10% 95%;
+    /* Just MUV Brand Colors - Dark Teal Theme */
+    --background: 192 45% 8%;
+    --foreground: 180 20% 95%;
 
-    --card: 195 35% 12%;
-    --card-foreground: 180 10% 95%;
+    --card: 192 40% 12%;
+    --card-foreground: 180 20% 95%;
 
-    --popover: 195 35% 12%;
-    --popover-foreground: 180 10% 95%;
+    --popover: 192 40% 12%;
+    --popover-foreground: 180 20% 95%;
 
-    /* Primary - Deep Teal */
-    --primary: 190 65% 27%;
-    --primary-foreground: 180 10% 98%;
+    /* Primary - Cyan/Teal Accent */
+    --primary: 169 100% 45%;
+    --primary-foreground: 192 45% 8%;
 
-    /* Secondary - Darker Teal */
-    --secondary: 195 50% 15%;
-    --secondary-foreground: 180 10% 95%;
+    --secondary: 192 35% 18%;
+    --secondary-foreground: 180 20% 95%;
 
-    --muted: 195 30% 18%;
-    --muted-foreground: 190 15% 55%;
+    --muted: 192 30% 16%;
+    --muted-foreground: 180 15% 55%;
 
-    /* Accent - Bright Cyan */
-    --accent: 185 70% 45%;
-    --accent-foreground: 195 30% 8%;
+    --accent: 169 100% 45%;
+    --accent-foreground: 192 45% 8%;
 
-    /* Success - Lime Green for progress */
-    --success: 75 85% 55%;
-    --success-foreground: 195 30% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Warning - Gold/Yellow */
-    --warning: 45 90% 55%;
-    --warning-foreground: 195 30% 8%;
+    /* Activity/Progress Colors */
+    --success: 145 80% 50%;
+    --success-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 180 10% 98%;
+    --warning: 55 95% 55%;
+    --warning-foreground: 0 0% 0%;
 
-    --border: 195 30% 20%;
-    --input: 195 30% 20%;
-    --ring: 185 70% 45%;
+    --border: 192 30% 20%;
+    --input: 192 30% 16%;
+    --ring: 169 100% 45%;
 
     --radius: 1rem;
 
-    /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(190, 65%, 27%) 0%, hsl(185, 70%, 35%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(195, 35%, 14%) 0%, hsl(195, 35%, 10%) 100%);
-    --gradient-glow: radial-gradient(circle at center, hsl(185, 70%, 45%, 0.15) 0%, transparent 70%);
+    /* Activity type colors */
+    --activity-training: 145 80% 50%;
+    --activity-padel: 55 95% 55%;
+    --activity-custom: 320 80% 60%;
 
-    /* Shadows */
-    --shadow-card: 0 4px 24px -4px hsl(195, 30%, 5%, 0.5);
-    --shadow-glow: 0 0 30px hsl(185, 70%, 45%, 0.2);
+    /* Chart colors */
+    --chart-1: 169 100% 45%;
+    --chart-2: 145 80% 50%;
+    --chart-3: 55 95% 55%;
+    --chart-4: 320 80% 60%;
+    --chart-5: 200 80% 60%;
 
-    /* Progress ring colors */
-    --ring-functional: 190 65% 35%;
-    --ring-padel: 75 85% 55%;
-    --ring-kine: 185 70% 45%;
-
-    --sidebar-background: 195 30% 8%;
-    --sidebar-foreground: 180 10% 95%;
-    --sidebar-primary: 190 65% 27%;
-    --sidebar-primary-foreground: 180 10% 98%;
-    --sidebar-accent: 195 50% 15%;
-    --sidebar-accent-foreground: 180 10% 95%;
-    --sidebar-border: 195 30% 20%;
-    --sidebar-ring: 185 70% 45%;
+    /* Sidebar */
+    --sidebar-background: 192 45% 8%;
+    --sidebar-foreground: 180 20% 95%;
+    --sidebar-primary: 169 100% 45%;
+    --sidebar-primary-foreground: 192 45% 8%;
+    --sidebar-accent: 192 35% 18%;
+    --sidebar-accent-foreground: 180 20% 95%;
+    --sidebar-border: 192 30% 20%;
+    --sidebar-ring: 169 100% 45%;
   }
 
   .dark {
-    --background: 195 30% 8%;
-    --foreground: 180 10% 95%;
-    --card: 195 35% 12%;
-    --card-foreground: 180 10% 95%;
-    --popover: 195 35% 12%;
-    --popover-foreground: 180 10% 95%;
-    --primary: 190 65% 27%;
-    --primary-foreground: 180 10% 98%;
-    --secondary: 195 50% 15%;
-    --secondary-foreground: 180 10% 95%;
-    --muted: 195 30% 18%;
-    --muted-foreground: 190 15% 55%;
-    --accent: 185 70% 45%;
-    --accent-foreground: 195 30% 8%;
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 180 10% 98%;
-    --border: 195 30% 20%;
-    --input: 195 30% 20%;
-    --ring: 185 70% 45%;
+    --background: 192 45% 8%;
+    --foreground: 180 20% 95%;
+    --card: 192 40% 12%;
+    --card-foreground: 180 20% 95%;
+    --popover: 192 40% 12%;
+    --popover-foreground: 180 20% 95%;
+    --primary: 169 100% 45%;
+    --primary-foreground: 192 45% 8%;
+    --secondary: 192 35% 18%;
+    --secondary-foreground: 180 20% 95%;
+    --muted: 192 30% 16%;
+    --muted-foreground: 180 15% 55%;
+    --accent: 169 100% 45%;
+    --accent-foreground: 192 45% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 192 30% 20%;
+    --input: 192 30% 16%;
+    --ring: 169 100% 45%;
   }
 }
 
@@ -101,7 +95,7 @@
   }
 
   html {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Poppins', sans-serif;
   }
 
   body {
@@ -109,50 +103,43 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Poppins', sans-serif;
   }
 }
 
 @layer components {
   .glass-card {
     @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl;
-    box-shadow: var(--shadow-card);
-  }
-
-  .glow-effect {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  .gradient-card {
-    background: var(--gradient-card);
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Progress ring animations */
-  @keyframes progress-fill {
-    from {
-      stroke-dashoffset: 251.2;
-    }
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
-  .animate-progress {
-    animation: progress-fill 1.5s ease-out forwards;
+  /* Activity indicators */
+  .activity-training {
+    background-color: hsl(var(--activity-training));
+  }
+  
+  .activity-padel {
+    background-color: hsl(var(--activity-padel));
+  }
+  
+  .activity-custom {
+    background-color: hsl(var(--activity-custom));
   }
 
   /* Fade in animation */
   @keyframes fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
@@ -161,32 +148,19 @@
   }
 
   .animate-fade-in-up {
-    animation: fade-in-up 0.5s ease-out forwards;
+    animation: fade-in-up 0.4s ease-out forwards;
   }
 
   /* Stagger children */
   .stagger-children > * {
-    animation: fade-in-up 0.5s ease-out forwards;
+    animation: fade-in-up 0.4s ease-out forwards;
     opacity: 0;
   }
 
-  .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
-  .stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
-  .stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
-  .stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
-  .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
-
-  /* Pulse glow */
-  @keyframes pulse-glow {
-    0%, 100% {
-      box-shadow: 0 0 20px hsl(185, 70%, 45%, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 40px hsl(185, 70%, 45%, 0.5);
-    }
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 }

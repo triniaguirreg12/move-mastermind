@@ -1,46 +1,48 @@
-import { Home, Dumbbell, Users, Settings } from "lucide-react";
-import { NavLink as RouterNavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { Home, Dumbbell, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/", icon: Home, label: "Inicio" },
-  { to: "/entrenamiento", icon: Dumbbell, label: "Entrenamiento" },
-  { to: "/profesionales", icon: Users, label: "Profesionales" },
-  { to: "/configuracion", icon: Settings, label: "Config" },
+  { icon: Home, label: "Home", path: "/" },
+  { icon: Dumbbell, label: "Entrenamiento", path: "/entrenamiento" },
+  { icon: Users, label: "Profesionales", path: "/profesionales" },
 ];
 
 export function BottomNav() {
+  const location = useLocation();
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl border-t border-border/50 safe-area-pb">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
-        {navItems.map((item) => (
-          <RouterNavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200"
-          >
-            {({ isActive }) => (
-              <>
-                <div className={cn(
-                  "p-2 rounded-xl transition-all duration-200",
-                  isActive && "bg-accent/10"
-                )}>
-                  <item.icon className={cn(
-                    "w-5 h-5 transition-colors",
-                    isActive ? "text-accent" : "text-muted-foreground"
-                  )} />
-                </div>
-                <span className={cn(
-                  "text-[10px] font-medium transition-colors",
-                  isActive ? "text-accent" : "text-muted-foreground"
-                )}>
-                  {item.label}
-                </span>
-              </>
-            )}
-          </RouterNavLink>
-        ))}
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border safe-area-pb z-50">
+      <div className="flex items-center justify-around py-3">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className="flex flex-col items-center gap-1 px-6 py-1 min-w-[80px] relative"
+            >
+              <item.icon
+                className={cn(
+                  "h-6 w-6 transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              />
+              <span
+                className={cn(
+                  "text-xs font-medium transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {item.label}
+              </span>
+              {isActive && (
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
+              )}
+            </NavLink>
+          );
+        })}
       </div>
     </nav>
   );

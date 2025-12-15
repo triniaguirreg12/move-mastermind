@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Entrenamiento from "./pages/Entrenamiento";
 import Profesionales from "./pages/Profesionales";
 import Configuracion from "./pages/Configuracion";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -30,9 +31,9 @@ const App = () => (
         theme="dark"
         toastOptions={{
           style: {
-            background: "hsl(195 35% 12%)",
-            border: "1px solid hsl(195 30% 20%)",
-            color: "hsl(180 10% 95%)",
+            background: "hsl(192 40% 12%)",
+            border: "1px solid hsl(192 30% 20%)",
+            color: "hsl(180 20% 95%)",
           },
         }}
       />
@@ -40,6 +41,7 @@ const App = () => (
         <Routes>
           {/* User App Routes */}
           <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/entrenamiento" element={<Entrenamiento />} />
           <Route path="/profesionales" element={<Profesionales />} />
           <Route path="/configuracion" element={<Configuracion />} />
