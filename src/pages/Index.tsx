@@ -78,9 +78,11 @@ const Index = () => {
       <header className="px-4 pt-4 pb-2 flex items-center justify-between">
         <Logo size="lg" />
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="text-muted-foreground h-9 w-9">
-            <Calendar className="h-5 w-5" />
-          </Button>
+          <Link to="/calendario">
+            <Button variant="ghost" size="icon" className="text-muted-foreground h-9 w-9">
+              <Calendar className="h-5 w-5" />
+            </Button>
+          </Link>
           <Link to="/configuracion">
             <Button variant="ghost" size="icon" className="text-muted-foreground h-9 w-9">
               <Settings className="h-5 w-5" />
