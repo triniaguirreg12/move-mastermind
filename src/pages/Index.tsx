@@ -76,7 +76,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="px-4 pt-4 pb-2 flex items-center justify-between">
-        <Logo size="md" />
+        <Logo size="lg" />
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="text-muted-foreground h-9 w-9">
             <Calendar className="h-5 w-5" />
