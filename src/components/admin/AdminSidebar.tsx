@@ -39,7 +39,7 @@ export const AdminSidebar = () => {
     >
       {/* Logo */}
       <div className="p-4 border-b border-border flex items-center justify-between">
-        {!collapsed && <Logo size="sm" showIcon={true} />}
+        {!collapsed && <Logo size="sm" />}
         <Button
           variant="ghost"
           size="icon"
