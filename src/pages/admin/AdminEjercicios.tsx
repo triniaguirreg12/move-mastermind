@@ -423,7 +423,7 @@ const AdminEjercicios = () => {
                   <button
                     onClick={() => ejercicio.video && setSelectedVideo({ url: ejercicio.video, nombre: ejercicio.nombre })}
                     disabled={!ejercicio.video}
-                    className="relative group w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative group w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {ejercicio.thumbnail ? (
                       <img
@@ -436,8 +436,8 @@ const AdminEjercicios = () => {
                     )}
                     {ejercicio.video && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/60 transition-colors">
-                          <Play className="h-4 w-4 text-white/80 fill-current ml-0.5" />
+                        <div className="w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                          <Play className="h-4 w-4 text-white/70 fill-current ml-0.5" />
                         </div>
                       </div>
                     )}
