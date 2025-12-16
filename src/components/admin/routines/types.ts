@@ -31,16 +31,25 @@ export interface RutinaObjetivo {
   resistencia: number;
 }
 
+export type DificultadRutina = "Principiante" | "Intermedio" | "Avanzado";
+
+export const DIFICULTADES_RUTINA: DificultadRutina[] = ["Principiante", "Intermedio", "Avanzado"];
+
 export interface Rutina {
   id: number;
   nombre: string;
   descripcion: string;
   categoria: "Funcional" | "Kinesiología" | "Activación" | "";
+  dificultad: DificultadRutina | "";
+  dificultadMode: "manual" | "auto";
   objetivoMode: "manual" | "auto";
   objetivo: RutinaObjetivo;
   bloques: RutinaBloque[];
   estado: "borrador" | "publicada";
   descansoEntreBloques: number; // seconds
+  portadaType: "ejercicio" | "custom" | "";
+  portadaEjercicioId?: number;
+  portadaCustomUrl?: string;
 }
 
 export const APTITUDES_KEYS: (keyof RutinaObjetivo)[] = [
@@ -94,9 +103,14 @@ export const createEmptyRutina = (): Rutina => ({
   nombre: "",
   descripcion: "",
   categoria: "",
+  dificultad: "",
+  dificultadMode: "auto",
   objetivoMode: "auto",
   objetivo: createEmptyObjetivo(),
   bloques: [],
   estado: "borrador",
   descansoEntreBloques: 60,
+  portadaType: "",
+  portadaEjercicioId: undefined,
+  portadaCustomUrl: undefined,
 });
