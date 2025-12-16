@@ -16,6 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Play } from "lucide-react";
 
@@ -27,7 +33,8 @@ const ejercicios = [
     mecanica: "Tren Inferior",
     objetivo: "Fuerza",
     implementos: ["Mancuerna"],
-    video: true,
+    video: "https://www.youtube.com/embed/YaXPRqUwItQ",
+    thumbnail: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=120&h=80&fit=crop",
   },
   {
     id: 2,
@@ -36,7 +43,8 @@ const ejercicios = [
     mecanica: "Tren Inferior",
     objetivo: "Fuerza",
     implementos: ["Barra", "Mancuerna"],
-    video: true,
+    video: "https://www.youtube.com/embed/jEy_czb3RKA",
+    thumbnail: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=120&h=80&fit=crop",
   },
   {
     id: 3,
@@ -45,7 +53,8 @@ const ejercicios = [
     mecanica: "Tren Superior",
     objetivo: "Fuerza",
     implementos: ["Barra", "Banco"],
-    video: true,
+    video: "https://www.youtube.com/embed/rT7DgCr-3pg",
+    thumbnail: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=120&h=80&fit=crop",
   },
   {
     id: 4,
@@ -54,7 +63,8 @@ const ejercicios = [
     mecanica: "Core",
     objetivo: "Resistencia",
     implementos: ["Sin equipamiento"],
-    video: true,
+    video: "https://www.youtube.com/embed/pSHjTRCQxIw",
+    thumbnail: "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=120&h=80&fit=crop",
   },
   {
     id: 5,
@@ -63,7 +73,8 @@ const ejercicios = [
     mecanica: "Full Body",
     objetivo: "Cardio",
     implementos: ["Sin equipamiento"],
-    video: true,
+    video: "https://www.youtube.com/embed/dZgVxmf6jkA",
+    thumbnail: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=120&h=80&fit=crop",
   },
   {
     id: 6,
@@ -72,12 +83,14 @@ const ejercicios = [
     mecanica: "Tren Inferior",
     objetivo: "Fuerza",
     implementos: ["Mancuerna"],
-    video: false,
+    video: null,
+    thumbnail: null,
   },
 ];
 
 const AdminEjercicios = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; nombre: string } | null>(null);
 
   return (
     <div className="p-6 space-y-6">
@@ -155,6 +168,7 @@ const AdminEjercicios = () => {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground">Video</TableHead>
               <TableHead className="text-muted-foreground">Nombre</TableHead>
               <TableHead className="text-muted-foreground">Músculos Principales</TableHead>
               <TableHead className="text-muted-foreground">Mecánica</TableHead>
@@ -167,16 +181,31 @@ const AdminEjercicios = () => {
             {ejercicios.map((ejercicio) => (
               <TableRow key={ejercicio.id} className="border-border">
                 <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      {ejercicio.video ? (
-                        <Play className="h-4 w-4 text-primary" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full bg-muted" />
-                      )}
-                    </div>
-                    <span className="font-medium text-foreground">{ejercicio.nombre}</span>
-                  </div>
+                  <button
+                    onClick={() => ejercicio.video && setSelectedVideo({ url: ejercicio.video, nombre: ejercicio.nombre })}
+                    disabled={!ejercicio.video}
+                    className="relative group w-16 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {ejercicio.thumbnail ? (
+                      <img
+                        src={ejercicio.thumbnail}
+                        alt={ejercicio.nombre}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted" />
+                    )}
+                    {ejercicio.video && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                          <Play className="h-3.5 w-3.5 text-primary-foreground fill-current ml-0.5" />
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                </TableCell>
+                <TableCell>
+                  <span className="font-medium text-foreground">{ejercicio.nombre}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -230,6 +259,25 @@ const AdminEjercicios = () => {
       <p className="text-sm text-muted-foreground text-center">
         Mostrando {ejercicios.length} ejercicios
       </p>
+
+      {/* Video Dialog */}
+      <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle>{selectedVideo?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="aspect-video">
+            {selectedVideo && (
+              <iframe
+                src={selectedVideo.url}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
