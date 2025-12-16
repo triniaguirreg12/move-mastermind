@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,32 @@ import { Link } from "react-router-dom";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayedText, setDisplayedText] = useState("");
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  
+  const brandText = "No Todo es Pádel";
+
+  useEffect(() => {
+    let currentIndex = 0;
+    const typingDelay = 80;
+    
+    const typeNextChar = () => {
+      if (currentIndex < brandText.length) {
+        setDisplayedText(brandText.slice(0, currentIndex + 1));
+        currentIndex++;
+        setTimeout(typeNextChar, typingDelay);
+      } else {
+        setIsTypingComplete(true);
+      }
+    };
+
+    // Start typing after a brief delay for logo to render
+    const startDelay = setTimeout(() => {
+      typeNextChar();
+    }, 500);
+
+    return () => clearTimeout(startDelay);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,9 +42,17 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
-      {/* Logo */}
-      <div className="mb-16">
-        <Logo size="lg" />
+      {/* Logo & Brand Text */}
+      <div className="mb-12 flex flex-col items-center">
+        <Logo size="lg" className="h-24 md:h-32 mb-4" />
+        <div className="h-10 flex items-center">
+          <span className="font-brand text-2xl md:text-3xl text-primary">
+            {displayedText}
+            {!isTypingComplete && (
+              <span className="animate-pulse ml-0.5">|</span>
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Form */}
