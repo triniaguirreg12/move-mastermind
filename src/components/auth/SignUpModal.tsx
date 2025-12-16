@@ -254,17 +254,17 @@ export const SignUpModal = ({ open, onOpenChange, onSuccess }: SignUpModalProps)
                   {birthDate ? format(birthDate, "PPP", { locale: es }) : "Selecciona una fecha"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 z-[100] bg-background border-border" align="start">
                 <Calendar
                   mode="single"
                   selected={birthDate}
                   onSelect={setBirthDate}
                   disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                   initialFocus
-                  className="pointer-events-auto"
                   captionLayout="dropdown-buttons"
                   fromYear={1920}
                   toYear={new Date().getFullYear()}
+                  locale={es}
                 />
               </PopoverContent>
             </Popover>
