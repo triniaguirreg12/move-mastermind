@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Play } from "lucide-react";
+import CreateExerciseModal from "@/components/admin/CreateExerciseModal";
 
 const ejercicios = [
   {
@@ -91,6 +92,7 @@ const ejercicios = [
 const AdminEjercicios = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; nombre: string } | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   return (
     <div className="p-6 space-y-6">
@@ -100,7 +102,7 @@ const AdminEjercicios = () => {
           <h1 className="text-2xl font-heading font-bold text-foreground">Ejercicios</h1>
           <p className="text-muted-foreground">Biblioteca de ejercicios (405)</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Crear Ejercicio
         </Button>
@@ -278,6 +280,9 @@ const AdminEjercicios = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Exercise Modal */}
+      <CreateExerciseModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
     </div>
   );
 };
