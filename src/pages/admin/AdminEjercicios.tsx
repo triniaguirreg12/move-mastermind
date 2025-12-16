@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, Play, X, AlertTriangle } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Play, X, AlertTriangle, ArrowUpDown } from "lucide-react";
 import CreateExerciseModal, { Ejercicio } from "@/components/admin/CreateExerciseModal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -189,6 +189,7 @@ const AdminEjercicios = () => {
   const [filterAptitudPrimaria, setFilterAptitudPrimaria] = useState<string>("");
   const [filterAptitudSecundaria, setFilterAptitudSecundaria] = useState<string>("");
   const [filterImplemento, setFilterImplemento] = useState<string>("");
+  const [sortByUso, setSortByUso] = useState<string>("");
 
   // Active filters count
   const activeFiltersCount = [
@@ -208,6 +209,7 @@ const AdminEjercicios = () => {
     setFilterAptitudSecundaria("");
     setFilterImplemento("");
     setSearchTerm("");
+    setSortByUso("");
   };
 
   // Get count of routines using an exercise
@@ -266,9 +268,9 @@ const AdminEjercicios = () => {
     }
   };
 
-  // Filtered exercises
+  // Filtered and sorted exercises
   const filteredEjercicios = useMemo(() => {
-    return ejercicios.filter((ejercicio) => {
+    let result = ejercicios.filter((ejercicio) => {
       // Search filter
       if (searchTerm && !ejercicio.nombre.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
@@ -299,7 +301,16 @@ const AdminEjercicios = () => {
       }
       return true;
     });
-  }, [ejercicios, searchTerm, filterMecanica, filterGrupoMuscular, filterMusculo, filterAptitudPrimaria, filterAptitudSecundaria, filterImplemento]);
+
+    // Sort by usage
+    if (sortByUso === "desc") {
+      result = [...result].sort((a, b) => getUsoCount(b.id) - getUsoCount(a.id));
+    } else if (sortByUso === "asc") {
+      result = [...result].sort((a, b) => getUsoCount(a.id) - getUsoCount(b.id));
+    }
+
+    return result;
+  }, [ejercicios, searchTerm, filterMecanica, filterGrupoMuscular, filterMusculo, filterAptitudPrimaria, filterAptitudSecundaria, filterImplemento, sortByUso]);
 
   return (
     <div className="p-6 space-y-6">
@@ -408,6 +419,20 @@ const AdminEjercicios = () => {
             </SelectContent>
           </Select>
 
+          {/* Sort by Usage */}
+          <Select value={sortByUso} onValueChange={setSortByUso}>
+            <SelectTrigger className="w-[180px] bg-card border-border">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                <SelectValue placeholder="Ordenar por uso" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Más usados primero</SelectItem>
+              <SelectItem value="asc">Menos usados primero</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Clear Filters */}
           {activeFiltersCount > 0 && (
             <Button variant="ghost" size="sm" onClick={clearAllFilters} className="gap-1">
@@ -429,6 +454,7 @@ const AdminEjercicios = () => {
               <TableHead className="text-muted-foreground">Mecánica</TableHead>
               <TableHead className="text-muted-foreground">Aptitudes</TableHead>
               <TableHead className="text-muted-foreground">Implementos</TableHead>
+              <TableHead className="text-muted-foreground text-center w-[80px]">Uso</TableHead>
               <TableHead className="text-muted-foreground text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -461,21 +487,7 @@ const AdminEjercicios = () => {
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{ejercicio.nombre}</span>
-                      {(() => {
-                        const count = getUsoCount(ejercicio.id);
-                        return count > 0 ? (
-                          <Badge variant="outline" className="text-xs border-primary/50 text-primary bg-primary/10">
-                            {count} {count === 1 ? 'rutina' : 'rutinas'}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs border-muted-foreground/30 text-muted-foreground">
-                            No usado
-                          </Badge>
-                        );
-                      })()}
-                    </div>
+                    <span className="font-medium text-foreground">{ejercicio.nombre}</span>
                     <p className="text-xs text-muted-foreground">
                       {ejercicio.grupoMuscular.join(", ")}
                     </p>
@@ -530,6 +542,23 @@ const AdminEjercicios = () => {
                       </Badge>
                     ))}
                   </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  {(() => {
+                    const count = getUsoCount(ejercicio.id);
+                    return (
+                      <Badge 
+                        variant="outline" 
+                        className={`text-sm font-medium min-w-[32px] justify-center ${
+                          count > 0 
+                            ? "border-primary/50 text-primary bg-primary/10" 
+                            : "border-muted-foreground/30 text-muted-foreground"
+                        }`}
+                      >
+                        {count}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
