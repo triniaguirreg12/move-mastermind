@@ -48,8 +48,19 @@ const MUSCULOS_PRINCIPALES = ["Bíceps", "Gemelos", "Glúteos", "Cuádriceps", "
 const APTITUDES = ["Fuerza", "Potencia", "Agilidad", "Coordinación", "Resistencia", "Estabilidad", "Movilidad", "Velocidad"];
 const IMPLEMENTOS = ["Sin implemento", "Banda", "Mancuerna", "Miniband"];
 
-// Mock data for exercises in use (in a real app, this would come from an API)
-const EJERCICIOS_EN_USO = [1, 3, 5]; // IDs of exercises that are in use
+// Mock data for routines (in a real app, this would come from an API)
+interface Rutina {
+  id: number;
+  nombre: string;
+  ejerciciosIds: number[];
+}
+
+const RUTINAS_MOCK: Rutina[] = [
+  { id: 1, nombre: "Tren Inferior Básico", ejerciciosIds: [1, 2, 6] },
+  { id: 2, nombre: "Full Body Express", ejerciciosIds: [1, 3, 5] },
+  { id: 3, nombre: "Core Intenso", ejerciciosIds: [4, 7] },
+  { id: 4, nombre: "Fuerza Superior", ejerciciosIds: [3, 5] },
+];
 
 const ejerciciosIniciales: Ejercicio[] = [
   {
@@ -199,8 +210,13 @@ const AdminEjercicios = () => {
     setSearchTerm("");
   };
 
+  // Get count of routines using an exercise
+  const getUsoCount = (ejercicioId: number) => {
+    return RUTINAS_MOCK.filter(rutina => rutina.ejerciciosIds.includes(ejercicioId)).length;
+  };
+
   // Check if exercise is in use
-  const isEjercicioEnUso = (id: number) => EJERCICIOS_EN_USO.includes(id);
+  const isEjercicioEnUso = (id: number) => getUsoCount(id) > 0;
 
   // Handle delete click
   const handleDeleteClick = (ejercicio: Ejercicio) => {
@@ -444,9 +460,23 @@ const AdminEjercicios = () => {
                   </button>
                 </TableCell>
                 <TableCell>
-                  <div>
-                    <span className="font-medium text-foreground">{ejercicio.nombre}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">{ejercicio.nombre}</span>
+                      {(() => {
+                        const count = getUsoCount(ejercicio.id);
+                        return count > 0 ? (
+                          <Badge variant="outline" className="text-xs border-primary/50 text-primary bg-primary/10">
+                            {count} {count === 1 ? 'rutina' : 'rutinas'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs border-muted-foreground/30 text-muted-foreground">
+                            No usado
+                          </Badge>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
                       {ejercicio.grupoMuscular.join(", ")}
                     </p>
                   </div>
