@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,9 +14,25 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Upload, X, Plus, Video, Image, AlertCircle } from "lucide-react";
 
+export interface Ejercicio {
+  id: number;
+  nombre: string;
+  tips: string;
+  mecanicas: string[];
+  grupoMuscular: string[];
+  musculosPrincipales: string[];
+  aptitudesPrimarias: string[];
+  aptitudesSecundarias: string[];
+  implementos: string[];
+  video: string | null;
+  thumbnail: string | null;
+}
+
 interface CreateExerciseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  ejercicio?: Ejercicio | null;
+  onSave?: (ejercicio: Ejercicio) => void;
 }
 
 const MECANICAS = [
@@ -55,13 +71,17 @@ const APTITUDES = [
 
 const IMPLEMENTOS_INICIALES = ["Sin implemento", "Banda", "Mancuerna", "Miniband"];
 
-const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) => {
+const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateExerciseModalProps) => {
+  const isEditMode = !!ejercicio;
+  
   // Form state
   const [nombre, setNombre] = useState("");
   const [tips, setTips] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [existingVideo, setExistingVideo] = useState<string | null>(null);
+  const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
   
   // Categorization
   const [mecanicas, setMecanicas] = useState<string[]>([]);
@@ -81,10 +101,36 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (ejercicio && open) {
+      setNombre(ejercicio.nombre);
+      setTips(ejercicio.tips);
+      setMecanicas(ejercicio.mecanicas);
+      setGruposMusculares(ejercicio.grupoMuscular);
+      setMusculosPrincipales(ejercicio.musculosPrincipales);
+      setAptitudesPrimarias(ejercicio.aptitudesPrimarias);
+      setAptitudesSecundarias(ejercicio.aptitudesSecundarias);
+      setImplementos(ejercicio.implementos);
+      setExistingVideo(ejercicio.video);
+      setExistingThumbnail(ejercicio.thumbnail);
+      setThumbnailPreview(ejercicio.thumbnail);
+      
+      // Add any custom implementos from the exercise
+      const customImplementos = ejercicio.implementos.filter(
+        (impl) => !IMPLEMENTOS_INICIALES.includes(impl)
+      );
+      if (customImplementos.length > 0) {
+        setImplementosDisponibles([...IMPLEMENTOS_INICIALES, ...customImplementos]);
+      }
+    }
+  }, [ejercicio, open]);
+
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setThumbnailFile(file);
+      setExistingThumbnail(null);
       const reader = new FileReader();
       reader.onload = (e) => setThumbnailPreview(e.target?.result as string);
       reader.readAsDataURL(file);
@@ -95,6 +141,7 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
     const file = e.target.files?.[0];
     if (file) {
       setVideoFile(file);
+      setExistingVideo(null);
     }
   };
 
@@ -145,8 +192,16 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
 
     if (!nombre.trim()) newErrors.nombre = "El nombre es obligatorio";
     if (!tips.trim()) newErrors.tips = "Los tips de ejecución son obligatorios";
-    if (!videoFile) newErrors.video = "El video es obligatorio";
-    if (!thumbnailFile) newErrors.thumbnail = "La imagen de portada es obligatoria";
+    
+    // For create mode, require files. For edit mode, accept existing or new
+    if (!isEditMode) {
+      if (!videoFile) newErrors.video = "El video es obligatorio";
+      if (!thumbnailFile) newErrors.thumbnail = "La imagen de portada es obligatoria";
+    } else {
+      if (!videoFile && !existingVideo) newErrors.video = "El video es obligatorio";
+      if (!thumbnailFile && !existingThumbnail) newErrors.thumbnail = "La imagen de portada es obligatoria";
+    }
+    
     if (aptitudesPrimarias.length === 0) {
       newErrors.aptitudesPrimarias = "Debes seleccionar al menos una aptitud principal";
     }
@@ -157,19 +212,21 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
 
   const handleSubmit = () => {
     if (validate()) {
-      // Here you would submit the form data
-      console.log({
+      const savedEjercicio: Ejercicio = {
+        id: ejercicio?.id || Date.now(),
         nombre,
         tips,
-        videoFile,
-        thumbnailFile,
         mecanicas,
-        gruposMusculares,
+        grupoMuscular: gruposMusculares,
         musculosPrincipales,
         aptitudesPrimarias,
         aptitudesSecundarias,
         implementos,
-      });
+        video: existingVideo || (videoFile ? URL.createObjectURL(videoFile) : null),
+        thumbnail: thumbnailPreview,
+      };
+      
+      onSave?.(savedEjercicio);
       handleClose();
     }
   };
@@ -181,12 +238,15 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
     setVideoFile(null);
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setExistingVideo(null);
+    setExistingThumbnail(null);
     setMecanicas([]);
     setGruposMusculares([]);
     setMusculosPrincipales([]);
     setAptitudesPrimarias([]);
     setAptitudesSecundarias([]);
     setImplementos([]);
+    setImplementosDisponibles(IMPLEMENTOS_INICIALES);
     setErrors({});
     onOpenChange(false);
   };
@@ -195,7 +255,9 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-heading">Crear Nuevo Ejercicio</DialogTitle>
+          <DialogTitle className="text-xl font-heading">
+            {isEditMode ? "Editar Ejercicio" : "Crear Nuevo Ejercicio"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-8 py-4">
@@ -279,6 +341,16 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
                           {(videoFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
+                    ) : existingVideo ? (
+                      <div className="space-y-2">
+                        <Video className="h-10 w-10 mx-auto text-primary" />
+                        <p className="text-sm text-foreground font-medium">
+                          Video actual
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Haz clic para cambiar
+                        </p>
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
@@ -324,8 +396,13 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
                           className="h-20 w-auto mx-auto rounded-lg object-cover"
                         />
                         <p className="text-sm text-foreground font-medium truncate">
-                          {thumbnailFile?.name}
+                          {thumbnailFile?.name || "Imagen actual"}
                         </p>
+                        {isEditMode && !thumbnailFile && (
+                          <p className="text-xs text-muted-foreground">
+                            Haz clic para cambiar
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -553,7 +630,9 @@ const CreateExerciseModal = ({ open, onOpenChange }: CreateExerciseModalProps) =
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>Guardar Ejercicio</Button>
+          <Button onClick={handleSubmit}>
+            {isEditMode ? "Guardar Cambios" : "Guardar Ejercicio"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
