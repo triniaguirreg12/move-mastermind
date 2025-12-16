@@ -11,14 +11,26 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Upload, X, Plus, Video, Image, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+export type DificultadEjercicio = "Principiante" | "Intermedio" | "Avanzado";
+
+export const DIFICULTADES_EJERCICIO: DificultadEjercicio[] = ["Principiante", "Intermedio", "Avanzado"];
 
 export interface Ejercicio {
   id: number;
   nombre: string;
   tips: string;
+  dificultad: DificultadEjercicio;
   mecanicas: string[];
   grupoMuscular: string[];
   musculosPrincipales: string[];
@@ -79,6 +91,7 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
   // Form state
   const [nombre, setNombre] = useState("");
   const [tips, setTips] = useState("");
+  const [dificultad, setDificultad] = useState<DificultadEjercicio>("Intermedio");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
@@ -116,6 +129,7 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
     if (ejercicio && open) {
       setNombre(ejercicio.nombre);
       setTips(ejercicio.tips);
+      setDificultad(ejercicio.dificultad);
       setMecanicas(ejercicio.mecanicas);
       setGruposMusculares(ejercicio.grupoMuscular);
       setMusculosPrincipales(ejercicio.musculosPrincipales);
@@ -302,6 +316,7 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
         id: ejercicio?.id || Date.now(),
         nombre,
         tips,
+        dificultad,
         mecanicas,
         grupoMuscular: gruposMusculares,
         musculosPrincipales,
@@ -321,6 +336,7 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
     // Reset form
     setNombre("");
     setTips("");
+    setDificultad("Intermedio");
     setVideoFile(null);
     setThumbnailFile(null);
     setThumbnailPreview(null);
@@ -389,6 +405,24 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
                     {errors.tips}
                   </p>
                 )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dificultad">
+                  Dificultad sugerida <span className="text-destructive">*</span>
+                </Label>
+                <Select value={dificultad} onValueChange={(v) => setDificultad(v as DificultadEjercicio)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar dificultad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIFICULTADES_EJERCICIO.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Se utilizará para calcular la dificultad automática de las rutinas
+                </p>
               </div>
             </div>
           </section>
