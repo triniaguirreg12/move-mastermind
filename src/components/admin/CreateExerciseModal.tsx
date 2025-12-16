@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, DragEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Upload, X, Plus, Video, Image, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export interface Ejercicio {
   id: number;
@@ -72,6 +73,7 @@ const APTITUDES = [
 const IMPLEMENTOS_INICIALES = ["Sin implemento", "Banda", "Mancuerna", "Miniband"];
 
 const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateExerciseModalProps) => {
+  const { toast } = useToast();
   const isEditMode = !!ejercicio;
   
   // Form state
@@ -82,6 +84,14 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [existingVideo, setExistingVideo] = useState<string | null>(null);
   const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
+  
+  // Drag & drop states
+  const [isDraggingVideo, setIsDraggingVideo] = useState(false);
+  const [isDraggingThumbnail, setIsDraggingThumbnail] = useState(false);
+  
+  // Refs for file inputs
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
   
   // Categorization
   const [mecanicas, setMecanicas] = useState<string[]>([]);
@@ -126,23 +136,99 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
     }
   }, [ejercicio, open]);
 
+  // Valid file types
+  const VALID_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
+  const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setThumbnailFile(file);
-      setExistingThumbnail(null);
-      const reader = new FileReader();
-      reader.onload = (e) => setThumbnailPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    }
+    if (file) processImageFile(file);
   };
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setVideoFile(file);
-      setExistingVideo(null);
+    if (file) processVideoFile(file);
+  };
+
+  const processImageFile = (file: File) => {
+    if (!VALID_IMAGE_TYPES.includes(file.type)) {
+      toast({
+        title: "Formato no válido",
+        description: "Solo se permiten archivos JPG, PNG o WebP.",
+        variant: "destructive",
+      });
+      return;
     }
+    setThumbnailFile(file);
+    setExistingThumbnail(null);
+    const reader = new FileReader();
+    reader.onload = (e) => setThumbnailPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const processVideoFile = (file: File) => {
+    if (!VALID_VIDEO_TYPES.includes(file.type)) {
+      toast({
+        title: "Formato no válido",
+        description: "Solo se permiten archivos MP4, MOV o WebM.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setVideoFile(file);
+    setExistingVideo(null);
+  };
+
+  // Drag & drop handlers for video
+  const handleVideoDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingVideo(true);
+  };
+
+  const handleVideoDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingVideo(false);
+  };
+
+  const handleVideoDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleVideoDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingVideo(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processVideoFile(file);
+  };
+
+  // Drag & drop handlers for thumbnail
+  const handleThumbnailDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingThumbnail(true);
+  };
+
+  const handleThumbnailDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingThumbnail(false);
+  };
+
+  const handleThumbnailDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleThumbnailDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingThumbnail(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processImageFile(file);
   };
 
   const toggleArrayItem = (
@@ -319,48 +405,55 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
                   Video del ejercicio <span className="text-destructive">*</span>
                 </Label>
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    errors.video ? "border-destructive" : "border-border hover:border-primary/50"
+                  onDragEnter={handleVideoDragEnter}
+                  onDragLeave={handleVideoDragLeave}
+                  onDragOver={handleVideoDragOver}
+                  onDrop={handleVideoDrop}
+                  onClick={() => videoInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer ${
+                    isDraggingVideo 
+                      ? "border-primary bg-primary/10 scale-[1.02]" 
+                      : errors.video 
+                        ? "border-destructive" 
+                        : "border-border hover:border-primary/50"
                   }`}
                 >
                   <input
+                    ref={videoInputRef}
                     type="file"
-                    accept="video/*"
+                    accept="video/mp4,video/quicktime,video/webm"
                     onChange={handleVideoChange}
                     className="hidden"
-                    id="video-upload"
                   />
-                  <label htmlFor="video-upload" className="cursor-pointer">
-                    {videoFile ? (
-                      <div className="space-y-2">
-                        <Video className="h-10 w-10 mx-auto text-primary" />
-                        <p className="text-sm text-foreground font-medium truncate">
-                          {videoFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(videoFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    ) : existingVideo ? (
-                      <div className="space-y-2">
-                        <Video className="h-10 w-10 mx-auto text-primary" />
-                        <p className="text-sm text-foreground font-medium">
-                          Video actual
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Haz clic para cambiar
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Haz clic para subir video
-                        </p>
-                        <p className="text-xs text-muted-foreground">MP4, MOV, WebM</p>
-                      </div>
-                    )}
-                  </label>
+                  {videoFile ? (
+                    <div className="space-y-2">
+                      <Video className="h-10 w-10 mx-auto text-primary" />
+                      <p className="text-sm text-foreground font-medium truncate">
+                        {videoFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(videoFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  ) : existingVideo ? (
+                    <div className="space-y-2">
+                      <Video className="h-10 w-10 mx-auto text-primary" />
+                      <p className="text-sm text-foreground font-medium">
+                        Video actual
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Clic o arrastra para cambiar
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className={`h-10 w-10 mx-auto ${isDraggingVideo ? "text-primary" : "text-muted-foreground"}`} />
+                      <p className={`text-sm ${isDraggingVideo ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                        {isDraggingVideo ? "Suelta el video aquí" : "Arrastra o haz clic para subir"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">MP4, MOV, WebM</p>
+                    </div>
+                  )}
                 </div>
                 {errors.video && (
                   <p className="text-xs text-destructive flex items-center gap-1">
@@ -376,44 +469,51 @@ const CreateExerciseModal = ({ open, onOpenChange, ejercicio, onSave }: CreateEx
                   Imagen de portada <span className="text-destructive">*</span>
                 </Label>
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    errors.thumbnail ? "border-destructive" : "border-border hover:border-primary/50"
+                  onDragEnter={handleThumbnailDragEnter}
+                  onDragLeave={handleThumbnailDragLeave}
+                  onDragOver={handleThumbnailDragOver}
+                  onDrop={handleThumbnailDrop}
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer ${
+                    isDraggingThumbnail 
+                      ? "border-primary bg-primary/10 scale-[1.02]" 
+                      : errors.thumbnail 
+                        ? "border-destructive" 
+                        : "border-border hover:border-primary/50"
                   }`}
                 >
                   <input
+                    ref={thumbnailInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleThumbnailChange}
                     className="hidden"
-                    id="thumbnail-upload"
                   />
-                  <label htmlFor="thumbnail-upload" className="cursor-pointer">
-                    {thumbnailPreview ? (
-                      <div className="space-y-2">
-                        <img
-                          src={thumbnailPreview}
-                          alt="Preview"
-                          className="h-20 w-auto mx-auto rounded-lg object-cover"
-                        />
-                        <p className="text-sm text-foreground font-medium truncate">
-                          {thumbnailFile?.name || "Imagen actual"}
+                  {thumbnailPreview ? (
+                    <div className="space-y-2">
+                      <img
+                        src={thumbnailPreview}
+                        alt="Preview"
+                        className="h-20 w-auto mx-auto rounded-lg object-cover"
+                      />
+                      <p className="text-sm text-foreground font-medium truncate">
+                        {thumbnailFile?.name || "Imagen actual"}
+                      </p>
+                      {(isEditMode || thumbnailFile) && (
+                        <p className="text-xs text-muted-foreground">
+                          Clic o arrastra para cambiar
                         </p>
-                        {isEditMode && !thumbnailFile && (
-                          <p className="text-xs text-muted-foreground">
-                            Haz clic para cambiar
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Image className="h-10 w-10 mx-auto text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Haz clic para subir imagen
-                        </p>
-                        <p className="text-xs text-muted-foreground">JPG, PNG, WebP</p>
-                      </div>
-                    )}
-                  </label>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Image className={`h-10 w-10 mx-auto ${isDraggingThumbnail ? "text-primary" : "text-muted-foreground"}`} />
+                      <p className={`text-sm ${isDraggingThumbnail ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                        {isDraggingThumbnail ? "Suelta la imagen aquí" : "Arrastra o haz clic para subir"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">JPG, PNG, WebP</p>
+                    </div>
+                  )}
                 </div>
                 {errors.thumbnail && (
                   <p className="text-xs text-destructive flex items-center gap-1">
