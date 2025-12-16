@@ -48,6 +48,11 @@
     --activity-padel: 55 95% 55%;
     --activity-custom: 320 80% 60%;
 
+    /* Category colors */
+    --category-funcional: 169 100% 45%;
+    --category-kinesiologia: 280 70% 60%;
+    --category-activacion: 55 95% 55%;
+
     /* Chart colors */
     --chart-1: 169 100% 45%;
     --chart-2: 145 80% 50%;
