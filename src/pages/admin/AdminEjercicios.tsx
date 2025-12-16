@@ -23,10 +23,23 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, Play, X } from "lucide-react";
-import CreateExerciseModal from "@/components/admin/CreateExerciseModal";
+import { Plus, Search, Edit, Trash2, Play, X, AlertTriangle } from "lucide-react";
+import CreateExerciseModal, { Ejercicio } from "@/components/admin/CreateExerciseModal";
+import { useToast } from "@/hooks/use-toast";
 
 // Filter options matching the creation modal exactly
 const MECANICAS = ["Empuje", "Tracción", "Rotacional", "Locomoción", "Anti-movimiento", "Compuesto"];
@@ -35,22 +48,10 @@ const MUSCULOS_PRINCIPALES = ["Bíceps", "Gemelos", "Glúteos", "Cuádriceps", "
 const APTITUDES = ["Fuerza", "Potencia", "Agilidad", "Coordinación", "Resistencia", "Estabilidad", "Movilidad", "Velocidad"];
 const IMPLEMENTOS = ["Sin implemento", "Banda", "Mancuerna", "Miniband"];
 
-// Updated exercise data structure matching creation modal
-interface Ejercicio {
-  id: number;
-  nombre: string;
-  tips: string;
-  mecanicas: string[];
-  grupoMuscular: string[];
-  musculosPrincipales: string[];
-  aptitudesPrimarias: string[];
-  aptitudesSecundarias: string[];
-  implementos: string[];
-  video: string | null;
-  thumbnail: string | null;
-}
+// Mock data for exercises in use (in a real app, this would come from an API)
+const EJERCICIOS_EN_USO = [1, 3, 5]; // IDs of exercises that are in use
 
-const ejercicios: Ejercicio[] = [
+const ejerciciosIniciales: Ejercicio[] = [
   {
     id: 1,
     nombre: "Sentadilla con mancuerna",
@@ -62,7 +63,7 @@ const ejercicios: Ejercicio[] = [
     aptitudesSecundarias: ["Estabilidad"],
     implementos: ["Mancuerna"],
     video: "https://www.youtube.com/embed/YaXPRqUwItQ",
-    thumbnail: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=120&h=80&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=200&h=150&fit=crop",
   },
   {
     id: 2,
@@ -75,7 +76,7 @@ const ejercicios: Ejercicio[] = [
     aptitudesSecundarias: ["Movilidad"],
     implementos: ["Mancuerna"],
     video: "https://www.youtube.com/embed/jEy_czb3RKA",
-    thumbnail: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=120&h=80&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200&h=150&fit=crop",
   },
   {
     id: 3,
@@ -88,7 +89,7 @@ const ejercicios: Ejercicio[] = [
     aptitudesSecundarias: [],
     implementos: ["Mancuerna"],
     video: "https://www.youtube.com/embed/rT7DgCr-3pg",
-    thumbnail: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=120&h=80&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=200&h=150&fit=crop",
   },
   {
     id: 4,
@@ -101,7 +102,7 @@ const ejercicios: Ejercicio[] = [
     aptitudesSecundarias: ["Fuerza"],
     implementos: ["Sin implemento"],
     video: "https://www.youtube.com/embed/pSHjTRCQxIw",
-    thumbnail: "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=120&h=80&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=200&h=150&fit=crop",
   },
   {
     id: 5,
@@ -114,7 +115,7 @@ const ejercicios: Ejercicio[] = [
     aptitudesSecundarias: ["Agilidad", "Coordinación"],
     implementos: ["Sin implemento"],
     video: "https://www.youtube.com/embed/dZgVxmf6jkA",
-    thumbnail: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=120&h=80&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=200&h=150&fit=crop",
   },
   {
     id: 6,
@@ -158,9 +159,17 @@ const ejercicios: Ejercicio[] = [
 ];
 
 const AdminEjercicios = () => {
+  const { toast } = useToast();
+  const [ejercicios, setEjercicios] = useState<Ejercicio[]>(ejerciciosIniciales);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; nombre: string } | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingEjercicio, setEditingEjercicio] = useState<Ejercicio | null>(null);
+  
+  // Delete dialogs
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteBlockedOpen, setDeleteBlockedOpen] = useState(false);
+  const [ejercicioToDelete, setEjercicioToDelete] = useState<Ejercicio | null>(null);
 
   // Filter states
   const [filterMecanica, setFilterMecanica] = useState<string>("");
@@ -188,6 +197,57 @@ const AdminEjercicios = () => {
     setFilterAptitudSecundaria("");
     setFilterImplemento("");
     setSearchTerm("");
+  };
+
+  // Check if exercise is in use
+  const isEjercicioEnUso = (id: number) => EJERCICIOS_EN_USO.includes(id);
+
+  // Handle delete click
+  const handleDeleteClick = (ejercicio: Ejercicio) => {
+    setEjercicioToDelete(ejercicio);
+    if (isEjercicioEnUso(ejercicio.id)) {
+      setDeleteBlockedOpen(true);
+    } else {
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = () => {
+    if (ejercicioToDelete) {
+      setEjercicios(ejercicios.filter(e => e.id !== ejercicioToDelete.id));
+      toast({
+        title: "Ejercicio eliminado",
+        description: `"${ejercicioToDelete.nombre}" ha sido eliminado correctamente.`,
+      });
+    }
+    setDeleteConfirmOpen(false);
+    setEjercicioToDelete(null);
+  };
+
+  // Handle edit click
+  const handleEditClick = (ejercicio: Ejercicio) => {
+    setEditingEjercicio(ejercicio);
+  };
+
+  // Handle save (create or update)
+  const handleSaveEjercicio = (ejercicio: Ejercicio) => {
+    const exists = ejercicios.find(e => e.id === ejercicio.id);
+    if (exists) {
+      // Update existing
+      setEjercicios(ejercicios.map(e => e.id === ejercicio.id ? ejercicio : e));
+      toast({
+        title: "Ejercicio actualizado",
+        description: `"${ejercicio.nombre}" ha sido actualizado correctamente.`,
+      });
+    } else {
+      // Create new
+      setEjercicios([...ejercicios, ejercicio]);
+      toast({
+        title: "Ejercicio creado",
+        description: `"${ejercicio.nombre}" ha sido creado correctamente.`,
+      });
+    }
   };
 
   // Filtered exercises
@@ -223,7 +283,7 @@ const AdminEjercicios = () => {
       }
       return true;
     });
-  }, [searchTerm, filterMecanica, filterGrupoMuscular, filterMusculo, filterAptitudPrimaria, filterAptitudSecundaria, filterImplemento]);
+  }, [ejercicios, searchTerm, filterMecanica, filterGrupoMuscular, filterMusculo, filterAptitudPrimaria, filterAptitudSecundaria, filterImplemento]);
 
   return (
     <div className="p-6 space-y-6">
@@ -347,7 +407,7 @@ const AdminEjercicios = () => {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Video</TableHead>
+              <TableHead className="text-muted-foreground w-[120px]">Video</TableHead>
               <TableHead className="text-muted-foreground">Nombre</TableHead>
               <TableHead className="text-muted-foreground">Músculos</TableHead>
               <TableHead className="text-muted-foreground">Mecánica</TableHead>
@@ -363,7 +423,7 @@ const AdminEjercicios = () => {
                   <button
                     onClick={() => ejercicio.video && setSelectedVideo({ url: ejercicio.video, nombre: ejercicio.nombre })}
                     disabled={!ejercicio.video}
-                    className="relative group w-16 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative group w-24 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {ejercicio.thumbnail ? (
                       <img
@@ -375,9 +435,9 @@ const AdminEjercicios = () => {
                       <div className="w-full h-full bg-muted" />
                     )}
                     {ejercicio.video && (
-                      <div className="absolute inset-0 flex items-center justify-center group-hover:bg-black/30 transition-colors">
-                        <div className="w-7 h-7 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center group-hover:bg-primary transition-colors">
-                          <Play className="h-3.5 w-3.5 text-primary-foreground fill-current ml-0.5" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                          <Play className="h-4 w-4 text-white/80 fill-current ml-0.5" />
                         </div>
                       </div>
                     )}
@@ -443,10 +503,20 @@ const AdminEjercicios = () => {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleEditClick(ejercicio)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteClick(ejercicio)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -481,7 +551,64 @@ const AdminEjercicios = () => {
       </Dialog>
 
       {/* Create Exercise Modal */}
-      <CreateExerciseModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <CreateExerciseModal 
+        open={isCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen}
+        onSave={handleSaveEjercicio}
+      />
+
+      {/* Edit Exercise Modal */}
+      <CreateExerciseModal 
+        open={!!editingEjercicio} 
+        onOpenChange={(open) => !open && setEditingEjercicio(null)}
+        ejercicio={editingEjercicio}
+        onSave={handleSaveEjercicio}
+      />
+
+      {/* Delete Blocked Dialog */}
+      <Dialog open={deleteBlockedOpen} onOpenChange={setDeleteBlockedOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>No se puede eliminar el ejercicio</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              Este ejercicio está siendo utilizado en una o más rutinas o programas. 
+              Para eliminarlo, primero debes quitarlo de esos contenidos.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setDeleteBlockedOpen(false)}>
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar ejercicio</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás segura de que quieres eliminar "{ejercicioToDelete?.nombre}"? 
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
