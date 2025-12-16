@@ -44,13 +44,13 @@ const Login = () => {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       {/* Logo & Brand Text */}
       <div className="mb-12 flex flex-col items-center">
-        <Logo size="lg" className="h-24 md:h-32 mb-4" />
-        <div className="h-10 flex items-center">
-          <span className="font-brand text-2xl md:text-3xl text-primary">
+        <Logo size="lg" className="h-32 md:h-44 lg:h-52 mb-6" />
+        <div className="h-10 md:h-12 flex items-center justify-center min-w-[280px] md:min-w-[360px]">
+          <span className="font-brand text-2xl md:text-3xl lg:text-4xl text-primary whitespace-nowrap">
             {displayedText}
-            {!isTypingComplete && (
-              <span className="animate-pulse ml-0.5">|</span>
-            )}
+            <span 
+              className={`ml-0.5 inline-block w-[2px] h-[1em] bg-primary align-middle transition-opacity duration-100 ${isTypingComplete ? 'opacity-0' : 'animate-pulse'}`}
+            />
           </span>
         </div>
       </div>
