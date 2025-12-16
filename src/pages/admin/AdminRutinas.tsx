@@ -431,33 +431,41 @@ const AdminRutinas = () => {
                 </div>
 
                 {/* Implements */}
-                {implementos.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {implementos.slice(0, 4).map((impl) => (
-                      <Tooltip key={impl}>
-                        <TooltipTrigger asChild>
-                          <Badge variant="outline" className="text-xs gap-1 border-border">
-                            <Dumbbell className="h-3 w-3" />
+                <div className="flex items-center gap-2 mb-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Dumbbell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>Implementos requeridos</TooltipContent>
+                  </Tooltip>
+                  <div className="flex flex-wrap gap-1">
+                    {implementos.length > 0 ? (
+                      <>
+                        {implementos.slice(0, 4).map((impl) => (
+                          <Badge key={impl} variant="outline" className="text-xs border-border">
                             {impl}
                           </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>Implemento requerido</TooltipContent>
-                      </Tooltip>
-                    ))}
-                    {implementos.length > 4 && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge variant="outline" className="text-xs border-border">
-                            +{implementos.length - 4}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {implementos.slice(4).join(", ")}
-                        </TooltipContent>
-                      </Tooltip>
+                        ))}
+                        {implementos.length > 4 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-xs border-border">
+                                +{implementos.length - 4}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {implementos.slice(4).join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </>
+                    ) : (
+                      <Badge variant="outline" className="text-xs border-border">
+                        Sin implemento
+                      </Badge>
                     )}
                   </div>
-                )}
+                </div>
 
                 {/* Objective preview */}
                 <div className="flex flex-wrap gap-1 mb-4">
