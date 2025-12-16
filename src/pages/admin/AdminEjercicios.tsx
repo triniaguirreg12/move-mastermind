@@ -196,8 +196,8 @@ const AdminEjercicios = () => {
                       <div className="w-full h-full bg-muted" />
                     )}
                     {ejercicio.video && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/60 transition-colors">
-                        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center group-hover:bg-black/30 transition-colors">
+                        <div className="w-7 h-7 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center group-hover:bg-primary transition-colors">
                           <Play className="h-3.5 w-3.5 text-primary-foreground fill-current ml-0.5" />
                         </div>
                       </div>
