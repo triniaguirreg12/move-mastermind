@@ -1,8 +1,21 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronRight, User, Target, CreditCard, LogOut, Moon, Bell } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SettingsItemProps {
   icon: React.ReactNode;
@@ -35,8 +48,45 @@ function SettingsItem({ icon, label, description, onClick, trailing }: SettingsI
 }
 
 const Configuracion = () => {
-  const handleLogout = () => {
-    toast.info("Cerrando sesión...");
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [userSex, setUserSex] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("Usuario");
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("name, sex, email")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (data) {
+        setUserSex(data.sex);
+        setUserName(data.name || "Usuario");
+        setUserEmail(data.email || user.email || "");
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const getLogoutMessage = () => {
+    if (userSex === "Mujer") {
+      return "¿Estás segura de que quieres cerrar sesión?";
+    } else if (userSex === "Hombre") {
+      return "¿Estás seguro de que quieres cerrar sesión?";
+    }
+    return "¿Quieres cerrar sesión?";
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -53,13 +103,13 @@ const Configuracion = () => {
         <section className="glass-card p-5">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-display font-bold text-2xl">
-              U
+              {userName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
               <h2 className="font-display font-semibold text-lg text-foreground">
-                Usuario Demo
+                {userName}
               </h2>
-              <p className="text-muted-foreground text-sm">usuario@email.com</p>
+              <p className="text-muted-foreground text-sm">{userEmail}</p>
             </div>
             <Button variant="ghost" size="sm">
               Editar
@@ -111,7 +161,7 @@ const Configuracion = () => {
         <Button
           variant="outline"
           className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutDialog(true)}
         >
           <LogOut className="w-4 h-4 mr-2" />
           Cerrar sesión
@@ -122,6 +172,27 @@ const Configuracion = () => {
           Just MUV v1.0.0
         </p>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cerrar sesión</AlertDialogTitle>
+            <AlertDialogDescription>
+              {getLogoutMessage()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
