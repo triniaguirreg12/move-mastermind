@@ -50,6 +50,9 @@ export interface Rutina {
   portadaType: "ejercicio" | "custom" | "";
   portadaEjercicioId?: number;
   portadaCustomUrl?: string;
+  // New fields for library display
+  calificacion?: number; // average rating (0-5)
+  vecesRealizada?: number; // times completed
 }
 
 export const APTITUDES_KEYS: (keyof RutinaObjetivo)[] = [
@@ -113,4 +116,69 @@ export const createEmptyRutina = (): Rutina => ({
   portadaType: "",
   portadaEjercicioId: undefined,
   portadaCustomUrl: undefined,
+  calificacion: undefined,
+  vecesRealizada: 0,
 });
+
+// Helper to calculate total duration in seconds
+export const calcularDuracionRutina = (rutina: Rutina): number => {
+  const SEGUNDOS_POR_REP = 3; // estimated seconds per rep
+  let totalSegundos = 0;
+
+  rutina.bloques.forEach((bloque, bloqueIndex) => {
+    const series = bloque.repetirBloque ? bloque.series : 1;
+    
+    bloque.ejercicios.forEach((ej, ejIndex) => {
+      // Time for exercise
+      const tiempoEjercicio = ej.tipoEjecucion === "tiempo" 
+        ? ej.tiempo 
+        : ej.repeticiones * SEGUNDOS_POR_REP;
+      
+      // Rest after exercise (except last in block)
+      const descansoEj = ejIndex < bloque.ejercicios.length - 1 
+        ? (ej.descansoOverride ?? bloque.descansoEntreEjercicios)
+        : 0;
+      
+      totalSegundos += (tiempoEjercicio + descansoEj) * series;
+    });
+
+    // Rest between series (for repeated blocks)
+    if (bloque.repetirBloque && series > 1) {
+      const descansoSeries = bloque.usarMismoDescanso 
+        ? bloque.descansoEntreEjercicios 
+        : bloque.descansoEntreSeries;
+      totalSegundos += descansoSeries * (series - 1);
+    }
+
+    // Rest between blocks (except last)
+    if (bloqueIndex < rutina.bloques.length - 1) {
+      totalSegundos += rutina.descansoEntreBloques;
+    }
+  });
+
+  return totalSegundos;
+};
+
+// Helper to get unique implements from routine
+export const obtenerImplementosRutina = (rutina: Rutina): string[] => {
+  const implementosSet = new Set<string>();
+  
+  rutina.bloques.forEach(bloque => {
+    bloque.ejercicios.forEach(ej => {
+      ej.ejercicio.implementos?.forEach(impl => {
+        implementosSet.add(impl);
+      });
+    });
+  });
+
+  const implementos = Array.from(implementosSet);
+  
+  // If there are real implements, filter out "Sin implemento"
+  const realImplementos = implementos.filter(i => i !== "Sin implemento");
+  if (realImplementos.length > 0) {
+    return realImplementos;
+  }
+  
+  // If all exercises are "Sin implemento" or no implements
+  return implementos.length > 0 ? ["Sin implemento"] : [];
+};
