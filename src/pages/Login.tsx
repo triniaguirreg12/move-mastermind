@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { SignUpModal } from "@/components/auth/SignUpModal";
+import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
   const [isTypingComplete, setIsTypingComplete] = useState(false);
   
@@ -183,6 +185,7 @@ const Login = () => {
         <div className="text-center pt-4">
           <button
             type="button"
+            onClick={() => setShowForgotPassword(true)}
             className="text-sm text-foreground underline underline-offset-4 hover:text-primary transition-colors"
           >
             ¿Olvidaste tu contraseña?
@@ -194,6 +197,11 @@ const Login = () => {
         open={showSignUp} 
         onOpenChange={setShowSignUp}
         onSuccess={handleSignUpSuccess}
+      />
+
+      <ForgotPasswordModal
+        open={showForgotPassword}
+        onOpenChange={setShowForgotPassword}
       />
     </div>
   );
