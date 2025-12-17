@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar as CalendarIcon, X, CheckCircle2, Clock, CalendarDays } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, Clock, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useRoutineSchedules, useScheduleRoutine } from "@/hooks/useScheduledRoutines";
+import { useRoutineEventSchedules, useScheduleRoutineEvent } from "@/hooks/useUserEvents";
 
 interface ScheduleRoutineModalProps {
   open: boolean;
@@ -27,14 +27,14 @@ export function ScheduleRoutineModal({
   routineName,
 }: ScheduleRoutineModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const { data: schedules, isLoading } = useRoutineSchedules(routineId);
-  const { mutate: scheduleRoutine, isPending } = useScheduleRoutine();
+  const { data: schedules, isLoading } = useRoutineEventSchedules(routineId);
+  const { mutate: scheduleRoutine, isPending } = useScheduleRoutineEvent();
 
   const handleSchedule = () => {
     if (!selectedDate) return;
 
     scheduleRoutine(
-      { routineId, date: selectedDate },
+      { routineId, routineName, date: selectedDate },
       {
         onSuccess: () => {
           setSelectedDate(undefined);
@@ -83,15 +83,15 @@ export function ScheduleRoutineModal({
             ) : (
               <div className="space-y-2">
                 {/* Future schedules (highlighted) */}
-                {schedules?.future.map((schedule) => (
+                {schedules?.future.map((event) => (
                   <div
-                    key={schedule.id}
+                    key={event.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20"
                   >
                     <div className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4 text-primary" />
                       <span className="text-sm font-medium text-foreground">
-                        {format(new Date(schedule.scheduled_date), "EEEE d 'de' MMMM", { locale: es })}
+                        {format(new Date(event.event_date), "EEEE d 'de' MMMM", { locale: es })}
                       </span>
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
@@ -101,28 +101,28 @@ export function ScheduleRoutineModal({
                 ))}
 
                 {/* Past schedules */}
-                {schedules?.past.map((schedule) => (
+                {schedules?.past.map((event) => (
                   <div
-                    key={schedule.id}
+                    key={event.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/30"
                   >
                     <div className="flex items-center gap-2">
-                      {schedule.status === "completada" ? (
+                      {event.status === "completed" ? (
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                       ) : (
                         <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       )}
                       <span className="text-sm text-muted-foreground">
-                        {format(new Date(schedule.scheduled_date), "d MMM yyyy", { locale: es })}
+                        {format(new Date(event.event_date), "d MMM yyyy", { locale: es })}
                       </span>
                     </div>
                     <span className={cn(
                       "text-xs px-2 py-0.5 rounded-full font-medium",
-                      schedule.status === "completada" 
+                      event.status === "completed" 
                         ? "bg-green-500/20 text-green-500"
                         : "bg-muted text-muted-foreground"
                     )}>
-                      {schedule.status === "completada" ? "Completada" : "Pasada"}
+                      {event.status === "completed" ? "Completada" : "Pasada"}
                     </span>
                   </div>
                 ))}

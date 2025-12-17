@@ -300,6 +300,48 @@ export type Database = {
           },
         ]
       }
+      user_events: {
+        Row: {
+          created_at: string
+          event_date: string
+          id: string
+          metadata: Json | null
+          status: string
+          time_end: string | null
+          time_start: string | null
+          title: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_date: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          time_end?: string | null
+          time_start?: string | null
+          title?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_date?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          time_end?: string | null
+          time_start?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Calendar, Settings, ChevronRight, Info } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
@@ -11,20 +11,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
-import { useScheduledRoutines } from "@/hooks/useScheduledRoutines";
+import {
+  useUserEvents,
+  useCleanupMissedEvents,
+  getActivityDotsForDate,
+  getDotColorClass,
+  calculateWeeklyStats,
+  UserEvent,
+} from "@/hooks/useUserEvents";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
-import upperBodyImg from "@/assets/upper-body-workout.png";
 import agilityImg from "@/assets/agility-routine.png";
 
 const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
-
-// Static activities removed - now using scheduled routines from database
 
 const radarData = [
   { label: "Fu", value: 85 },  // Fuerza
@@ -41,59 +45,66 @@ const Index = () => {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-  const { data: scheduledRoutines = [] } = useScheduledRoutines();
+  const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+
+  const { data: events = [] } = useUserEvents();
+  const cleanupMissedEvents = useCleanupMissedEvents();
+
+  // Cleanup missed scheduled entrenamientos on mount
+  useEffect(() => {
+    cleanupMissedEvents.mutate();
+  }, []);
 
   const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // Get scheduled routines for a specific date
-  const getScheduledForDate = (date: Date) => {
-    return scheduledRoutines.filter(
-      (sr) => sr.scheduled_date === format(date, "yyyy-MM-dd") && sr.status === "programada"
+  // Filter events for current week
+  const weekEvents = useMemo(() => {
+    const startStr = format(weekStart, "yyyy-MM-dd");
+    const endStr = format(weekEnd, "yyyy-MM-dd");
+    return events.filter(
+      (e) => e.event_date >= startStr && e.event_date <= endStr
     );
-  };
+  }, [events, weekStart, weekEnd]);
 
+  // Calculate weekly stats
+  const weeklyStats = useMemo(
+    () => calculateWeeklyStats(weekEvents),
+    [weekEvents]
+  );
+
+  // Get activity dots for a date
   const getActivityDots = (date: Date) => {
-    const scheduled = getScheduledForDate(date);
-    const dots: string[] = [];
-    
-    // Add training dots for scheduled routines
-    scheduled.forEach(() => dots.push("training"));
-    
-    // Keep some mock data for demo purposes (padel, custom)
-    const day = date.getDate();
-    if (day === 17) dots.push("padel", "custom");
-    if (day === 21) dots.push("padel");
-    
-    return dots;
+    const dateKey = format(date, "yyyy-MM-dd");
+    return getActivityDotsForDate(events, dateKey);
   };
 
-  // Get activities for today based on scheduled routines
+  // Get activities for today
   const todayActivities = useMemo(() => {
-    const todayScheduled = getScheduledForDate(selectedDate);
-    
-    const scheduledActivities = todayScheduled.map((sr) => ({
-      id: sr.id,
-      type: "routine" as const,
-      title: sr.routine?.nombre || "Rutina",
-      subtitle: `${sr.routine?.categoria || ""} | ${sr.routine?.dificultad || ""}`,
-      image: sr.routine?.portada_url || agilityImg,
-      routineId: sr.routine_id,
-    }));
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    return events.filter((e) => e.event_date === dateKey);
+  }, [events, selectedDate]);
 
-    // Keep some mock activities for demo
-    const mockActivities = [
-      {
-        id: "mock-1",
-        type: "padel" as const,
-        title: "Partido de Padel",
-        subtitle: "13:00 - 14:00",
-        image: padelBallImg,
-        routineId: null,
-      },
-    ];
+  const handleActivityClick = (event: UserEvent) => {
+    if (event.type === "entrenamiento" && event.metadata?.routine_id) {
+      navigate(`/rutina/${event.metadata.routine_id}`);
+    }
+  };
 
-    return [...scheduledActivities, ...mockActivities];
-  }, [scheduledRoutines, selectedDate]);
+  const formatEventTime = (event: UserEvent) => {
+    if (event.time_start && event.time_end) {
+      return `${event.time_start.slice(0, 5)} - ${event.time_end.slice(0, 5)}`;
+    }
+    if (event.time_start) {
+      return event.time_start.slice(0, 5);
+    }
+    return null;
+  };
+
+  const getEventImage = (event: UserEvent) => {
+    if (event.type === "padel") return padelBallImg;
+    if (event.type === "entrenamiento") return agilityImg;
+    return agilityImg;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -144,12 +155,7 @@ const Index = () => {
                   {dots.map((type, i) => (
                     <div
                       key={i}
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        type === "training" && "activity-training",
-                        type === "padel" && "activity-padel",
-                        type === "custom" && "activity-custom"
-                      )}
+                      className={cn("w-1.5 h-1.5 rounded-full", getDotColorClass(type))}
                     />
                   ))}
                 </div>
@@ -186,22 +192,22 @@ const Index = () => {
               <RadarChart data={radarData} />
             </div>
 
-            {/* Legend */}
+            {/* Legend with dynamic stats */}
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full activity-training flex-shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                <span className="text-xs font-medium text-foreground">3/6</span>
+                <span className="text-xs font-medium text-foreground">{weeklyStats.entrenamiento}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full activity-padel flex-shrink-0" />
-                <span className="text-xs text-muted-foreground flex-1">Padel</span>
-                <span className="text-xs font-medium text-foreground">3/6</span>
+                <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
+                <span className="text-xs text-muted-foreground flex-1">Pádel</span>
+                <span className="text-xs font-medium text-foreground">{weeklyStats.padel}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full activity-custom flex-shrink-0" />
-                <span className="text-xs text-muted-foreground flex-1">Personalizado</span>
-                <span className="text-xs font-medium text-foreground">1/1</span>
+                <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
+                <span className="text-xs text-muted-foreground flex-1">Profesional</span>
+                <span className="text-xs font-medium text-foreground">{weeklyStats.profesional}</span>
               </div>
             </div>
           </div>
@@ -222,32 +228,48 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-3 stagger-children">
-            {todayActivities.map((activity) => (
+            {todayActivities.map((event) => (
               <div
-                key={activity.id}
-                onClick={() => {
-                  if (activity.routineId) {
-                    navigate(`/rutina/${activity.routineId}`);
-                  }
-                }}
-                className="bg-card rounded-xl p-3 border border-border flex items-center gap-3 hover:border-primary/30 transition-colors cursor-pointer"
+                key={event.id}
+                onClick={() => handleActivityClick(event)}
+                className={cn(
+                  "bg-card rounded-xl p-3 border border-border flex items-center gap-3 transition-colors",
+                  event.type === "entrenamiento" && event.metadata?.routine_id
+                    ? "hover:border-primary/30 cursor-pointer"
+                    : ""
+                )}
               >
                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
                   <img
-                    src={activity.image}
-                    alt={activity.title}
+                    src={getEventImage(event)}
+                    alt={event.title || "Actividad"}
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm text-foreground truncate">
-                    {activity.title}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-sm text-foreground truncate">
+                      {event.title}
+                    </h3>
+                    {event.status === "completed" && (
+                      <span className="text-[10px] bg-activity-training/20 text-activity-training px-1.5 py-0.5 rounded-full">
+                        ✓
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    {activity.subtitle}
+                    {formatEventTime(event) || (event.status === "scheduled" ? "Programado" : "Completado")}
                   </p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full flex-shrink-0",
+                    getDotColorClass(event.type)
+                  )}
+                />
+                {event.type === "entrenamiento" && event.metadata?.routine_id && (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                )}
               </div>
             ))}
           </div>
