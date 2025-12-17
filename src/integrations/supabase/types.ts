@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      block_exercises: {
+        Row: {
+          block_id: string
+          created_at: string
+          exercise_id: string
+          id: string
+          orden: number
+          repeticiones: number | null
+          tiempo: number | null
+          tipo_ejecucion: string
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          exercise_id: string
+          id?: string
+          orden?: number
+          repeticiones?: number | null
+          tiempo?: number | null
+          tipo_ejecucion?: string
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          orden?: number
+          repeticiones?: number | null
+          tiempo?: number | null
+          tipo_ejecucion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "block_exercises_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "routine_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercises: {
+        Row: {
+          aptitudes_primarias: string[] | null
+          aptitudes_secundarias: string[] | null
+          created_at: string
+          dificultad: string
+          grupo_muscular: string[] | null
+          id: string
+          implementos: string[] | null
+          mecanicas: string[] | null
+          musculos_principales: string[] | null
+          nombre: string
+          thumbnail_url: string | null
+          tips: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          aptitudes_primarias?: string[] | null
+          aptitudes_secundarias?: string[] | null
+          created_at?: string
+          dificultad: string
+          grupo_muscular?: string[] | null
+          id?: string
+          implementos?: string[] | null
+          mecanicas?: string[] | null
+          musculos_principales?: string[] | null
+          nombre: string
+          thumbnail_url?: string | null
+          tips?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          aptitudes_primarias?: string[] | null
+          aptitudes_secundarias?: string[] | null
+          created_at?: string
+          dificultad?: string
+          grupo_muscular?: string[] | null
+          id?: string
+          implementos?: string[] | null
+          mecanicas?: string[] | null
+          musculos_principales?: string[] | null
+          nombre?: string
+          thumbnail_url?: string | null
+          tips?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           birth_date: string
@@ -50,6 +149,110 @@ export type Database = {
           sex?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      routine_blocks: {
+        Row: {
+          created_at: string
+          descanso_entre_ejercicios: number | null
+          descanso_entre_series: number | null
+          id: string
+          nombre: string
+          orden: number
+          repetir_bloque: boolean | null
+          routine_id: string
+          series: number | null
+          usar_mismo_descanso: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          descanso_entre_ejercicios?: number | null
+          descanso_entre_series?: number | null
+          id?: string
+          nombre: string
+          orden?: number
+          repetir_bloque?: boolean | null
+          routine_id: string
+          series?: number | null
+          usar_mismo_descanso?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          descanso_entre_ejercicios?: number | null
+          descanso_entre_series?: number | null
+          id?: string
+          nombre?: string
+          orden?: number
+          repetir_bloque?: boolean | null
+          routine_id?: string
+          series?: number | null
+          usar_mismo_descanso?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_blocks_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routines: {
+        Row: {
+          calificacion: number | null
+          categoria: string
+          created_at: string
+          descanso_entre_bloques: number | null
+          descripcion: string | null
+          dificultad: string
+          dificultad_mode: string | null
+          estado: string
+          id: string
+          nombre: string
+          objetivo: Json | null
+          objetivo_mode: string | null
+          portada_type: string | null
+          portada_url: string | null
+          updated_at: string
+          veces_realizada: number | null
+        }
+        Insert: {
+          calificacion?: number | null
+          categoria: string
+          created_at?: string
+          descanso_entre_bloques?: number | null
+          descripcion?: string | null
+          dificultad: string
+          dificultad_mode?: string | null
+          estado?: string
+          id?: string
+          nombre: string
+          objetivo?: Json | null
+          objetivo_mode?: string | null
+          portada_type?: string | null
+          portada_url?: string | null
+          updated_at?: string
+          veces_realizada?: number | null
+        }
+        Update: {
+          calificacion?: number | null
+          categoria?: string
+          created_at?: string
+          descanso_entre_bloques?: number | null
+          descripcion?: string | null
+          dificultad?: string
+          dificultad_mode?: string | null
+          estado?: string
+          id?: string
+          nombre?: string
+          objetivo?: Json | null
+          objetivo_mode?: string | null
+          portada_type?: string | null
+          portada_url?: string | null
+          updated_at?: string
+          veces_realizada?: number | null
         }
         Relationships: []
       }

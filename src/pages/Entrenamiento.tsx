@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { Search, Library } from "lucide-react";
+import { Search, Library, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CategoryCarousel } from "@/components/library/CategoryCarousel";
+import { usePublishedRoutines, routineToLibraryCard } from "@/hooks/useRoutines";
 
 // Category descriptions for info tooltips
 const categoryDescriptions = {
@@ -11,174 +12,28 @@ const categoryDescriptions = {
   Activación: "Rutinas cortas de calentamiento y activación muscular para preparar el cuerpo antes de la actividad.",
 };
 
-// Mock data with aptitudes
-const mockRoutines = [
-  {
-    id: "1",
-    title: "Fuerza Upper Body",
-    subtitle: "Tren superior intenso",
-    duration: "25 min",
-    difficulty: "Avanzado" as const,
-    equipment: ["Mancuerna", "Barra"],
-    rating: 4.6,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Fuerza", value: 9 },
-      { name: "Potencia", value: 6 },
-      { name: "Estabilidad", value: 5 },
-      { name: "Resistencia", value: 4 },
-    ],
-  },
-  {
-    id: "2",
-    title: "Core & Estabilidad",
-    subtitle: "Fortalece tu centro",
-    duration: "20 min",
-    difficulty: "Intermedio" as const,
-    equipment: ["Banda", "Miniband"],
-    rating: 4.8,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Estabilidad", value: 10 },
-      { name: "Fuerza", value: 6 },
-      { name: "Coordinación", value: 5 },
-    ],
-  },
-  {
-    id: "3",
-    title: "Piernas Explosivas",
-    subtitle: "Potencia y velocidad",
-    duration: "30 min",
-    difficulty: "Avanzado" as const,
-    equipment: ["Mancuerna", "Pesa rusa"],
-    rating: 4.3,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Potencia", value: 9 },
-      { name: "Velocidad", value: 8 },
-      { name: "Fuerza", value: 7 },
-    ],
-  },
-  {
-    id: "4",
-    title: "Full Body Funcional",
-    subtitle: "Entrena todo el cuerpo",
-    duration: "35 min",
-    difficulty: "Intermedio" as const,
-    equipment: ["Mancuerna"],
-    rating: 4.5,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Resistencia", value: 8 },
-      { name: "Fuerza", value: 7 },
-      { name: "Coordinación", value: 6 },
-    ],
-  },
-  {
-    id: "5",
-    title: "Recuperación Activa",
-    subtitle: "Movilidad y estiramiento",
-    duration: "15 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Sin implemento"],
-    rating: 4.9,
-    category: "kinesiologia" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 10 },
-      { name: "Estabilidad", value: 5 },
-    ],
-  },
-  {
-    id: "6",
-    title: "Liberación Miofascial",
-    subtitle: "Foam roller session",
-    duration: "20 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Foam roller"],
-    rating: 4.7,
-    category: "kinesiologia" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 9 },
-      { name: "Estabilidad", value: 4 },
-    ],
-  },
-  {
-    id: "7",
-    title: "Hombro Saludable",
-    subtitle: "Prevención de lesiones",
-    duration: "18 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Banda"],
-    rating: 4.6,
-    category: "kinesiologia" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 8 },
-      { name: "Estabilidad", value: 7 },
-      { name: "Coordinación", value: 4 },
-    ],
-  },
-  {
-    id: "8",
-    title: "Activación Pre-Padel",
-    subtitle: "Prepara tu cuerpo",
-    duration: "10 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Banda elástica"],
-    rating: 4.4,
-    category: "activacion" as const,
-    aptitudes: [
-      { name: "Agilidad", value: 8 },
-      { name: "Velocidad", value: 7 },
-      { name: "Coordinación", value: 6 },
-    ],
-  },
-  {
-    id: "9",
-    title: "Warm Up Dinámico",
-    subtitle: "Calentamiento completo",
-    duration: "12 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Sin implemento"],
-    rating: 4.5,
-    category: "activacion" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 7 },
-      { name: "Agilidad", value: 6 },
-      { name: "Velocidad", value: 5 },
-    ],
-  },
-  {
-    id: "10",
-    title: "Activación Neuromuscular",
-    subtitle: "Despierta tus músculos",
-    duration: "8 min",
-    difficulty: "Intermedio" as const,
-    equipment: ["Miniband"],
-    rating: 4.2,
-    category: "activacion" as const,
-    aptitudes: [
-      { name: "Coordinación", value: 8 },
-      { name: "Estabilidad", value: 6 },
-      { name: "Velocidad", value: 5 },
-    ],
-  },
-];
-
 const Entrenamiento = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const { data: routines, isLoading, error } = usePublishedRoutines();
+
+  // Transform to library card format
+  const libraryRoutines = useMemo(() => {
+    return (routines || []).map(routineToLibraryCard);
+  }, [routines]);
 
   // Filter routines by search only
   const filteredRoutines = useMemo(() => {
-    if (!searchQuery) return mockRoutines;
+    if (!searchQuery) return libraryRoutines;
     
     const query = searchQuery.toLowerCase();
-    return mockRoutines.filter(
+    return libraryRoutines.filter(
       (r) =>
         r.title.toLowerCase().includes(query) ||
         r.subtitle?.toLowerCase().includes(query)
     );
-  }, [searchQuery]);
+  }, [searchQuery, libraryRoutines]);
 
   // Group by category
   const routinesByCategory = useMemo(() => {
@@ -221,76 +76,111 @@ const Entrenamiento = () => {
           </div>
         </header>
 
-        {/* Categories with Carousels */}
-        <div className="space-y-4">
-          {hasNoResults ? (
-            <div className="px-4">
-              <div className="glass-card p-8 text-center">
-                <p className="text-muted-foreground">
-                  No se encontraron rutinas con esos criterios
-                </p>
-              </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="px-4">
+            <div className="glass-card p-8 text-center">
+              <p className="text-destructive">Error al cargar las rutinas</p>
             </div>
-          ) : hasSearchResults ? (
-            // Search results - show matching routines grouped by category
-            <>
-              {routinesByCategory.funcional.length > 0 && (
-                <CategoryCarousel
-                  title="Funcional"
-                  description={categoryDescriptions.Funcional}
-                  routines={routinesByCategory.funcional}
-                  categoryKey="funcional"
-                  onRoutineClick={handleRoutineClick}
-                />
-              )}
-              {routinesByCategory.kinesiologia.length > 0 && (
-                <CategoryCarousel
-                  title="Kinesiología"
-                  description={categoryDescriptions.Kinesiología}
-                  routines={routinesByCategory.kinesiologia}
-                  categoryKey="kinesiologia"
-                  onRoutineClick={handleRoutineClick}
-                />
-              )}
-              {routinesByCategory.activacion.length > 0 && (
-                <CategoryCarousel
-                  title="Activación"
-                  description={categoryDescriptions.Activación}
-                  routines={routinesByCategory.activacion}
-                  categoryKey="activacion"
-                  onRoutineClick={handleRoutineClick}
-                />
-              )}
-            </>
-          ) : (
-            // Default view - all category carousels
-            <>
-              <CategoryCarousel
-                title="Funcional"
-                description={categoryDescriptions.Funcional}
-                routines={routinesByCategory.funcional}
-                categoryKey="funcional"
-                onRoutineClick={handleRoutineClick}
-              />
+          </div>
+        )}
 
-              <CategoryCarousel
-                title="Kinesiología"
-                description={categoryDescriptions.Kinesiología}
-                routines={routinesByCategory.kinesiologia}
-                categoryKey="kinesiologia"
-                onRoutineClick={handleRoutineClick}
-              />
+        {/* Empty State - No routines yet */}
+        {!isLoading && !error && libraryRoutines.length === 0 && (
+          <div className="px-4">
+            <div className="glass-card p-8 text-center">
+              <p className="text-muted-foreground">
+                No hay rutinas disponibles todavía. Crea rutinas desde el panel de administración.
+              </p>
+            </div>
+          </div>
+        )}
 
-              <CategoryCarousel
-                title="Activación"
-                description={categoryDescriptions.Activación}
-                routines={routinesByCategory.activacion}
-                categoryKey="activacion"
-                onRoutineClick={handleRoutineClick}
-              />
-            </>
-          )}
-        </div>
+        {/* Categories with Carousels */}
+        {!isLoading && !error && libraryRoutines.length > 0 && (
+          <div className="space-y-4">
+            {hasNoResults ? (
+              <div className="px-4">
+                <div className="glass-card p-8 text-center">
+                  <p className="text-muted-foreground">
+                    No se encontraron rutinas con esos criterios
+                  </p>
+                </div>
+              </div>
+            ) : hasSearchResults ? (
+              // Search results - show matching routines grouped by category
+              <>
+                {routinesByCategory.funcional.length > 0 && (
+                  <CategoryCarousel
+                    title="Funcional"
+                    description={categoryDescriptions.Funcional}
+                    routines={routinesByCategory.funcional}
+                    categoryKey="funcional"
+                    onRoutineClick={handleRoutineClick}
+                  />
+                )}
+                {routinesByCategory.kinesiologia.length > 0 && (
+                  <CategoryCarousel
+                    title="Kinesiología"
+                    description={categoryDescriptions.Kinesiología}
+                    routines={routinesByCategory.kinesiologia}
+                    categoryKey="kinesiologia"
+                    onRoutineClick={handleRoutineClick}
+                  />
+                )}
+                {routinesByCategory.activacion.length > 0 && (
+                  <CategoryCarousel
+                    title="Activación"
+                    description={categoryDescriptions.Activación}
+                    routines={routinesByCategory.activacion}
+                    categoryKey="activacion"
+                    onRoutineClick={handleRoutineClick}
+                  />
+                )}
+              </>
+            ) : (
+              // Default view - all category carousels
+              <>
+                {routinesByCategory.funcional.length > 0 && (
+                  <CategoryCarousel
+                    title="Funcional"
+                    description={categoryDescriptions.Funcional}
+                    routines={routinesByCategory.funcional}
+                    categoryKey="funcional"
+                    onRoutineClick={handleRoutineClick}
+                  />
+                )}
+
+                {routinesByCategory.kinesiologia.length > 0 && (
+                  <CategoryCarousel
+                    title="Kinesiología"
+                    description={categoryDescriptions.Kinesiología}
+                    routines={routinesByCategory.kinesiologia}
+                    categoryKey="kinesiologia"
+                    onRoutineClick={handleRoutineClick}
+                  />
+                )}
+
+                {routinesByCategory.activacion.length > 0 && (
+                  <CategoryCarousel
+                    title="Activación"
+                    description={categoryDescriptions.Activación}
+                    routines={routinesByCategory.activacion}
+                    categoryKey="activacion"
+                    onRoutineClick={handleRoutineClick}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </AppLayout>
   );
