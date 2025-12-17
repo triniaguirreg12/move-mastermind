@@ -31,14 +31,14 @@ export function BottomNav() {
               />
               <span
                 className={cn(
-                  "text-xs font-medium transition-colors",
+                  "text-xs font-medium transition-colors text-center",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 {item.label}
               </span>
               {isActive && (
-                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
+                <div className="absolute -bottom-3 w-12 h-1 bg-primary rounded-full" />
               )}
             </NavLink>
           );

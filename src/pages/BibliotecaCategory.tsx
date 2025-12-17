@@ -220,6 +220,17 @@ const aptitudes = [
   { id: "Movilidad", label: "Movilidad" },
 ];
 
+const equipmentOptions = [
+  { id: "Sin implemento", label: "Sin implemento" },
+  { id: "Mancuerna", label: "Mancuerna" },
+  { id: "Banda", label: "Banda" },
+  { id: "Miniband", label: "Miniband" },
+  { id: "Barra", label: "Barra" },
+  { id: "Pesa rusa", label: "Pesa rusa" },
+  { id: "Foam roller", label: "Foam roller" },
+  { id: "Banda elástica", label: "Banda elástica" },
+];
+
 const sortOptions = [
   { id: "rating-desc", label: "Mejor calificadas" },
   { id: "completed-desc", label: "Más realizadas" },
@@ -270,7 +281,7 @@ const BibliotecaCategory = () => {
   const navigate = useNavigate();
   const { category } = useParams<{ category: string }>();
   const [searchQuery, setSearchQuery] = useState("");
-  const [contentType, setContentType] = useState<"all" | "routines" | "programs">("all");
+  const [contentType, setContentType] = useState<"routines" | "programs">("routines");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     difficulty: [] as string[],
@@ -294,9 +305,16 @@ const BibliotecaCategory = () => {
     let result = mockRoutines.filter((r) => r.category === category);
 
     // Content type filter (only for funcional)
-    if (isFuncional && contentType !== "all") {
+    if (isFuncional) {
       result = result.filter((r) => 
         contentType === "routines" ? r.type === "routine" : r.type === "program"
+      );
+    }
+
+    // Equipment filter
+    if (filters.equipment.length > 0) {
+      result = result.filter((r) =>
+        r.equipment.some((eq) => filters.equipment.includes(eq))
       );
     }
 
@@ -406,150 +424,269 @@ const BibliotecaCategory = () => {
             </h1>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar rutinas o programas..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-          </div>
-
-          {/* Rutinas/Programas toggle (only for Funcional) + Filter */}
-          <div className="flex items-center justify-between">
-            {isFuncional ? (
-              <div className="flex bg-card rounded-lg p-1 border border-border/50">
-                <button
-                  onClick={() => setContentType("all")}
-                  className={cn(
-                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
-                    contentType === "all"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Todas
-                </button>
-                <button
-                  onClick={() => setContentType("routines")}
-                  className={cn(
-                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
-                    contentType === "routines"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Rutinas
-                </button>
-                <button
-                  onClick={() => setContentType("programs")}
-                  className={cn(
-                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
-                    contentType === "programs"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Programas
-                </button>
+          {/* Search + Filter layout */}
+          {isFuncional ? (
+            <>
+              {/* Full width search for Funcional */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar rutinas o programas..."
+                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
               </div>
-            ) : (
-              <div />
-            )}
 
-            {/* Filter Button */}
-            <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 relative">
-                  <Filter className="w-4 h-4" />
-                  Filtros
-                  {activeFiltersCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                      {activeFiltersCount}
-                    </span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
-                <SheetHeader className="flex flex-row items-center justify-between">
-                  <SheetTitle>Filtros y orden</SheetTitle>
-                  {activeFiltersCount > 0 && (
-                    <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      <X className="w-4 h-4 mr-1" />
-                      Limpiar
+              {/* Rutinas/Programas toggle + Filter */}
+              <div className="flex items-center justify-between">
+                <div className="flex bg-card rounded-lg p-1 border border-border/50">
+                  <button
+                    onClick={() => setContentType("routines")}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                      contentType === "routines"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Rutinas
+                  </button>
+                  <button
+                    onClick={() => setContentType("programs")}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                      contentType === "programs"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Programas
+                  </button>
+                </div>
+
+                {/* Filter Button */}
+                <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 relative">
+                      <Filter className="w-4 h-4" />
+                      Filtros
+                      {activeFiltersCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                          {activeFiltersCount}
+                        </span>
+                      )}
                     </Button>
-                  )}
-                </SheetHeader>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
+                    <SheetHeader className="flex flex-row items-center justify-between">
+                      <SheetTitle>Filtros y orden</SheetTitle>
+                      {activeFiltersCount > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearFilters}>
+                          <X className="w-4 h-4 mr-1" />
+                          Limpiar
+                        </Button>
+                      )}
+                    </SheetHeader>
 
-                <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(85vh-120px)] pb-6">
-                  {/* Sort By */}
-                  <FilterSection title="Ordenar por">
-                    {sortOptions.map((option) => (
-                      <FilterChip
-                        key={option.id}
-                        selected={filters.sortBy === option.id}
-                        onClick={() =>
-                          setFilter("sortBy", filters.sortBy === option.id ? "" : option.id)
-                        }
-                      >
-                        {option.label}
-                      </FilterChip>
-                    ))}
-                  </FilterSection>
+                    <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(85vh-120px)] pb-6">
+                      {/* Sort By */}
+                      <FilterSection title="Ordenar por">
+                        {sortOptions.map((option) => (
+                          <FilterChip
+                            key={option.id}
+                            selected={filters.sortBy === option.id}
+                            onClick={() =>
+                              setFilter("sortBy", filters.sortBy === option.id ? "" : option.id)
+                            }
+                          >
+                            {option.label}
+                          </FilterChip>
+                        ))}
+                      </FilterSection>
 
-                  {/* Difficulty */}
-                  <FilterSection title="Dificultad">
-                    {difficulties.map((option) => (
-                      <FilterChip
-                        key={option.id}
-                        selected={filters.difficulty.includes(option.id)}
-                        onClick={() => toggleArrayFilter("difficulty", option.id)}
-                      >
-                        {option.label}
-                      </FilterChip>
-                    ))}
-                  </FilterSection>
+                      {/* Difficulty */}
+                      <FilterSection title="Dificultad">
+                        {difficulties.map((option) => (
+                          <FilterChip
+                            key={option.id}
+                            selected={filters.difficulty.includes(option.id)}
+                            onClick={() => toggleArrayFilter("difficulty", option.id)}
+                          >
+                            {option.label}
+                          </FilterChip>
+                        ))}
+                      </FilterSection>
 
-                  {/* Duration */}
-                  <FilterSection title="Duración">
-                    {durations.map((option) => (
-                      <FilterChip
-                        key={option.id}
-                        selected={filters.duration === option.id}
-                        onClick={() =>
-                          setFilter("duration", filters.duration === option.id ? "" : option.id)
-                        }
-                      >
-                        {option.label}
-                      </FilterChip>
-                    ))}
-                  </FilterSection>
+                      {/* Equipment */}
+                      <FilterSection title="Implementos">
+                        {equipmentOptions.map((option) => (
+                          <FilterChip
+                            key={option.id}
+                            selected={filters.equipment.includes(option.id)}
+                            onClick={() => toggleArrayFilter("equipment", option.id)}
+                          >
+                            {option.label}
+                          </FilterChip>
+                        ))}
+                      </FilterSection>
 
-                  {/* Aptitudes */}
-                  <FilterSection title="Aptitud principal">
-                    {aptitudes.map((option) => (
-                      <FilterChip
-                        key={option.id}
-                        selected={filters.aptitude.includes(option.id)}
-                        onClick={() => toggleArrayFilter("aptitude", option.id)}
-                      >
-                        {option.label}
-                      </FilterChip>
-                    ))}
-                  </FilterSection>
-                </div>
+                      {/* Duration */}
+                      <FilterSection title="Duración">
+                        {durations.map((option) => (
+                          <FilterChip
+                            key={option.id}
+                            selected={filters.duration === option.id}
+                            onClick={() =>
+                              setFilter("duration", filters.duration === option.id ? "" : option.id)
+                            }
+                          >
+                            {option.label}
+                          </FilterChip>
+                        ))}
+                      </FilterSection>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
-                  <SheetClose asChild>
-                    <Button className="w-full">Aplicar filtros</Button>
-                  </SheetClose>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+                      {/* Aptitudes */}
+                      <FilterSection title="Aptitud principal">
+                        {aptitudes.map((option) => (
+                          <FilterChip
+                            key={option.id}
+                            selected={filters.aptitude.includes(option.id)}
+                            onClick={() => toggleArrayFilter("aptitude", option.id)}
+                          >
+                            {option.label}
+                          </FilterChip>
+                        ))}
+                      </FilterSection>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+                      <SheetClose asChild>
+                        <Button className="w-full">Aplicar filtros</Button>
+                      </SheetClose>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            </>
+          ) : (
+            /* Narrower search with filter button for Kinesiología and Activación */
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar rutinas..."
+                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+              </div>
+
+              {/* Filter Button */}
+              <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-11 w-11 relative shrink-0">
+                    <Filter className="w-4 h-4" />
+                    {activeFiltersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {activeFiltersCount}
+                      </span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
+                  <SheetHeader className="flex flex-row items-center justify-between">
+                    <SheetTitle>Filtros y orden</SheetTitle>
+                    {activeFiltersCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={clearFilters}>
+                        <X className="w-4 h-4 mr-1" />
+                        Limpiar
+                      </Button>
+                    )}
+                  </SheetHeader>
+
+                  <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(85vh-120px)] pb-6">
+                    {/* Sort By */}
+                    <FilterSection title="Ordenar por">
+                      {sortOptions.map((option) => (
+                        <FilterChip
+                          key={option.id}
+                          selected={filters.sortBy === option.id}
+                          onClick={() =>
+                            setFilter("sortBy", filters.sortBy === option.id ? "" : option.id)
+                          }
+                        >
+                          {option.label}
+                        </FilterChip>
+                      ))}
+                    </FilterSection>
+
+                    {/* Difficulty */}
+                    <FilterSection title="Dificultad">
+                      {difficulties.map((option) => (
+                        <FilterChip
+                          key={option.id}
+                          selected={filters.difficulty.includes(option.id)}
+                          onClick={() => toggleArrayFilter("difficulty", option.id)}
+                        >
+                          {option.label}
+                        </FilterChip>
+                      ))}
+                    </FilterSection>
+
+                    {/* Equipment */}
+                    <FilterSection title="Implementos">
+                      {equipmentOptions.map((option) => (
+                        <FilterChip
+                          key={option.id}
+                          selected={filters.equipment.includes(option.id)}
+                          onClick={() => toggleArrayFilter("equipment", option.id)}
+                        >
+                          {option.label}
+                        </FilterChip>
+                      ))}
+                    </FilterSection>
+
+                    {/* Duration */}
+                    <FilterSection title="Duración">
+                      {durations.map((option) => (
+                        <FilterChip
+                          key={option.id}
+                          selected={filters.duration === option.id}
+                          onClick={() =>
+                            setFilter("duration", filters.duration === option.id ? "" : option.id)
+                          }
+                        >
+                          {option.label}
+                        </FilterChip>
+                      ))}
+                    </FilterSection>
+
+                    {/* Aptitudes */}
+                    <FilterSection title="Aptitud principal">
+                      {aptitudes.map((option) => (
+                        <FilterChip
+                          key={option.id}
+                          selected={filters.aptitude.includes(option.id)}
+                          onClick={() => toggleArrayFilter("aptitude", option.id)}
+                        >
+                          {option.label}
+                        </FilterChip>
+                      ))}
+                    </FilterSection>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+                    <SheetClose asChild>
+                      <Button className="w-full">Aplicar filtros</Button>
+                    </SheetClose>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
         </header>
 
         {/* Results Grid */}

@@ -223,7 +223,7 @@ const Entrenamiento = () => {
         </header>
 
         {/* Categories with Carousels */}
-        <div className="space-y-8">
+        <div className="space-y-4">
           {hasNoResults ? (
             <div className="px-4">
               <div className="glass-card p-8 text-center">
