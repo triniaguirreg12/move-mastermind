@@ -1,0 +1,153 @@
+import { useEffect, useRef } from "react";
+import { SkipForward, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+interface WorkoutRestProps {
+  type: "rest-exercise" | "rest-series" | "rest-block";
+  timeRemaining: number;
+  nextExerciseName?: string;
+  nextBlockName?: string;
+  seriesInfo?: string; // e.g., "Serie 2 de 3"
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  onSkip: () => void;
+  onExit: () => void;
+  onPlayBuzzer?: () => void;
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+function getRestLabel(type: WorkoutRestProps["type"]): string {
+  switch (type) {
+    case "rest-exercise":
+      return "Descanso";
+    case "rest-series":
+      return "Descanso entre series";
+    case "rest-block":
+      return "Descanso entre bloques";
+    default:
+      return "Descanso";
+  }
+}
+
+export function WorkoutRest({
+  type,
+  timeRemaining,
+  nextExerciseName,
+  nextBlockName,
+  seriesInfo,
+  videoUrl,
+  thumbnailUrl,
+  onSkip,
+  onExit,
+  onPlayBuzzer,
+}: WorkoutRestProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const lastBuzzerRef = useRef<number | null>(null);
+
+  // Play buzzer on 3, 2, 1
+  useEffect(() => {
+    if (timeRemaining <= 3 && timeRemaining >= 1 && lastBuzzerRef.current !== timeRemaining) {
+      lastBuzzerRef.current = timeRemaining;
+      onPlayBuzzer?.();
+    }
+  }, [timeRemaining, onPlayBuzzer]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* Video Background - next exercise preview */}
+      <div className="absolute inset-0">
+        {videoUrl ? (
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+            poster={thumbnailUrl || undefined}
+          />
+        ) : thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={nextExerciseName || "Next exercise"}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-b from-background to-card" />
+        )}
+        {/* Dark overlay to differentiate from active exercise */}
+        <div className="absolute inset-0 bg-black/70" />
+      </div>
+
+      {/* Content Overlay */}
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-4 text-center">
+        {/* Rest label */}
+        <div className="mb-6">
+          <p className="text-lg font-medium text-primary uppercase tracking-wider">
+            {getRestLabel(type)}
+          </p>
+        </div>
+
+        {/* Timer */}
+        <p
+          className={cn(
+            "text-8xl font-bold tracking-tight transition-colors duration-200",
+            timeRemaining <= 3 ? "text-primary" : "text-white"
+          )}
+        >
+          {formatTime(timeRemaining)}
+        </p>
+
+        {/* Next exercise info */}
+        <div className="mt-8 space-y-2">
+          {type === "rest-block" && nextBlockName && (
+            <p className="text-sm text-white/50">
+              Próximo bloque
+            </p>
+          )}
+          {seriesInfo && type === "rest-series" && (
+            <p className="text-sm text-white/50">
+              {seriesInfo}
+            </p>
+          )}
+          {nextExerciseName && (
+            <>
+              <p className="text-sm text-white/50">
+                {type === "rest-block" ? "" : "Siguiente"}
+              </p>
+              <p className="text-xl font-semibold text-white">
+                {nextExerciseName}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Skip button */}
+        <Button
+          variant="outline"
+          size="lg"
+          className="mt-8 rounded-full px-8 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+          onClick={onSkip}
+        >
+          <SkipForward className="w-5 h-5 mr-2" />
+          Saltar descanso
+        </Button>
+      </div>
+
+      {/* Exit button */}
+      <button
+        onClick={onExit}
+        className="absolute top-4 left-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+    </div>
+  );
+}

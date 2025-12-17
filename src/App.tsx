@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Entrenamiento from "./pages/Entrenamiento";
 import BibliotecaCategory from "./pages/BibliotecaCategory";
 import RutinaDetalle from "./pages/RutinaDetalle";
+import RutinaEjecucion from "./pages/RutinaEjecucion";
 import Profesionales from "./pages/Profesionales";
 import Configuracion from "./pages/Configuracion";
 import Calendario from "./pages/Calendario";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/entrenamiento" element={<Entrenamiento />} />
             <Route path="/biblioteca/:category" element={<BibliotecaCategory />} />
             <Route path="/rutina/:id" element={<RutinaDetalle />} />
+            <Route path="/rutina/:id/ejecucion" element={<RutinaEjecucion />} />
             <Route path="/profesionales" element={<Profesionales />} />
             <Route path="/configuracion" element={<Configuracion />} />
             
