@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, CheckCircle2, Clock, CalendarDays } from "lucide-react";
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useRoutineEventSchedules, useScheduleRoutineEvent } from "@/hooks/useUserEvents";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
 
 interface ScheduleRoutineModalProps {
   open: boolean;
@@ -19,6 +21,7 @@ interface ScheduleRoutineModalProps {
   routineId: string;
   routineName: string;
   routineCategory?: string;
+  routineCoverUrl?: string;
 }
 
 export function ScheduleRoutineModal({
@@ -27,16 +30,36 @@ export function ScheduleRoutineModal({
   routineId,
   routineName,
   routineCategory,
+  routineCoverUrl,
 }: ScheduleRoutineModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const { data: schedules, isLoading } = useRoutineEventSchedules(routineId);
   const { mutate: scheduleRoutine, isPending } = useScheduleRoutineEvent();
 
+  // Check auth status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    };
+    if (open) {
+      checkAuth();
+    }
+  }, [open]);
+
   const handleSchedule = () => {
+    // Check authentication first
+    if (!isAuthenticated) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     if (!selectedDate) return;
 
     scheduleRoutine(
-      { routineId, routineName, routineCategory, date: selectedDate },
+      { routineId, routineName, routineCategory, routineCoverUrl, date: selectedDate },
       {
         onSuccess: () => {
           setSelectedDate(undefined);
@@ -48,6 +71,22 @@ export function ScheduleRoutineModal({
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Show auth prompt modal
+  if (showAuthPrompt) {
+    return (
+      <AuthPromptModal
+        isOpen={open}
+        onClose={() => {
+          setShowAuthPrompt(false);
+          onOpenChange(false);
+        }}
+        title="Crea tu cuenta para programar rutinas"
+        description="Regístrate o inicia sesión para guardar tus rutinas en el calendario y llevar el control de tu entrenamiento."
+        accentColor="training"
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,6 +185,21 @@ export function ScheduleRoutineModal({
                 disabled={(date) => date < today}
                 locale={es}
                 className="rounded-lg border border-border p-3 pointer-events-auto"
+                classNames={{
+                  caption: "flex justify-center pt-1 relative items-center",
+                  caption_label: "text-sm font-medium capitalize text-foreground",
+                  nav_button: cn(
+                    "h-7 w-7 bg-transparent border-0 p-0 opacity-70 hover:opacity-100 hover:bg-secondary"
+                  ),
+                  head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                  row: "flex w-full mt-2",
+                  cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                  day: "h-9 w-9 p-0 font-normal text-foreground hover:bg-secondary/80 rounded-full transition-colors",
+                  day_selected: "!bg-activity-training !text-background hover:!bg-activity-training/90 rounded-full",
+                  day_today: "ring-2 ring-foreground ring-inset !bg-transparent rounded-full",
+                  day_outside: "text-muted-foreground opacity-50",
+                  day_disabled: "text-muted-foreground opacity-50",
+                }}
               />
             </div>
           </div>

@@ -116,7 +116,10 @@ const Index = () => {
   };
 
   const getEventImage = (event: UserEvent) => {
-    if (event.type === "entrenamiento") return agilityImg;
+    // Use routine cover image if available
+    if (event.type === "entrenamiento" && event.metadata?.routine_cover_url) {
+      return event.metadata.routine_cover_url as string;
+    }
     return agilityImg;
   };
 

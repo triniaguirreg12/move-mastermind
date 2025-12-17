@@ -479,6 +479,7 @@ export default function RutinaDetalle() {
         routineId={routine.id}
         routineName={routine.nombre}
         routineCategory={routine.categoria}
+        routineCoverUrl={routine.portada_url || undefined}
       />
     </div>
   );
