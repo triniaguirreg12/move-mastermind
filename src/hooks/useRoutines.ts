@@ -56,6 +56,7 @@ export interface Routine {
   nombre: string;
   descripcion: string | null;
   categoria: "Funcional" | "Kinesiología" | "Activación";
+  tipo: "rutina" | "programa";
   dificultad: "Principiante" | "Intermedio" | "Avanzado";
   dificultad_mode: "auto" | "manual";
   objetivo_mode: "auto" | "manual";
@@ -77,6 +78,7 @@ function transformRoutine(dbRoutine: Record<string, unknown>): Routine {
     ...dbRoutine,
     objetivo: dbRoutine.objetivo as RoutineObjective,
     categoria: dbRoutine.categoria as Routine["categoria"],
+    tipo: (dbRoutine.tipo as Routine["tipo"]) || "rutina",
     dificultad: dbRoutine.dificultad as Routine["dificultad"],
     dificultad_mode: dbRoutine.dificultad_mode as Routine["dificultad_mode"],
     objetivo_mode: dbRoutine.objetivo_mode as Routine["objetivo_mode"],
@@ -84,19 +86,83 @@ function transformRoutine(dbRoutine: Record<string, unknown>): Routine {
   } as Routine;
 }
 
-// Fetch all published routines (for Library view)
+// Fetch all published routines with their blocks and exercises (for Library view)
 export function usePublishedRoutines() {
   return useQuery({
     queryKey: ["routines", "published"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch published routines
+      const { data: routines, error } = await supabase
         .from("routines")
         .select("*")
         .eq("estado", "publicada")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(r => transformRoutine(r as unknown as Record<string, unknown>));
+      if (!routines || routines.length === 0) return [];
+
+      // Fetch all blocks for these routines
+      const routineIds = routines.map(r => r.id);
+      const { data: blocks, error: blocksError } = await supabase
+        .from("routine_blocks")
+        .select("*")
+        .in("routine_id", routineIds);
+      
+      if (blocksError) throw blocksError;
+
+      // Fetch all block exercises with exercise data
+      const blockIds = (blocks || []).map(b => b.id);
+      let blockExercises: Array<{
+        block_id: string;
+        exercise: { implementos: string[] | null; } | null;
+        tiempo: number | null;
+      }> = [];
+      
+      if (blockIds.length > 0) {
+        const { data: beData, error: beError } = await supabase
+          .from("block_exercises")
+          .select(`
+            block_id,
+            tiempo,
+            exercise:exercises(implementos)
+          `)
+          .in("block_id", blockIds);
+        
+        if (beError) throw beError;
+        blockExercises = beData || [];
+      }
+
+      // Map routines with calculated implements and duration
+      return routines.map(routine => {
+        const routineBlocks = (blocks || []).filter(b => b.routine_id === routine.id);
+        const routineBlockIds = routineBlocks.map(b => b.id);
+        const routineExercises = blockExercises.filter(be => routineBlockIds.includes(be.block_id));
+        
+        // Calculate unique implements from exercises
+        const allImplements = new Set<string>();
+        routineExercises.forEach(be => {
+          const exercise = be.exercise as { implementos: string[] | null } | null;
+          if (exercise?.implementos) {
+            exercise.implementos.forEach(imp => allImplements.add(imp));
+          }
+        });
+        
+        // Filter out "Sin implemento" if there are real implements
+        let implements_arr = Array.from(allImplements);
+        if (implements_arr.length > 1 && implements_arr.includes("Sin implemento")) {
+          implements_arr = implements_arr.filter(i => i !== "Sin implemento");
+        }
+        
+        // Calculate total duration (sum of exercise times)
+        const totalTime = routineExercises.reduce((sum, be) => sum + (be.tiempo || 0), 0);
+        const durationMins = Math.ceil(totalTime / 60);
+
+        return {
+          ...transformRoutine(routine as unknown as Record<string, unknown>),
+          calculatedImplements: implements_arr,
+          calculatedDuration: durationMins,
+        };
+      });
     },
   });
 }
@@ -185,6 +251,7 @@ export function useCreateRoutine() {
           nombre: routine.nombre,
           descripcion: routine.descripcion,
           categoria: routine.categoria,
+          tipo: routine.tipo || "rutina",
           dificultad: routine.dificultad,
           dificultad_mode: routine.dificultad_mode,
           objetivo_mode: routine.objetivo_mode,
@@ -219,6 +286,7 @@ export function useUpdateRoutine() {
       if (routine.nombre !== undefined) updateData.nombre = routine.nombre;
       if (routine.descripcion !== undefined) updateData.descripcion = routine.descripcion;
       if (routine.categoria !== undefined) updateData.categoria = routine.categoria;
+      if (routine.tipo !== undefined) updateData.tipo = routine.tipo;
       if (routine.dificultad !== undefined) updateData.dificultad = routine.dificultad;
       if (routine.dificultad_mode !== undefined) updateData.dificultad_mode = routine.dificultad_mode;
       if (routine.objetivo_mode !== undefined) updateData.objetivo_mode = routine.objetivo_mode;
@@ -261,8 +329,14 @@ export function useDeleteRoutine() {
   });
 }
 
+// Extended routine type with calculated fields from usePublishedRoutines
+export interface RoutineWithCalculated extends Routine {
+  calculatedImplements?: string[];
+  calculatedDuration?: number;
+}
+
 // Helper to transform routine data to library card format
-export function routineToLibraryCard(routine: Routine) {
+export function routineToLibraryCard(routine: RoutineWithCalculated) {
   const objetivo = routine.objetivo;
   
   // Get top aptitudes
@@ -275,14 +349,23 @@ export function routineToLibraryCard(routine: Routine) {
       value,
     }));
 
+  // Use calculated implements or empty array
+  const equipment = routine.calculatedImplements || [];
+  
+  // Use calculated duration or fallback
+  const duration = routine.calculatedDuration 
+    ? `${routine.calculatedDuration} min` 
+    : "-- min";
+
   return {
     id: routine.id,
     title: routine.nombre,
     subtitle: routine.descripcion || "",
-    duration: "-- min",
+    duration,
     difficulty: routine.dificultad,
-    equipment: [] as string[],
+    equipment,
     rating: routine.calificacion || 0,
+    tipo: routine.tipo,
     category: routine.categoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") as "funcional" | "kinesiologia" | "activacion",
     aptitudes,
   };
