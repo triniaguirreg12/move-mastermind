@@ -19,6 +19,7 @@ export interface UserEvent {
     routine_id?: string;
     routine_name?: string;
     routine_category?: string;
+    routine_cover_url?: string;
     padel_subtype?: PadelSubtype;
     professional_id?: string;
     professional_name?: string;
@@ -143,11 +144,13 @@ export function useScheduleRoutineEvent() {
       routineId,
       routineName,
       routineCategory,
+      routineCoverUrl,
       date,
     }: {
       routineId: string;
       routineName: string;
       routineCategory?: string;
+      routineCoverUrl?: string;
       date: Date;
     }) => {
       return createEvent.mutateAsync({
@@ -159,6 +162,7 @@ export function useScheduleRoutineEvent() {
           routine_id: routineId,
           routine_name: routineName,
           routine_category: routineCategory,
+          routine_cover_url: routineCoverUrl,
         },
       });
     },
@@ -174,10 +178,12 @@ export function useCompleteRoutine() {
       routineId,
       routineName,
       routineCategory,
+      routineCoverUrl,
     }: {
       routineId: string;
       routineName: string;
       routineCategory?: string;
+      routineCoverUrl?: string;
     }) => {
       const today = new Date().toISOString().split("T")[0];
       return createEvent.mutateAsync({
@@ -189,6 +195,7 @@ export function useCompleteRoutine() {
           routine_id: routineId,
           routine_name: routineName,
           routine_category: routineCategory,
+          routine_cover_url: routineCoverUrl,
         },
       });
     },

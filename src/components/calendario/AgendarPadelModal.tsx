@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Clock, UserPlus, LogIn } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { useSchedulePadel, PadelSubtype } from "@/hooks/useUserEvents";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
 
 interface AgendarPadelModalProps {
   isOpen: boolean;
@@ -50,7 +50,6 @@ export function AgendarPadelModal({
   onClose,
   initialDate,
 }: AgendarPadelModalProps) {
-  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate || new Date());
   const [selectedSubtype, setSelectedSubtype] = useState<PadelSubtype>("partido");
   const [timeStart, setTimeStart] = useState("");
@@ -127,11 +126,6 @@ export function AgendarPadelModal({
     }
   };
 
-  const handleNavigateToAuth = (mode: "signup" | "login") => {
-    onClose();
-    navigate("/login", { state: { mode } });
-  };
-
   const isPastDate = selectedDate && selectedDate < new Date(new Date().setHours(0, 0, 0, 0));
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -139,42 +133,16 @@ export function AgendarPadelModal({
   // Auth prompt modal
   if (showAuthPrompt) {
     return (
-      <Dialog open={isOpen} onOpenChange={() => { setShowAuthPrompt(false); onClose(); }}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground text-center text-xl">
-              Crea tu cuenta para agendar
-            </DialogTitle>
-            <DialogDescription className="text-center text-muted-foreground pt-2">
-              Para guardar tus actividades y ver tu progreso en el calendario, necesitas registrarte.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3 pt-4">
-            <Button
-              onClick={() => handleNavigateToAuth("signup")}
-              className="w-full bg-activity-padel text-background hover:bg-activity-padel/90 h-12 text-base font-medium"
-            >
-              <UserPlus className="h-5 w-5 mr-2" />
-              Crear cuenta
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleNavigateToAuth("login")}
-              className="w-full h-12 text-base"
-            >
-              <LogIn className="h-5 w-5 mr-2" />
-              Iniciar sesión
-            </Button>
-            <button
-              onClick={() => { setShowAuthPrompt(false); onClose(); }}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors pt-2"
-            >
-              Seguir explorando
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AuthPromptModal
+        isOpen={isOpen}
+        onClose={() => {
+          setShowAuthPrompt(false);
+          onClose();
+        }}
+        title="Crea tu cuenta para agendar"
+        description="Regístrate o inicia sesión para guardar tus actividades de pádel y ver tu progreso en el calendario."
+        accentColor="padel"
+      />
     );
   }
 
