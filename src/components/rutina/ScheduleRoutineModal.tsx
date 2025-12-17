@@ -18,6 +18,7 @@ interface ScheduleRoutineModalProps {
   onOpenChange: (open: boolean) => void;
   routineId: string;
   routineName: string;
+  routineCategory?: string;
 }
 
 export function ScheduleRoutineModal({
@@ -25,6 +26,7 @@ export function ScheduleRoutineModal({
   onOpenChange,
   routineId,
   routineName,
+  routineCategory,
 }: ScheduleRoutineModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { data: schedules, isLoading } = useRoutineEventSchedules(routineId);
@@ -34,7 +36,7 @@ export function ScheduleRoutineModal({
     if (!selectedDate) return;
 
     scheduleRoutine(
-      { routineId, routineName, date: selectedDate },
+      { routineId, routineName, routineCategory, date: selectedDate },
       {
         onSuccess: () => {
           setSelectedDate(undefined);

@@ -18,6 +18,7 @@ export interface UserEvent {
   metadata: {
     routine_id?: string;
     routine_name?: string;
+    routine_category?: string;
     padel_subtype?: PadelSubtype;
     professional_id?: string;
     professional_name?: string;
@@ -141,10 +142,12 @@ export function useScheduleRoutineEvent() {
     mutationFn: async ({
       routineId,
       routineName,
+      routineCategory,
       date,
     }: {
       routineId: string;
       routineName: string;
+      routineCategory?: string;
       date: Date;
     }) => {
       return createEvent.mutateAsync({
@@ -155,6 +158,7 @@ export function useScheduleRoutineEvent() {
         metadata: {
           routine_id: routineId,
           routine_name: routineName,
+          routine_category: routineCategory,
         },
       });
     },
@@ -169,9 +173,11 @@ export function useCompleteRoutine() {
     mutationFn: async ({
       routineId,
       routineName,
+      routineCategory,
     }: {
       routineId: string;
       routineName: string;
+      routineCategory?: string;
     }) => {
       const today = new Date().toISOString().split("T")[0];
       return createEvent.mutateAsync({
@@ -182,6 +188,7 @@ export function useCompleteRoutine() {
         metadata: {
           routine_id: routineId,
           routine_name: routineName,
+          routine_category: routineCategory,
         },
       });
     },
@@ -387,9 +394,15 @@ export function getDotColorClass(type: EventType): string {
 }
 
 // Calculate weekly stats (completed events only for entrenamiento and padel)
+// For entrenamiento, only counts Funcional and Kinesiología categories
 export function calculateWeeklyStats(events: UserEvent[]) {
+  // Only count completed entrenamientos that are Funcional or Kinesiología
+  const validCategories = ["Funcional", "Kinesiología"];
+  
   const completedEntrenamientos = events.filter(
-    e => e.type === "entrenamiento" && e.status === "completed"
+    e => e.type === "entrenamiento" && 
+         e.status === "completed" &&
+         (e.metadata?.routine_category ? validCategories.includes(e.metadata.routine_category) : true)
   ).length;
 
   const completedPadel = events.filter(

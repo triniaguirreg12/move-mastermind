@@ -478,6 +478,7 @@ export default function RutinaDetalle() {
         onOpenChange={setScheduleModalOpen}
         routineId={routine.id}
         routineName={routine.nombre}
+        routineCategory={routine.categoria}
       />
     </div>
   );

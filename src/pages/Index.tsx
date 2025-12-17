@@ -24,6 +24,7 @@ import {
   UserEvent,
   PadelSubtype,
 } from "@/hooks/useUserEvents";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
@@ -52,6 +53,7 @@ const Index = () => {
   const monthEnd = endOfMonth(selectedDate);
 
   const { data: events = [] } = useUserEvents();
+  const { data: userProfile } = useUserProfile();
   const cleanupMissedEvents = useCleanupMissedEvents();
 
   // Cleanup missed scheduled entrenamientos on mount
@@ -233,7 +235,9 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                <span className="text-xs font-medium text-foreground">{periodStats.entrenamiento}</span>
+                <span className="text-xs font-medium text-foreground">
+                  {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? (userProfile?.weekly_training_goal || 4) : (userProfile?.weekly_training_goal || 4) * 4}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
