@@ -1,7 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/layout/BottomNav";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   format,
   startOfMonth,
@@ -21,6 +31,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   useUserEvents,
   useCleanupMissedEvents,
+  useDeleteEvent,
   getActivityDotsForDate,
   getDotColorClass,
   UserEvent,
@@ -34,10 +45,12 @@ const Calendario = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isPadelModalOpen, setIsPadelModalOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<UserEvent | null>(null);
   const navigate = useNavigate();
 
   const { data: events = [], isLoading } = useUserEvents();
   const cleanupMissedEvents = useCleanupMissedEvents();
+  const deleteEvent = useDeleteEvent();
 
   // Cleanup missed scheduled entrenamientos on mount
   useEffect(() => {
@@ -85,6 +98,18 @@ const Calendario = () => {
       return event.time_start.slice(0, 5);
     }
     return null;
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, event: UserEvent) => {
+    e.stopPropagation();
+    setEventToDelete(event);
+  };
+
+  const confirmDelete = () => {
+    if (eventToDelete) {
+      deleteEvent.mutate(eventToDelete.id);
+      setEventToDelete(null);
+    }
   };
 
   const getStatusBadge = (event: UserEvent) => {
@@ -239,6 +264,13 @@ const Calendario = () => {
                     </span>
                   )}
                 </div>
+                <button
+                  onClick={(e) => handleDeleteClick(e, event)}
+                  className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                  title="Eliminar evento"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 {event.type === "entrenamiento" && event.metadata?.routine_id && (
                   <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 )}
@@ -269,6 +301,27 @@ const Calendario = () => {
         onClose={() => setIsPadelModalOpen(false)}
         initialDate={selectedDate}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!eventToDelete} onOpenChange={() => setEventToDelete(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">¿Eliminar evento?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              ¿Estás segura de que quieres eliminar "{eventToDelete?.title}"? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>
