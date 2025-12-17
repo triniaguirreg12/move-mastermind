@@ -208,8 +208,8 @@ export function WorkoutExercise({
       {/* Paused overlay - single button here */}
       {isPaused && (
         <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <p className="text-2xl font-bold text-white mb-4">Pausado</p>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-2xl font-bold text-white mb-2">Pausado</p>
             <Button
               size="lg"
               onClick={onResume}
