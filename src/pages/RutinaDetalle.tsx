@@ -275,7 +275,7 @@ export default function RutinaDetalle() {
       {/* Hero Section */}
       <div className="relative h-64 overflow-hidden">
         {/* Background Image */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <img
             src={routine.portada_url || "/placeholder.svg"}
             alt={routine.nombre}
@@ -285,10 +285,11 @@ export default function RutinaDetalle() {
         </div>
 
         {/* Top Overlay - Back + Rating */}
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-20">
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors cursor-pointer"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors pointer-events-auto"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
