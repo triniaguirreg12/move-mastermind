@@ -190,8 +190,7 @@ const Entrenamiento = () => {
   }, [filteredRoutines]);
 
   const handleRoutineClick = (id: string | number) => {
-    // Navigate to routine detail (to be implemented)
-    console.log("Navigate to routine:", id);
+    navigate(`/rutina/${id}`);
   };
 
   const hasSearchResults = searchQuery && filteredRoutines.length > 0;
