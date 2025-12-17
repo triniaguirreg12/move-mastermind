@@ -53,6 +53,10 @@ export interface Rutina {
   // New fields for library display
   calificacion?: number; // average rating (0-5)
   vecesRealizada?: number; // times completed
+  // DB reference fields (optional, used when editing existing routines)
+  _dbId?: string; // Original UUID from database
+  tipo?: "rutina" | "programa";
+  duracionSemanas?: number | null;
 }
 
 export const APTITUDES_KEYS: (keyof RutinaObjetivo)[] = [

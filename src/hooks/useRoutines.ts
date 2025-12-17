@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import type { Rutina, RutinaBloque, RutinaEjercicio, RutinaObjetivo } from "@/components/admin/routines/types";
+import type { Ejercicio } from "@/components/admin/CreateExerciseModal";
 
 export interface RoutineObjective {
   fuerza: number;
@@ -67,6 +69,7 @@ export interface Routine {
   portada_url: string | null;
   calificacion: number | null;
   veces_realizada: number;
+  duracion_semanas: number | null;
   created_at: string;
   updated_at: string;
   blocks?: RoutineBlock[];
@@ -83,11 +86,16 @@ function transformRoutine(dbRoutine: Record<string, unknown>): Routine {
     dificultad_mode: dbRoutine.dificultad_mode as Routine["dificultad_mode"],
     objetivo_mode: dbRoutine.objetivo_mode as Routine["objetivo_mode"],
     estado: dbRoutine.estado as Routine["estado"],
+    duracion_semanas: (dbRoutine.duracion_semanas as number | null) || null,
   } as Routine;
 }
 
-// Helper to calculate total duration matching Admin logic
-function calcularDuracionTotal(
+// ============ UNIFIED DURATION CALCULATION ============
+// This is THE SINGLE SOURCE OF TRUTH for duration calculation
+// Used by both Admin and User views
+const SEGUNDOS_POR_REP = 3;
+
+export function calcularDuracionTotal(
   routineBlocks: Array<{
     id: string;
     series: number | null;
@@ -104,7 +112,6 @@ function calcularDuracionTotal(
   }>,
   descansoEntreBloques: number
 ): number {
-  const SEGUNDOS_POR_REP = 3;
   let totalSegundos = 0;
 
   routineBlocks.forEach((bloque, bloqueIndex) => {
@@ -140,6 +147,104 @@ function calcularDuracionTotal(
   });
 
   return totalSegundos;
+}
+
+// ============ UNIFIED IMPLEMENTS CALCULATION ============
+export function calcularImplementosUnicos(
+  blockExercises: Array<{
+    exercise?: { implementos: string[] | null } | null;
+  }>
+): string[] {
+  const allImplements = new Set<string>();
+  blockExercises.forEach(be => {
+    if (be.exercise?.implementos) {
+      be.exercise.implementos.forEach(imp => allImplements.add(imp));
+    }
+  });
+  
+  let implements_arr = Array.from(allImplements);
+  // Filter out "Sin implemento" if there are real implements
+  if (implements_arr.length > 1 && implements_arr.includes("Sin implemento")) {
+    implements_arr = implements_arr.filter(i => i !== "Sin implemento");
+  }
+  return implements_arr;
+}
+
+// ============ ADMIN TYPE TRANSFORMATIONS ============
+// Transform DB Exercise to Admin Ejercicio format
+function dbExerciseToAdminEjercicio(dbExercise: Exercise): Ejercicio {
+  return {
+    id: parseInt(dbExercise.id.replace(/\D/g, '').slice(0, 8)) || Math.random() * 1000000,
+    nombre: dbExercise.nombre,
+    tips: dbExercise.tips || "",
+    dificultad: dbExercise.dificultad,
+    mecanicas: dbExercise.mecanicas || [],
+    grupoMuscular: dbExercise.grupo_muscular || [],
+    musculosPrincipales: dbExercise.musculos_principales || [],
+    aptitudesPrimarias: dbExercise.aptitudes_primarias || [],
+    aptitudesSecundarias: dbExercise.aptitudes_secundarias || [],
+    implementos: dbExercise.implementos || [],
+    video: dbExercise.video_url,
+    thumbnail: dbExercise.thumbnail_url,
+  };
+}
+
+// Transform full DB routine (with blocks/exercises) to Admin Rutina format
+export function dbRoutineToAdminRutina(
+  routine: Routine,
+  blocks: RoutineBlock[]
+): Rutina {
+  const bloques: RutinaBloque[] = blocks.map(block => ({
+    id: block.id,
+    nombre: block.nombre,
+    ejercicios: (block.exercises || []).map(be => ({
+      id: be.id,
+      ejercicio: be.exercise ? dbExerciseToAdminEjercicio(be.exercise) : {
+        id: 0,
+        nombre: "Unknown",
+        tips: "",
+        dificultad: "Principiante" as const,
+        mecanicas: [],
+        grupoMuscular: [],
+        musculosPrincipales: [],
+        aptitudesPrimarias: [],
+        aptitudesSecundarias: [],
+        implementos: [],
+        video: null,
+        thumbnail: null,
+      },
+      tipoEjecucion: be.tipo_ejecucion as "tiempo" | "repeticiones",
+      tiempo: be.tiempo || 0,
+      repeticiones: be.repeticiones || 0,
+    })),
+    repetirBloque: block.repetir_bloque,
+    series: block.series,
+    descansoEntreEjercicios: block.descanso_entre_ejercicios,
+    descansoEntreSeries: block.descanso_entre_series,
+    usarMismoDescanso: block.usar_mismo_descanso,
+  }));
+
+  return {
+    id: parseInt(routine.id.replace(/\D/g, '').slice(0, 8)) || Date.now(),
+    nombre: routine.nombre,
+    descripcion: routine.descripcion || "",
+    categoria: routine.categoria as Rutina["categoria"],
+    dificultad: routine.dificultad as Rutina["dificultad"],
+    dificultadMode: routine.dificultad_mode as "manual" | "auto",
+    objetivoMode: routine.objetivo_mode as "manual" | "auto",
+    objetivo: routine.objetivo as RutinaObjetivo,
+    bloques,
+    estado: routine.estado as "borrador" | "publicada",
+    descansoEntreBloques: routine.descanso_entre_bloques,
+    portadaType: (routine.portada_type || "") as "ejercicio" | "custom" | "",
+    portadaCustomUrl: routine.portada_url || undefined,
+    calificacion: routine.calificacion || undefined,
+    vecesRealizada: routine.veces_realizada || 0,
+    // Store original UUID for DB operations
+    _dbId: routine.id,
+    tipo: routine.tipo,
+    duracionSemanas: routine.duracion_semanas,
+  } as Rutina & { _dbId: string; tipo: string; duracionSemanas: number | null };
 }
 
 // Fetch all published routines with their blocks and exercises (for Library view)
@@ -237,7 +342,109 @@ export function usePublishedRoutines() {
   });
 }
 
-// Fetch all routines (for Admin view)
+// Fetch all routines with full details (for Admin view)
+export function useAllRoutinesWithDetails() {
+  return useQuery({
+    queryKey: ["routines", "all", "details"],
+    queryFn: async () => {
+      // Fetch all routines
+      const { data: routines, error } = await supabase
+        .from("routines")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      if (!routines || routines.length === 0) return [];
+
+      // Fetch all blocks
+      const routineIds = routines.map(r => r.id);
+      const { data: blocks, error: blocksError } = await supabase
+        .from("routine_blocks")
+        .select("*")
+        .in("routine_id", routineIds)
+        .order("orden", { ascending: true });
+      
+      if (blocksError) throw blocksError;
+
+      // Fetch all block exercises with exercise data
+      const blockIds = (blocks || []).map(b => b.id);
+      let blockExercises: Array<{
+        id: string;
+        block_id: string;
+        exercise_id: string;
+        orden: number;
+        tipo_ejecucion: string;
+        tiempo: number | null;
+        repeticiones: number | null;
+        exercise: Exercise | null;
+      }> = [];
+      
+      if (blockIds.length > 0) {
+        const { data: beData, error: beError } = await supabase
+          .from("block_exercises")
+          .select(`
+            *,
+            exercise:exercises(*)
+          `)
+          .in("block_id", blockIds)
+          .order("orden", { ascending: true });
+        
+        if (beError) throw beError;
+        blockExercises = (beData || []).map(be => ({
+          ...be,
+          exercise: be.exercise as Exercise | null,
+        }));
+      }
+
+      // Build routines with blocks and exercises
+      return routines.map(routine => {
+        const routineBlocks = (blocks || [])
+          .filter(b => b.routine_id === routine.id)
+          .map(block => ({
+            ...block,
+            exercises: blockExercises.filter(be => be.block_id === block.id),
+          })) as RoutineBlock[];
+
+        const transformedRoutine = transformRoutine(routine as unknown as Record<string, unknown>);
+        
+        // Calculate duration and implements using unified logic
+        const routineBlocksForCalc = routineBlocks.map(b => ({
+          id: b.id,
+          series: b.series,
+          repetir_bloque: b.repetir_bloque,
+          descanso_entre_ejercicios: b.descanso_entre_ejercicios,
+          descanso_entre_series: b.descanso_entre_series,
+          usar_mismo_descanso: b.usar_mismo_descanso,
+        }));
+        const exercisesForCalc = blockExercises
+          .filter(be => routineBlocks.some(b => b.id === be.block_id))
+          .map(be => ({
+            block_id: be.block_id,
+            tiempo: be.tiempo,
+            repeticiones: be.repeticiones,
+            tipo_ejecucion: be.tipo_ejecucion,
+            exercise: be.exercise,
+          }));
+        
+        const totalSeconds = calcularDuracionTotal(
+          routineBlocksForCalc,
+          exercisesForCalc,
+          routine.descanso_entre_bloques || 60
+        );
+        const implements_arr = calcularImplementosUnicos(exercisesForCalc);
+
+        return {
+          ...transformedRoutine,
+          blocks: routineBlocks,
+          calculatedDuration: Math.round(totalSeconds / 60),
+          calculatedImplements: implements_arr,
+        };
+      });
+    },
+  });
+}
+
+// Fetch all routines (simple, for basic listing)
 export function useAllRoutines() {
   return useQuery({
     queryKey: ["routines", "all"],
@@ -403,7 +610,6 @@ export function useDeleteRoutine() {
 export interface RoutineWithCalculated extends Routine {
   calculatedImplements?: string[];
   calculatedDuration?: number;
-  duracion_semanas?: number | null;
 }
 
 // Helper to transform routine data to library card format
