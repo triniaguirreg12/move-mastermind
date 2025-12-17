@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { useRoutine } from "@/hooks/useRoutines";
 import { useWorkoutExecution } from "@/hooks/useWorkoutExecution";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkoutCountdown } from "@/components/workout/WorkoutCountdown";
 import { WorkoutExercise } from "@/components/workout/WorkoutExercise";
 import { WorkoutRest } from "@/components/workout/WorkoutRest";
 import { WorkoutComplete } from "@/components/workout/WorkoutComplete";
-import { toast } from "sonner";
 
 // Buzzer sound - using Web Audio API for reliability
 function createBuzzerSound() {
@@ -40,8 +40,8 @@ export default function RutinaEjecucion() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
-  
   const { data: routine, isLoading, error } = useRoutine(id);
+  const { data: userProfile } = useUserProfile();
   
   const [workoutStarted, setWorkoutStarted] = useState(false);
   const buzzerRef = useRef<(() => void) | null>(null);
@@ -119,6 +119,12 @@ export default function RutinaEjecucion() {
     handleWorkoutComplete,
     handleExit
   );
+
+  // Handle early finish - don't save anything, just redirect to routine preview
+  const handleFinishEarly = useCallback(() => {
+    exit();
+    navigate(`/rutina/${id}`);
+  }, [exit, navigate, id]);
 
   // Auto-start workout when started flag is set
   useEffect(() => {
@@ -261,12 +267,14 @@ export default function RutinaEjecucion() {
           isPaused={isPaused}
           dotsByBlock={dotsByBlock}
           currentDotIndex={currentDotIndex}
+          userGender={userProfile?.sex}
           onPause={pause}
           onResume={resume}
           onExit={() => {
             exit();
             handleExit();
           }}
+          onFinishEarly={handleFinishEarly}
         />
       );
 
