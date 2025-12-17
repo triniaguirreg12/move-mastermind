@@ -112,46 +112,39 @@ export function WorkoutExercise({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Bottom Section */}
-        <div className="px-4 pb-12 space-y-6">
-          {/* Pause/Resume button */}
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="lg"
-              className="rounded-full px-8 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
-              onClick={isPaused ? onResume : onPause}
-            >
-              {isPaused ? (
-                <>
-                  <Play className="w-5 h-5 mr-2" />
-                  Continuar
-                </>
-              ) : (
-                <>
-                  <Pause className="w-5 h-5 mr-2" />
-                  Pausar ejercicio
-                </>
-              )}
-            </Button>
-          </div>
+        {/* Bottom Section - only show when NOT paused */}
+        {!isPaused && (
+          <div className="px-4 pb-12 space-y-6">
+            {/* Pause button */}
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-full px-8 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                onClick={onPause}
+              >
+                <Pause className="w-5 h-5 mr-2" />
+                Pausar ejercicio
+              </Button>
+            </div>
 
-          {/* Timer */}
-          <div className="text-center">
-            {tipoEjecucion === "repeticiones" ? (
-              <div className="space-y-2">
-                <p className="text-7xl font-bold text-white tracking-tight">
-                  {repeticiones}
+            {/* Timer */}
+            <div className="text-center">
+              {tipoEjecucion === "repeticiones" ? (
+                <div className="space-y-2">
+                  <p className="text-7xl font-bold text-white tracking-tight">
+                    {repeticiones}
+                  </p>
+                  <p className="text-lg text-white/60">repeticiones</p>
+                </div>
+              ) : (
+                <p className="text-8xl font-bold text-white tracking-tight">
+                  {formatTime(timeRemaining)}
                 </p>
-                <p className="text-lg text-white/60">repeticiones</p>
-              </div>
-            ) : (
-              <p className="text-8xl font-bold text-white tracking-tight">
-                {formatTime(timeRemaining)}
-              </p>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Exit button - top left */}
@@ -188,7 +181,7 @@ export function WorkoutExercise({
         </div>
       )}
 
-      {/* Paused overlay */}
+      {/* Paused overlay - single button here */}
       {isPaused && (
         <div className="absolute inset-0 z-15 bg-black/50 flex items-center justify-center">
           <div className="text-center">
