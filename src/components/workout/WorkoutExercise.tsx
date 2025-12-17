@@ -1,8 +1,17 @@
 import { useRef, useState } from "react";
 import { Pause, Play, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { WorkoutProgressDots } from "./WorkoutProgressDots";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface WorkoutExerciseProps {
   exerciseName: string;
@@ -18,9 +27,11 @@ interface WorkoutExerciseProps {
   isPaused: boolean;
   dotsByBlock: number[];
   currentDotIndex: number;
+  userGender?: string;
   onPause: () => void;
   onResume: () => void;
   onExit: () => void;
+  onFinishEarly: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -43,11 +54,24 @@ export function WorkoutExercise({
   isPaused,
   dotsByBlock,
   currentDotIndex,
+  userGender,
   onPause,
   onResume,
   onExit,
+  onFinishEarly,
 }: WorkoutExerciseProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showFinishDialog, setShowFinishDialog] = useState(false);
+
+  // Gender-dynamic confirmation title
+  const getFinishTitle = () => {
+    if (userGender === "Mujer") {
+      return "¿Estás segura de finalizar la rutina?";
+    } else if (userGender === "Hombre") {
+      return "¿Estás seguro de finalizar la rutina?";
+    }
+    return "¿Quieres finalizar la rutina?";
+  };
   const [showTips, setShowTips] = useState(false);
 
   return (
@@ -184,7 +208,7 @@ export function WorkoutExercise({
       {/* Paused overlay - single button here */}
       {isPaused && (
         <div className="absolute inset-0 z-15 bg-black/50 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center space-y-4">
             <p className="text-2xl font-bold text-white mb-4">Pausado</p>
             <Button
               size="lg"
@@ -194,9 +218,45 @@ export function WorkoutExercise({
               <Play className="w-5 h-5 mr-2" />
               Continuar
             </Button>
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFinishDialog(true)}
+                className="text-white/60 hover:text-white hover:bg-white/10"
+              >
+                Finalizar rutina
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Finish Early Confirmation Dialog */}
+      <AlertDialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{getFinishTitle()}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Si finalizas ahora, la rutina no quedará registrada y no se modificará tu progreso ni el mapa radial.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowFinishDialog(false)}>
+              Seguir entrenando
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowFinishDialog(false);
+                onFinishEarly();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Finalizar rutina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
