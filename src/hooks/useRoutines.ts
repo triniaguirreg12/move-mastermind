@@ -152,18 +152,28 @@ export function calcularDuracionTotal(
 // ============ UNIFIED IMPLEMENTS CALCULATION ============
 export function calcularImplementosUnicos(
   blockExercises: Array<{
-    exercise?: { implementos: string[] | null } | null;
+    exercise?: { implementos: string[] | null } | { implementos: string[] | null }[] | null;
   }>
 ): string[] {
   const allImplements = new Set<string>();
   blockExercises.forEach(be => {
-    if (be.exercise?.implementos) {
-      be.exercise.implementos.forEach(imp => allImplements.add(imp));
+    // Handle both object and array responses from Supabase join
+    const exercise = be.exercise;
+    let implementos: string[] | null = null;
+    
+    if (Array.isArray(exercise)) {
+      implementos = exercise[0]?.implementos || null;
+    } else if (exercise && typeof exercise === 'object') {
+      implementos = (exercise as { implementos: string[] | null }).implementos;
+    }
+    
+    if (implementos && Array.isArray(implementos)) {
+      implementos.forEach(imp => allImplements.add(imp));
     }
   });
   
-  let implements_arr = Array.from(allImplements);
-  // Filter out "Sin implemento" if there are real implements
+  // Filter out "Sin implemento" if there are real implements, then sort alphabetically
+  let implements_arr = Array.from(allImplements).sort();
   if (implements_arr.length > 1 && implements_arr.includes("Sin implemento")) {
     implements_arr = implements_arr.filter(i => i !== "Sin implemento");
   }
@@ -306,14 +316,25 @@ export function usePublishedRoutines() {
         // Calculate unique implements from exercises
         const allImplements = new Set<string>();
         routineExercisesData.forEach(be => {
-          const exercise = be.exercise as { implementos: string[] | null } | null;
-          if (exercise?.implementos) {
-            exercise.implementos.forEach(imp => allImplements.add(imp));
+          // Handle both object and array responses from Supabase join
+          const exercise = be.exercise;
+          let implementos: string[] | null = null;
+          
+          if (Array.isArray(exercise)) {
+            // If exercise is an array, get implementos from first item
+            implementos = exercise[0]?.implementos || null;
+          } else if (exercise && typeof exercise === 'object') {
+            // If exercise is a single object
+            implementos = (exercise as { implementos: string[] | null }).implementos;
+          }
+          
+          if (implementos && Array.isArray(implementos)) {
+            implementos.forEach(imp => allImplements.add(imp));
           }
         });
         
-        // Filter out "Sin implemento" if there are real implements
-        let implements_arr = Array.from(allImplements);
+        // Filter out "Sin implemento" if there are real implements, then sort alphabetically
+        let implements_arr = Array.from(allImplements).sort();
         if (implements_arr.length > 1 && implements_arr.includes("Sin implemento")) {
           implements_arr = implements_arr.filter(i => i !== "Sin implemento");
         }
