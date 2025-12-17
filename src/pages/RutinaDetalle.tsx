@@ -2,8 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useRoutine } from "@/hooks/useRoutines";
+import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
+import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 
 // Padel ball SVG component
 function PadelBall({ filled, size = "md" }: { filled: boolean; size?: "sm" | "md" }) {
@@ -172,6 +175,8 @@ function ExerciseItem({ exercise }: ExerciseItemProps) {
 export default function RutinaDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [activeTab, setActiveTab] = useState("rutina");
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   
   const { data: routine, isLoading, error } = useRoutine(id);
 
@@ -212,7 +217,7 @@ export default function RutinaDetalle() {
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Hero Section */}
-      <div className="relative h-72 overflow-hidden">
+      <div className="relative h-64 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
@@ -260,84 +265,143 @@ export default function RutinaDetalle() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-6 space-y-6">
-        {/* Description Section */}
-        {routine.descripcion && (
-          <section>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Descripción
-            </h2>
-            <p className="text-sm text-foreground/80 leading-relaxed">
-              {routine.descripcion}
-            </p>
-          </section>
-        )}
+      {/* Tabs */}
+      <div className="px-4 pt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+            <TabsTrigger 
+              value="rutina"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              Rutina
+            </TabsTrigger>
+            <TabsTrigger 
+              value="aptitudes"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              Aptitudes
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Category Badge */}
-        <section>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Categoría
-          </h2>
-          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-            {routine.categoria}
-          </span>
-        </section>
+          {/* Rutina Tab Content */}
+          <TabsContent value="rutina" className="mt-4 space-y-6">
+            {/* Description Section */}
+            {routine.descripcion && (
+              <section>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Descripción
+                </h2>
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  {routine.descripcion}
+                </p>
+              </section>
+            )}
 
-        {/* Exercise List by Blocks */}
-        {routine.blocks && routine.blocks.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Ejercicios
-            </h2>
-            
-            <div className="space-y-4">
-              {routine.blocks.map((block, blockIndex) => (
-                <div key={block.id} className="space-y-2">
-                  {/* Block separator */}
-                  {blockIndex > 0 && (
-                    <div className="py-2">
-                      <div className="h-px bg-border/50" />
+            {/* Category Badge */}
+            <section>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                Categoría
+              </h2>
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                {routine.categoria}
+              </span>
+            </section>
+
+            {/* Exercise List by Blocks */}
+            {routine.blocks && routine.blocks.length > 0 && (
+              <section>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Ejercicios
+                </h2>
+                
+                <div className="space-y-4">
+                  {routine.blocks.map((block, blockIndex) => (
+                    <div key={block.id} className="space-y-2">
+                      {/* Block separator */}
+                      {blockIndex > 0 && (
+                        <div className="py-2">
+                          <div className="h-px bg-border/50" />
+                        </div>
+                      )}
+                      
+                      {/* Block name */}
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
+                        {block.nombre}
+                        {block.repetir_bloque && block.series > 1 && (
+                          <span className="ml-2 text-primary">({block.series} series)</span>
+                        )}
+                      </p>
+
+                      {/* Exercises in block */}
+                      <div className="space-y-2">
+                        {block.exercises?.map((blockExercise) => {
+                          const exercise = (blockExercise as { exercise?: { id: string; nombre: string; thumbnail_url: string | null; video_url: string | null; tips: string | null } }).exercise;
+                          if (!exercise) return null;
+                          return (
+                            <ExerciseItem 
+                              key={blockExercise.id} 
+                              exercise={exercise}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
-                  
-                  {/* Block name */}
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
-                    {block.nombre}
-                    {block.repetir_bloque && block.series > 1 && (
-                      <span className="ml-2 text-primary">({block.series} series)</span>
-                    )}
-                  </p>
-
-                  {/* Exercises in block */}
-                  <div className="space-y-2">
-                    {block.exercises?.map((blockExercise) => {
-                      const exercise = (blockExercise as { exercise?: { id: string; nombre: string; thumbnail_url: string | null; video_url: string | null; tips: string | null } }).exercise;
-                      if (!exercise) return null;
-                      return (
-                        <ExerciseItem 
-                          key={blockExercise.id} 
-                          exercise={exercise}
-                        />
-                      );
-                    })}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              </section>
+            )}
 
-        {/* Empty exercises state */}
-        {(!routine.blocks || routine.blocks.length === 0) && (
-          <section>
-            <div className="p-6 rounded-xl bg-card/50 border border-border/30 text-center">
-              <p className="text-muted-foreground">
-                Esta rutina aún no tiene ejercicios asignados.
-              </p>
-            </div>
-          </section>
-        )}
+            {/* Empty exercises state */}
+            {(!routine.blocks || routine.blocks.length === 0) && (
+              <section>
+                <div className="p-6 rounded-xl bg-card/50 border border-border/30 text-center">
+                  <p className="text-muted-foreground">
+                    Esta rutina aún no tiene ejercicios asignados.
+                  </p>
+                </div>
+              </section>
+            )}
+          </TabsContent>
+
+          {/* Aptitudes Tab Content */}
+          <TabsContent value="aptitudes" className="mt-4">
+            <section>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 text-center">
+                Mapa de Aptitudes
+              </h2>
+              
+              <div className="bg-card/30 rounded-2xl border border-border/30 p-4">
+                <RoutineRadarChart objetivo={routine.objetivo as unknown as Record<string, number> | null} />
+              </div>
+
+              {/* Aptitudes legend */}
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                {[
+                  { key: "fuerza", label: "Fuerza" },
+                  { key: "potencia", label: "Potencia" },
+                  { key: "agilidad", label: "Agilidad" },
+                  { key: "coordinacion", label: "Coordinación" },
+                  { key: "velocidad", label: "Velocidad" },
+                  { key: "estabilidad", label: "Estabilidad" },
+                  { key: "movilidad", label: "Movilidad" },
+                  { key: "resistencia", label: "Resistencia" },
+                ].map(({ key, label }) => {
+                  const objetivo = routine.objetivo as unknown as Record<string, number> | null;
+                  const value = objetivo?.[key] || 0;
+                  return (
+                    <div 
+                      key={key}
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
+                    >
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <span className="text-xs font-semibold text-foreground">{value}/10</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Sticky Action Buttons */}
@@ -346,9 +410,7 @@ export default function RutinaDetalle() {
           <Button
             variant="outline"
             className="flex-1 h-12 text-sm font-medium"
-            onClick={() => {
-              navigate("/calendario");
-            }}
+            onClick={() => setScheduleModalOpen(true)}
           >
             <Calendar className="w-4 h-4 mr-2" />
             Programar
@@ -363,6 +425,14 @@ export default function RutinaDetalle() {
           </Button>
         </div>
       </div>
+
+      {/* Schedule Modal */}
+      <ScheduleRoutineModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        routineId={routine.id}
+        routineName={routine.nombre}
+      />
     </div>
   );
 }

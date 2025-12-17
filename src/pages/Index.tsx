@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Calendar, Settings, ChevronRight, Info } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
@@ -11,10 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addDays, startOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useScheduledRoutines } from "@/hooks/useScheduledRoutines";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
@@ -23,29 +24,7 @@ import agilityImg from "@/assets/agility-routine.png";
 
 const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
 
-const activities = [
-  {
-    id: 1,
-    type: "padel",
-    title: "Partido de Padel",
-    subtitle: "13:00 - 14:00",
-    image: padelBallImg,
-  },
-  {
-    id: 2,
-    type: "program",
-    title: "Programa agilidad Upper Body",
-    subtitle: "Semana 2",
-    image: upperBodyImg,
-  },
-  {
-    id: 3,
-    type: "routine",
-    title: "Rutina agilidad Upper Body",
-    subtitle: "Avanzado - Tren superior | 15 min",
-    image: agilityImg,
-  },
-];
+// Static activities removed - now using scheduled routines from database
 
 const radarData = [
   { label: "Fu", value: 85 },  // Fuerza
@@ -59,18 +38,62 @@ const radarData = [
 ];
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const { data: scheduledRoutines = [] } = useScheduledRoutines();
 
   const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const getActivityDots = (date: Date) => {
-    const day = date.getDate();
-    if (day === 15) return ["training", "training"];
-    if (day === 17) return ["training", "padel", "custom"];
-    if (day === 21) return ["training", "padel", "training"];
-    return [];
+  // Get scheduled routines for a specific date
+  const getScheduledForDate = (date: Date) => {
+    return scheduledRoutines.filter(
+      (sr) => sr.scheduled_date === format(date, "yyyy-MM-dd") && sr.status === "programada"
+    );
   };
+
+  const getActivityDots = (date: Date) => {
+    const scheduled = getScheduledForDate(date);
+    const dots: string[] = [];
+    
+    // Add training dots for scheduled routines
+    scheduled.forEach(() => dots.push("training"));
+    
+    // Keep some mock data for demo purposes (padel, custom)
+    const day = date.getDate();
+    if (day === 17) dots.push("padel", "custom");
+    if (day === 21) dots.push("padel");
+    
+    return dots;
+  };
+
+  // Get activities for today based on scheduled routines
+  const todayActivities = useMemo(() => {
+    const todayScheduled = getScheduledForDate(selectedDate);
+    
+    const scheduledActivities = todayScheduled.map((sr) => ({
+      id: sr.id,
+      type: "routine" as const,
+      title: sr.routine?.nombre || "Rutina",
+      subtitle: `${sr.routine?.categoria || ""} | ${sr.routine?.dificultad || ""}`,
+      image: sr.routine?.portada_url || agilityImg,
+      routineId: sr.routine_id,
+    }));
+
+    // Keep some mock activities for demo
+    const mockActivities = [
+      {
+        id: "mock-1",
+        type: "padel" as const,
+        title: "Partido de Padel",
+        subtitle: "13:00 - 14:00",
+        image: padelBallImg,
+        routineId: null,
+      },
+    ];
+
+    return [...scheduledActivities, ...mockActivities];
+  }, [scheduledRoutines, selectedDate]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -191,31 +214,44 @@ const Index = () => {
           Actividades de hoy
         </h2>
 
-        <div className="space-y-3 stagger-children">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="bg-card rounded-xl p-3 border border-border flex items-center gap-3 hover:border-primary/30 transition-colors cursor-pointer"
-            >
-              <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-                <img
-                  src={activity.image}
-                  alt={activity.title}
-                  className="w-full h-full object-cover"
-                />
+        {todayActivities.length === 0 ? (
+          <div className="p-6 rounded-xl bg-card/50 border border-dashed border-border/50 text-center">
+            <p className="text-sm text-muted-foreground">
+              No tienes actividades programadas para hoy
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 stagger-children">
+            {todayActivities.map((activity) => (
+              <div
+                key={activity.id}
+                onClick={() => {
+                  if (activity.routineId) {
+                    navigate(`/rutina/${activity.routineId}`);
+                  }
+                }}
+                className="bg-card rounded-xl p-3 border border-border flex items-center gap-3 hover:border-primary/30 transition-colors cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                  <img
+                    src={activity.image}
+                    alt={activity.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-sm text-foreground truncate">
+                    {activity.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {activity.subtitle}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-sm text-foreground truncate">
-                  {activity.title}
-                </h3>
-                <p className="text-xs text-muted-foreground truncate">
-                  {activity.subtitle}
-                </p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <BottomNav />
