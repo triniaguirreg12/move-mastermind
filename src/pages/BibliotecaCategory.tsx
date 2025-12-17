@@ -401,7 +401,7 @@ const BibliotecaCategory = () => {
     (filters.sortBy ? 1 : 0);
 
   const handleRoutineClick = (id: string | number) => {
-    console.log("Navigate to routine:", id);
+    navigate(`/rutina/${id}`);
   };
 
   return (
