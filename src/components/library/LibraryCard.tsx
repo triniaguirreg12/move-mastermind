@@ -1,4 +1,4 @@
-import { Clock, Dumbbell, Star } from "lucide-react";
+import { Clock, Calendar, Dumbbell, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ interface LibraryCardProps {
   equipment: string[];
   aptitudes: { name: string; value: number }[];
   category: "funcional" | "kinesiologia" | "activacion";
+  tipo?: "rutina" | "programa";
   onClick?: () => void;
 }
 
@@ -114,6 +115,7 @@ export function LibraryCard({
   equipment,
   aptitudes,
   category,
+  tipo = "rutina",
   onClick,
 }: LibraryCardProps) {
   const navigate = useNavigate();
@@ -121,6 +123,7 @@ export function LibraryCard({
   const displayEquipment = hasEquipment 
     ? equipment.filter(e => e !== "Sin implemento").slice(0, 2)
     : ["Sin implemento"];
+  const isPrograma = tipo === "programa";
 
   const handleClick = () => {
     if (onClick) {
@@ -181,11 +184,17 @@ export function LibraryCard({
 
           {/* Duration & Equipment Row */}
           <div className="flex items-center justify-between gap-1">
-            {/* Duration - Single line with nowrap */}
-            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md shrink-0">
-              <Clock className="w-2.5 h-2.5 text-white/80 shrink-0" />
-              <span className="text-[9px] font-medium text-white whitespace-nowrap">{duration}</span>
-            </div>
+            {/* Duration - Only show if there's a value */}
+            {duration && (
+              <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md shrink-0">
+                {isPrograma ? (
+                  <Calendar className="w-2.5 h-2.5 text-white/80 shrink-0" />
+                ) : (
+                  <Clock className="w-2.5 h-2.5 text-white/80 shrink-0" />
+                )}
+                <span className="text-[9px] font-medium text-white whitespace-nowrap">{duration}</span>
+              </div>
+            )}
 
             {/* Equipment - Icon + text chips */}
             <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md overflow-hidden">
