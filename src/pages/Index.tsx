@@ -202,7 +202,9 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Pádel</span>
-                <span className="text-xs font-medium text-foreground">{weeklyStats.padel}</span>
+                <span className="text-xs font-medium text-foreground">
+                  {weeklyStats.padelCompleted}/{weeklyStats.padelTotal}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
