@@ -133,7 +133,7 @@ export function CategoryCarousel({
           <div key={routine.id} className="snap-start">
             <LibraryCard
               {...routine}
-              onClick={() => onRoutineClick?.(routine.id)}
+              onClick={onRoutineClick ? () => onRoutineClick(routine.id) : undefined}
             />
           </div>
         ))}
