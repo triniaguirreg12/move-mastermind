@@ -271,35 +271,38 @@ export default function RutinaDetalle() {
   const allImplements = calcularImplementosRutina(routine.blocks || []);
 
   return (
-    <div className="min-h-screen bg-background pb-28">
+    <div className="min-h-screen bg-background pb-28 relative">
+      {/* Fixed Back Button - outside overflow context */}
+      <div className="absolute top-4 left-4 z-50">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Fixed Rating - outside overflow context */}
+      {routine.calificacion && routine.calificacion > 0 && (
+        <div className="absolute top-4 right-4 z-50">
+          <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <span className="text-sm font-semibold text-white">{routine.calificacion.toFixed(1)}</span>
+            <Star className="w-4 h-4 text-warning fill-warning" />
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="relative h-64 overflow-hidden">
         {/* Background Image */}
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0">
           <img
             src={routine.portada_url || "/placeholder.svg"}
             alt={routine.nombre}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-background" />
-        </div>
-
-        {/* Top Overlay - Back + Rating */}
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-20">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors pointer-events-auto"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          {routine.calificacion && routine.calificacion > 0 && (
-            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
-              <span className="text-sm font-semibold text-white">{routine.calificacion.toFixed(1)}</span>
-              <Star className="w-4 h-4 text-warning fill-warning" />
-            </div>
-          )}
         </div>
 
         {/* Bottom Overlay - Title, Difficulty, Meta */}
