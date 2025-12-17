@@ -147,9 +147,16 @@ const BibliotecaCategory = () => {
       .filter((r) => r.category === category);
   }, [routines, category]);
 
+  // Filter by content type (rutina vs programa) for Funcional category
+  const filteredByType = useMemo(() => {
+    if (!isFuncional) return libraryRoutines;
+    const tipoFilter = contentType === "routines" ? "rutina" : "programa";
+    return libraryRoutines.filter((r) => r.tipo === tipoFilter);
+  }, [libraryRoutines, contentType, isFuncional]);
+
   // Filter and sort routines
   const filteredRoutines = useMemo(() => {
-    let result = [...libraryRoutines];
+    let result = [...filteredByType];
 
     // Content type filter (only for funcional) - for now all are routines
     // Programs feature would need a separate table/flag
@@ -213,7 +220,7 @@ const BibliotecaCategory = () => {
     }
 
     return result;
-  }, [libraryRoutines, searchQuery, contentType, filters, isFuncional]);
+  }, [filteredByType, searchQuery, filters]);
 
   const toggleArrayFilter = (key: keyof typeof filters, value: string) => {
     const currentArray = filters[key] as string[];

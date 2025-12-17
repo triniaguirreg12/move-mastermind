@@ -215,6 +215,7 @@ export type Database = {
           objetivo_mode: string | null
           portada_type: string | null
           portada_url: string | null
+          tipo: string
           updated_at: string
           veces_realizada: number | null
         }
@@ -233,6 +234,7 @@ export type Database = {
           objetivo_mode?: string | null
           portada_type?: string | null
           portada_url?: string | null
+          tipo?: string
           updated_at?: string
           veces_realizada?: number | null
         }
@@ -251,6 +253,7 @@ export type Database = {
           objetivo_mode?: string | null
           portada_type?: string | null
           portada_url?: string | null
+          tipo?: string
           updated_at?: string
           veces_realizada?: number | null
         }
