@@ -21,6 +21,45 @@ const categoryGradients = {
   activacion: "from-warning/80 to-warning/20",
 };
 
+// Padel ball SVG component
+function PadelBall({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      className={cn(
+        "transition-colors",
+        filled ? "text-primary" : "text-muted-foreground/40"
+      )}
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="7"
+        fill={filled ? "currentColor" : "transparent"}
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      {/* Tennis/padel ball curve lines */}
+      <path
+        d="M4 3.5C6 5.5 6 10.5 4 12.5"
+        stroke={filled ? "hsl(var(--primary-foreground))" : "currentColor"}
+        strokeWidth="1"
+        fill="none"
+        opacity={filled ? 0.6 : 0.5}
+      />
+      <path
+        d="M12 3.5C10 5.5 10 10.5 12 12.5"
+        stroke={filled ? "hsl(var(--primary-foreground))" : "currentColor"}
+        strokeWidth="1"
+        fill="none"
+        opacity={filled ? 0.6 : 0.5}
+      />
+    </svg>
+  );
+}
+
 // Difficulty as padel balls
 function DifficultyIndicator({ level }: { level: string }) {
   const filled = level === "Principiante" ? 1 : level === "Intermedio" ? 2 : 3;
@@ -28,21 +67,15 @@ function DifficultyIndicator({ level }: { level: string }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className={cn(
-            "w-2.5 h-2.5 rounded-full border border-white/50",
-            i <= filled ? "bg-white" : "bg-transparent"
-          )}
-        />
+        <PadelBall key={i} filled={i <= filled} />
       ))}
     </div>
   );
 }
 
-// Simple aptitude preview bars
+// Simplified aptitude preview bars - smaller and more subtle
 function AptitudePreview({ aptitudes }: { aptitudes: { name: string; value: number }[] }) {
-  // Get top 3 aptitudes by value
+  // Get top 2-3 aptitudes by value
   const topAptitudes = [...aptitudes]
     .sort((a, b) => b.value - a.value)
     .slice(0, 3)
@@ -53,13 +86,13 @@ function AptitudePreview({ aptitudes }: { aptitudes: { name: string; value: numb
   const maxValue = Math.max(...topAptitudes.map(a => a.value));
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       {topAptitudes.map((apt) => (
-        <div key={apt.name} className="flex items-center gap-1.5">
-          <span className="text-[9px] text-white/80 w-14 truncate">{apt.name}</span>
-          <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+        <div key={apt.name} className="flex items-center gap-1">
+          <span className="text-[8px] text-white/60 w-12 truncate">{apt.name}</span>
+          <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-white/80 rounded-full transition-all"
+              className="h-full bg-white/50 rounded-full transition-all"
               style={{ width: `${(apt.value / maxValue) * 100}%` }}
             />
           </div>
@@ -110,8 +143,13 @@ export function LibraryCard({
         {/* Top Gradient Overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
 
-        {/* Top Overlay: Rating + Difficulty */}
+        {/* Top Overlay: Difficulty + Rating */}
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+          {/* Difficulty - Higher priority */}
+          <div className="bg-black/40 backdrop-blur-sm px-1.5 py-1 rounded-md">
+            <DifficultyIndicator level={difficulty} />
+          </div>
+
           {/* Rating */}
           {rating !== undefined && rating > 0 ? (
             <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
@@ -123,31 +161,26 @@ export function LibraryCard({
               <span className="text-[10px] text-white/60">—</span>
             </div>
           )}
-
-          {/* Difficulty */}
-          <div className="bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-            <DifficultyIndicator level={difficulty} />
-          </div>
         </div>
 
-        {/* Bottom Overlay: Duration, Equipment, Aptitudes */}
-        <div className="absolute bottom-2 left-2 right-2 space-y-2">
-          {/* Aptitude Preview */}
+        {/* Bottom Overlay: Aptitudes, Duration, Equipment */}
+        <div className="absolute bottom-2 left-2 right-2 space-y-1.5">
+          {/* Aptitude Preview - Smaller and subtle */}
           <AptitudePreview aptitudes={aptitudes} />
 
           {/* Duration & Equipment Row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-              <Clock className="w-2.5 h-2.5 text-white/80" />
-              <span className="text-[9px] font-medium text-white">{duration}</span>
+          <div className="flex items-center justify-between gap-1">
+            {/* Duration - Single line with nowrap */}
+            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md shrink-0">
+              <Clock className="w-2.5 h-2.5 text-white/80 shrink-0" />
+              <span className="text-[9px] font-medium text-white whitespace-nowrap">{duration}</span>
             </div>
 
-            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-              <Dumbbell className="w-2.5 h-2.5 text-white/80" />
-              <span className="text-[9px] text-white truncate max-w-[50px]">
-                {displayEquipment.length === 1 
-                  ? displayEquipment[0] 
-                  : `${displayEquipment.length}+`}
+            {/* Equipment - Icon + text chips */}
+            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md overflow-hidden">
+              <Dumbbell className="w-2.5 h-2.5 text-white/80 shrink-0" />
+              <span className="text-[8px] text-white truncate">
+                {displayEquipment.join(" · ")}
               </span>
             </div>
           </div>
