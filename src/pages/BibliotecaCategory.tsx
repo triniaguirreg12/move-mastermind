@@ -183,11 +183,13 @@ const BibliotecaCategory = () => {
       result = result.filter((r) => filters.difficulty.includes(r.difficulty));
     }
 
-    // Duration filter
+    // Duration filter - only applies to routines, not programs
     if (filters.duration) {
       result = result.filter((r) => {
-        const mins = parseInt(r.duration);
-        if (isNaN(mins)) return true; // Include if duration not set
+        // Programs don't use minute-based duration filter
+        if (r.tipo === "programa") return true;
+        const mins = r.durationValue;
+        if (!mins) return true; // Include if duration not set
         if (filters.duration === "short") return mins < 15;
         if (filters.duration === "medium") return mins >= 15 && mins <= 30;
         if (filters.duration === "long") return mins > 30;
@@ -210,9 +212,15 @@ const BibliotecaCategory = () => {
           case "rating-desc":
             return (b.rating || 0) - (a.rating || 0);
           case "duration-asc":
-            return parseInt(a.duration) - parseInt(b.duration);
+            // Programs (weeks) should sort differently than routines (minutes)
+            // For now, programs go to end when sorting by duration
+            if (a.tipo === "programa" && b.tipo !== "programa") return 1;
+            if (b.tipo === "programa" && a.tipo !== "programa") return -1;
+            return (a.durationValue || 0) - (b.durationValue || 0);
           case "duration-desc":
-            return parseInt(b.duration) - parseInt(a.duration);
+            if (a.tipo === "programa" && b.tipo !== "programa") return 1;
+            if (b.tipo === "programa" && a.tipo !== "programa") return -1;
+            return (b.durationValue || 0) - (a.durationValue || 0);
           default:
             return 0;
         }
