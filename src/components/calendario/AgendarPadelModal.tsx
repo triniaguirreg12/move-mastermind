@@ -258,7 +258,11 @@ export function AgendarPadelModal({
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border max-h-48">
                   {timeOptions.map((time) => (
-                    <SelectItem key={time} value={time} className="text-foreground">
+                    <SelectItem 
+                      key={time} 
+                      value={time} 
+                      className="text-foreground focus:bg-activity-padel/20 focus:text-foreground data-[state=checked]:bg-activity-padel/30"
+                    >
                       {time}
                     </SelectItem>
                   ))}
@@ -279,7 +283,7 @@ export function AgendarPadelModal({
                     <SelectItem 
                       key={time} 
                       value={time} 
-                      className="text-foreground"
+                      className="text-foreground focus:bg-activity-padel/20 focus:text-foreground data-[state=checked]:bg-activity-padel/30"
                       disabled={timeStart ? time <= timeStart : false}
                     >
                       {time}
