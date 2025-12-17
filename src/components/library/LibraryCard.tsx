@@ -1,6 +1,12 @@
 import { Clock, Calendar, Dumbbell, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LibraryCardProps {
   id: string | number;
@@ -119,10 +125,11 @@ export function LibraryCard({
   onClick,
 }: LibraryCardProps) {
   const navigate = useNavigate();
-  const hasEquipment = equipment.length > 0 && !equipment.includes("Sin implemento");
-  const displayEquipment = hasEquipment 
-    ? equipment.filter(e => e !== "Sin implemento").slice(0, 2)
-    : ["Sin implemento"];
+  // Equipment logic: filter out "Sin implemento" if real implements exist
+  const realEquipment = equipment.filter(e => e !== "Sin implemento");
+  const hasRealEquipment = realEquipment.length > 0;
+  const displayEquipment = hasRealEquipment ? realEquipment : ["Sin implemento"];
+  const extraEquipmentCount = hasRealEquipment ? realEquipment.length - 1 : 0;
   const isPrograma = tipo === "programa";
 
   const handleClick = () => {
@@ -196,12 +203,30 @@ export function LibraryCard({
               </div>
             )}
 
-            {/* Equipment - Icon + text chips */}
-            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md overflow-hidden">
-              <Dumbbell className="w-2.5 h-2.5 text-white/80 shrink-0" />
-              <span className="text-[8px] text-white truncate">
-                {displayEquipment.join(" · ")}
-              </span>
+            {/* Equipment - First implement + "+N" if more */}
+            <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                <Dumbbell className="w-2.5 h-2.5 text-white/80 shrink-0" />
+                <span className="text-[8px] text-white whitespace-nowrap">
+                  {displayEquipment[0]}
+                </span>
+              </div>
+              {extraEquipmentCount > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="bg-black/40 backdrop-blur-sm px-1 py-0.5 rounded-md cursor-pointer">
+                        <span className="text-[8px] text-white/80 font-medium">
+                          +{extraEquipmentCount}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-card border-border">
+                      <p className="text-xs">{realEquipment.slice(1).join(", ")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </div>
