@@ -205,11 +205,15 @@ export function LibraryCard({
               </div>
             )}
 
-            {/* Equipment - First implement + "+N" if more */}
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+            {/* Equipment - Main implement chip + plain "+N" text */}
+            <div className="flex items-center gap-1 min-w-0">
+              <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md min-w-0">
                 <Dumbbell className="w-2.5 h-2.5 text-white/80 shrink-0" />
-                <span className="text-[8px] text-white whitespace-nowrap">
+                <span className={cn(
+                  "text-[8px] text-white",
+                  // Only allow truncation for "Sin implemento"
+                  !hasRealEquipment ? "truncate min-w-0" : "whitespace-nowrap"
+                )}>
                   {displayEquipment[0]}
                 </span>
               </div>
@@ -217,11 +221,9 @@ export function LibraryCard({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="bg-black/40 backdrop-blur-sm px-1 py-0.5 rounded-md cursor-pointer">
-                        <span className="text-[8px] text-white/80 font-medium">
-                          +{extraEquipmentCount}
-                        </span>
-                      </div>
+                      <span className="text-[9px] text-white/70 font-medium cursor-pointer hover:text-white transition-colors shrink-0">
+                        +{extraEquipmentCount}
+                      </span>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="bg-card border-border">
                       <p className="text-xs">{realEquipment.slice(1).join(", ")}</p>
