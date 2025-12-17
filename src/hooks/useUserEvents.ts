@@ -396,13 +396,19 @@ export function calculateWeeklyStats(events: UserEvent[]) {
     e => e.type === "padel" && e.status === "completed"
   ).length;
 
+  const scheduledPadel = events.filter(
+    e => e.type === "padel" && e.status === "scheduled"
+  ).length;
+
   const profesionalEvents = events.filter(
     e => e.type === "profesional"
   ).length;
 
   return {
     entrenamiento: completedEntrenamientos,
-    padel: completedPadel,
+    padelCompleted: completedPadel,
+    padelScheduled: scheduledPadel,
+    padelTotal: completedPadel + scheduledPadel,
     profesional: profesionalEvents,
   };
 }
