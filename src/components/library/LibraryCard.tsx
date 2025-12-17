@@ -1,4 +1,5 @@
 import { Clock, Dumbbell, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface LibraryCardProps {
@@ -103,6 +104,7 @@ function AptitudePreview({ aptitudes }: { aptitudes: { name: string; value: numb
 }
 
 export function LibraryCard({
+  id,
   title,
   subtitle,
   imageUrl,
@@ -114,14 +116,23 @@ export function LibraryCard({
   category,
   onClick,
 }: LibraryCardProps) {
+  const navigate = useNavigate();
   const hasEquipment = equipment.length > 0 && !equipment.includes("Sin implemento");
   const displayEquipment = hasEquipment 
     ? equipment.filter(e => e !== "Sin implemento").slice(0, 2)
     : ["Sin implemento"];
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/rutina/${id}`);
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className="flex-shrink-0 w-36 group focus:outline-none"
     >
       {/* Card Image Container */}

@@ -7,12 +7,12 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Entrenamiento from "./pages/Entrenamiento";
 import BibliotecaCategory from "./pages/BibliotecaCategory";
+import RutinaDetalle from "./pages/RutinaDetalle";
 import Profesionales from "./pages/Profesionales";
 import Configuracion from "./pages/Configuracion";
 import Calendario from "./pages/Calendario";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-
 // Admin pages
 import { AdminLayout } from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -49,6 +49,7 @@ const App = () => (
             <Route path="/calendario" element={<Calendario />} />
             <Route path="/entrenamiento" element={<Entrenamiento />} />
             <Route path="/biblioteca/:category" element={<BibliotecaCategory />} />
+            <Route path="/rutina/:id" element={<RutinaDetalle />} />
             <Route path="/profesionales" element={<Profesionales />} />
             <Route path="/configuracion" element={<Configuracion />} />
             
