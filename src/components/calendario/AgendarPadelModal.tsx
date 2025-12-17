@@ -231,10 +231,15 @@ export function AgendarPadelModal({
                     "h-7 w-7 bg-transparent border-0 p-0 opacity-70 hover:opacity-100 hover:bg-secondary"
                   ),
                   head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                  day: "h-9 w-9 p-0 font-normal text-foreground hover:bg-secondary rounded-md",
-                  day_selected: "bg-activity-padel text-background hover:bg-activity-padel hover:text-background",
-                  day_today: "ring-2 ring-white/60 ring-inset bg-transparent text-foreground",
+                  row: "flex w-full mt-2",
+                  // Override cell to remove any accent/green background
+                  cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                  day: "h-9 w-9 p-0 font-normal text-foreground hover:bg-secondary/80 rounded-md transition-colors",
+                  day_selected: "!bg-activity-padel !text-background hover:!bg-activity-padel/90",
+                  day_today: "ring-2 ring-white/70 ring-inset !bg-transparent",
                   day_outside: "text-muted-foreground opacity-50",
+                  day_disabled: "text-muted-foreground opacity-50",
+                  day_range_middle: "bg-activity-padel/20",
                 }}
               />
             </div>
