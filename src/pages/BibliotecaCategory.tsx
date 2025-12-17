@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, ArrowLeft, Filter, X } from "lucide-react";
+import { Search, ArrowLeft, Filter, X, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LibraryCard } from "@/components/library/LibraryCard";
@@ -13,6 +13,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { usePublishedRoutines, routineToLibraryCard } from "@/hooks/useRoutines";
 
 // Category info
 const categoryInfo = {
@@ -32,169 +33,6 @@ const categoryInfo = {
     color: "text-warning",
   },
 };
-
-// Mock data - same as in Entrenamiento
-const mockRoutines = [
-  {
-    id: "1",
-    title: "Fuerza Upper Body",
-    subtitle: "Tren superior intenso",
-    duration: "25 min",
-    difficulty: "Avanzado" as const,
-    equipment: ["Mancuerna", "Barra"],
-    rating: 4.6,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Fuerza", value: 9 },
-      { name: "Potencia", value: 6 },
-      { name: "Estabilidad", value: 5 },
-      { name: "Resistencia", value: 4 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "2",
-    title: "Core & Estabilidad",
-    subtitle: "Fortalece tu centro",
-    duration: "20 min",
-    difficulty: "Intermedio" as const,
-    equipment: ["Banda", "Miniband"],
-    rating: 4.8,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Estabilidad", value: 10 },
-      { name: "Fuerza", value: 6 },
-      { name: "Coordinación", value: 5 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "3",
-    title: "Piernas Explosivas",
-    subtitle: "Potencia y velocidad",
-    duration: "30 min",
-    difficulty: "Avanzado" as const,
-    equipment: ["Mancuerna", "Pesa rusa"],
-    rating: 4.3,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Potencia", value: 9 },
-      { name: "Velocidad", value: 8 },
-      { name: "Fuerza", value: 7 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "4",
-    title: "Full Body Funcional",
-    subtitle: "Entrena todo el cuerpo",
-    duration: "35 min",
-    difficulty: "Intermedio" as const,
-    equipment: ["Mancuerna"],
-    rating: 4.5,
-    category: "funcional" as const,
-    aptitudes: [
-      { name: "Resistencia", value: 8 },
-      { name: "Fuerza", value: 7 },
-      { name: "Coordinación", value: 6 },
-    ],
-    type: "program" as const,
-  },
-  {
-    id: "5",
-    title: "Recuperación Activa",
-    subtitle: "Movilidad y estiramiento",
-    duration: "15 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Sin implemento"],
-    rating: 4.9,
-    category: "kinesiologia" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 10 },
-      { name: "Estabilidad", value: 5 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "6",
-    title: "Liberación Miofascial",
-    subtitle: "Foam roller session",
-    duration: "20 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Foam roller"],
-    rating: 4.7,
-    category: "kinesiologia" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 9 },
-      { name: "Estabilidad", value: 4 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "7",
-    title: "Hombro Saludable",
-    subtitle: "Prevención de lesiones",
-    duration: "18 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Banda"],
-    rating: 4.6,
-    category: "kinesiologia" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 8 },
-      { name: "Estabilidad", value: 7 },
-      { name: "Coordinación", value: 4 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "8",
-    title: "Activación Pre-Padel",
-    subtitle: "Prepara tu cuerpo",
-    duration: "10 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Banda elástica"],
-    rating: 4.4,
-    category: "activacion" as const,
-    aptitudes: [
-      { name: "Agilidad", value: 8 },
-      { name: "Velocidad", value: 7 },
-      { name: "Coordinación", value: 6 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "9",
-    title: "Warm Up Dinámico",
-    subtitle: "Calentamiento completo",
-    duration: "12 min",
-    difficulty: "Principiante" as const,
-    equipment: ["Sin implemento"],
-    rating: 4.5,
-    category: "activacion" as const,
-    aptitudes: [
-      { name: "Movilidad", value: 7 },
-      { name: "Agilidad", value: 6 },
-      { name: "Velocidad", value: 5 },
-    ],
-    type: "routine" as const,
-  },
-  {
-    id: "10",
-    title: "Activación Neuromuscular",
-    subtitle: "Despierta tus músculos",
-    duration: "8 min",
-    difficulty: "Intermedio" as const,
-    equipment: ["Miniband"],
-    rating: 4.2,
-    category: "activacion" as const,
-    aptitudes: [
-      { name: "Coordinación", value: 8 },
-      { name: "Estabilidad", value: 6 },
-      { name: "Velocidad", value: 5 },
-    ],
-    type: "routine" as const,
-  },
-];
 
 // Filter options
 const difficulties = [
@@ -291,6 +129,8 @@ const BibliotecaCategory = () => {
     sortBy: "",
   });
 
+  const { data: routines, isLoading, error } = usePublishedRoutines();
+
   const currentCategory = categoryInfo[category as keyof typeof categoryInfo];
 
   if (!currentCategory) {
@@ -300,16 +140,19 @@ const BibliotecaCategory = () => {
 
   const isFuncional = category === "funcional";
 
+  // Transform to library card format and filter by category
+  const libraryRoutines = useMemo(() => {
+    return (routines || [])
+      .map(routineToLibraryCard)
+      .filter((r) => r.category === category);
+  }, [routines, category]);
+
   // Filter and sort routines
   const filteredRoutines = useMemo(() => {
-    let result = mockRoutines.filter((r) => r.category === category);
+    let result = [...libraryRoutines];
 
-    // Content type filter (only for funcional)
-    if (isFuncional) {
-      result = result.filter((r) => 
-        contentType === "routines" ? r.type === "routine" : r.type === "program"
-      );
-    }
+    // Content type filter (only for funcional) - for now all are routines
+    // Programs feature would need a separate table/flag
 
     // Equipment filter
     if (filters.equipment.length > 0) {
@@ -337,6 +180,7 @@ const BibliotecaCategory = () => {
     if (filters.duration) {
       result = result.filter((r) => {
         const mins = parseInt(r.duration);
+        if (isNaN(mins)) return true; // Include if duration not set
         if (filters.duration === "short") return mins < 15;
         if (filters.duration === "medium") return mins >= 15 && mins <= 30;
         if (filters.duration === "long") return mins > 30;
@@ -369,7 +213,7 @@ const BibliotecaCategory = () => {
     }
 
     return result;
-  }, [category, searchQuery, contentType, filters, isFuncional]);
+  }, [libraryRoutines, searchQuery, contentType, filters, isFuncional]);
 
   const toggleArrayFilter = (key: keyof typeof filters, value: string) => {
     const currentArray = filters[key] as string[];
@@ -689,33 +533,54 @@ const BibliotecaCategory = () => {
           )}
         </header>
 
-        {/* Results Grid */}
-        <div className="px-4">
-          <p className="text-sm text-muted-foreground mb-4">
-            {filteredRoutines.length} resultado{filteredRoutines.length !== 1 ? "s" : ""}
-          </p>
-          
-          {filteredRoutines.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {filteredRoutines.map((routine) => (
-                <div key={routine.id} className="flex justify-center">
-                  <div className="w-full max-w-[160px]">
-                    <LibraryCard
-                      {...routine}
-                      onClick={() => handleRoutineClick(routine.id)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="px-4">
             <div className="glass-card p-8 text-center">
-              <p className="text-muted-foreground">
-                No se encontraron rutinas con esos criterios
-              </p>
+              <p className="text-destructive">Error al cargar las rutinas</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Results Grid */}
+        {!isLoading && !error && (
+          <div className="px-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              {filteredRoutines.length} resultado{filteredRoutines.length !== 1 ? "s" : ""}
+            </p>
+            
+            {filteredRoutines.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4">
+                {filteredRoutines.map((routine) => (
+                  <div key={routine.id} className="flex justify-center">
+                    <div className="w-full max-w-[160px]">
+                      <LibraryCard
+                        {...routine}
+                        onClick={() => handleRoutineClick(routine.id)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="glass-card p-8 text-center">
+                <p className="text-muted-foreground">
+                  {libraryRoutines.length === 0 
+                    ? "No hay rutinas disponibles en esta categoría. Crea rutinas desde el panel de administración."
+                    : "No se encontraron rutinas con esos criterios"
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </AppLayout>
   );
