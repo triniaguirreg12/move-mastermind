@@ -16,189 +16,45 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Search, Edit, Trash2, Star, Clock, Copy, Dumbbell, Timer } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Star, Clock, Copy, Dumbbell, Timer, Loader2 } from "lucide-react";
 import CreateRoutineModal from "@/components/admin/routines/CreateRoutineModal";
-import { Rutina, calcularDuracionRutina, obtenerImplementosRutina } from "@/components/admin/routines/types";
+import { Rutina, createEmptyRutina } from "@/components/admin/routines/types";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock exercises for demo purposes
-const mockEjercicio = {
-  id: 1,
-  nombre: "Sentadilla",
-  tips: "",
-  dificultad: "Intermedio" as const,
-  mecanicas: ["Compuesto"],
-  grupoMuscular: ["Tren Inferior"],
-  musculosPrincipales: ["Cuádriceps", "Glúteos"],
-  aptitudesPrimarias: ["Fuerza"],
-  aptitudesSecundarias: ["Estabilidad"],
-  implementos: ["Mancuerna"],
-  video: null,
-  thumbnail: null,
-};
-
-const mockEjercicio2 = {
-  id: 2,
-  nombre: "Plancha",
-  tips: "",
-  dificultad: "Principiante" as const,
-  mecanicas: ["Anti-movimiento"],
-  grupoMuscular: ["Core"],
-  musculosPrincipales: ["Zona media"],
-  aptitudesPrimarias: ["Estabilidad"],
-  aptitudesSecundarias: ["Resistencia"],
-  implementos: ["Sin implemento"],
-  video: null,
-  thumbnail: null,
-};
-
-const mockEjercicio3 = {
-  id: 3,
-  nombre: "Saltos",
-  tips: "",
-  dificultad: "Avanzado" as const,
-  mecanicas: ["Locomoción"],
-  grupoMuscular: ["Full Body"],
-  musculosPrincipales: ["Cuádriceps"],
-  aptitudesPrimarias: ["Potencia"],
-  aptitudesSecundarias: ["Agilidad"],
-  implementos: ["Banda"],
-  video: null,
-  thumbnail: null,
-};
-
-const rutinasIniciales: Rutina[] = [
-  {
-    id: 1,
-    nombre: "Full Body Strength",
-    descripcion: "Rutina completa de fuerza para todo el cuerpo",
-    categoria: "Funcional",
-    dificultad: "Intermedio",
-    dificultadMode: "auto",
-    objetivoMode: "auto",
-    objetivo: { fuerza: 8, potencia: 6, agilidad: 4, coordinacion: 5, velocidad: 3, estabilidad: 7, movilidad: 4, resistencia: 6 },
-    bloques: [
-      {
-        id: "b1",
-        nombre: "Bloque principal",
-        ejercicios: [
-          { id: "e1", ejercicio: mockEjercicio, tipoEjecucion: "tiempo", tiempo: 45, repeticiones: 0 },
-          { id: "e2", ejercicio: mockEjercicio3, tipoEjecucion: "tiempo", tiempo: 30, repeticiones: 0 },
-        ],
-        repetirBloque: true,
-        series: 3,
-        descansoEntreEjercicios: 30,
-        descansoEntreSeries: 60,
-        usarMismoDescanso: false,
-      }
-    ],
-    estado: "publicada",
-    descansoEntreBloques: 60,
-    portadaType: "",
-    calificacion: 4.6,
-    vecesRealizada: 127,
-  },
-  {
-    id: 2,
-    nombre: "Activación Matutina",
-    descripcion: "Rutina corta para comenzar el día con energía",
-    categoria: "Activación",
-    dificultad: "Principiante",
-    dificultadMode: "manual",
-    objetivoMode: "manual",
-    objetivo: { fuerza: 3, potencia: 2, agilidad: 5, coordinacion: 4, velocidad: 3, estabilidad: 4, movilidad: 7, resistencia: 4 },
-    bloques: [
-      {
-        id: "b2",
-        nombre: "Activación",
-        ejercicios: [
-          { id: "e3", ejercicio: mockEjercicio2, tipoEjecucion: "tiempo", tiempo: 60, repeticiones: 0 },
-        ],
-        repetirBloque: false,
-        series: 1,
-        descansoEntreEjercicios: 15,
-        descansoEntreSeries: 30,
-        usarMismoDescanso: true,
-      }
-    ],
-    estado: "publicada",
-    descansoEntreBloques: 30,
-    portadaType: "",
-    calificacion: 4.2,
-    vecesRealizada: 89,
-  },
-  {
-    id: 3,
-    nombre: "Recuperación Kinesiológica",
-    descripcion: "Ejercicios de recuperación y movilidad guiados",
-    categoria: "Kinesiología",
-    dificultad: "Principiante",
-    dificultadMode: "auto",
-    objetivoMode: "auto",
-    objetivo: { fuerza: 2, potencia: 1, agilidad: 3, coordinacion: 4, velocidad: 2, estabilidad: 6, movilidad: 9, resistencia: 3 },
-    bloques: [
-      {
-        id: "b3",
-        nombre: "Movilidad",
-        ejercicios: [
-          { id: "e4", ejercicio: mockEjercicio2, tipoEjecucion: "repeticiones", tiempo: 0, repeticiones: 12 },
-        ],
-        repetirBloque: true,
-        series: 2,
-        descansoEntreEjercicios: 20,
-        descansoEntreSeries: 45,
-        usarMismoDescanso: false,
-      }
-    ],
-    estado: "borrador",
-    descansoEntreBloques: 45,
-    portadaType: "",
-    calificacion: undefined,
-    vecesRealizada: 0,
-  },
-  {
-    id: 4,
-    nombre: "HIIT Funcional",
-    descripcion: "Entrenamiento de alta intensidad",
-    categoria: "Funcional",
-    dificultad: "Avanzado",
-    dificultadMode: "auto",
-    objetivoMode: "auto",
-    objetivo: { fuerza: 6, potencia: 8, agilidad: 7, coordinacion: 6, velocidad: 8, estabilidad: 5, movilidad: 3, resistencia: 9 },
-    bloques: [
-      {
-        id: "b4",
-        nombre: "HIIT",
-        ejercicios: [
-          { id: "e5", ejercicio: mockEjercicio, tipoEjecucion: "tiempo", tiempo: 40, repeticiones: 0 },
-          { id: "e6", ejercicio: mockEjercicio3, tipoEjecucion: "tiempo", tiempo: 40, repeticiones: 0 },
-        ],
-        repetirBloque: true,
-        series: 4,
-        descansoEntreEjercicios: 20,
-        descansoEntreSeries: 60,
-        usarMismoDescanso: false,
-      }
-    ],
-    estado: "publicada",
-    descansoEntreBloques: 90,
-    portadaType: "",
-    calificacion: 4.8,
-    vecesRealizada: 203,
-  },
-];
+import { 
+  useAllRoutinesWithDetails, 
+  dbRoutineToAdminRutina,
+  useDeleteRoutine,
+} from "@/hooks/useRoutines";
 
 type SortOption = "none" | "rating-desc" | "rating-asc" | "completed-desc" | "completed-asc";
 
 const AdminRutinas = () => {
   const { toast } = useToast();
-  const [rutinas, setRutinas] = useState<Rutina[]>(rutinasIniciales);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategoria, setFilterCategoria] = useState<string>("");
   const [filterEstado, setFilterEstado] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("none");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingRutina, setEditingRutina] = useState<Rutina | null>(null);
+
+  // Fetch real data from DB
+  const { data: routinesData, isLoading, error } = useAllRoutinesWithDetails();
+  const deleteRoutineMutation = useDeleteRoutine();
+
+  // Transform DB routines to Admin Rutina format
+  const rutinas = useMemo(() => {
+    if (!routinesData) return [];
+    return routinesData.map(routine => {
+      const adminRutina = dbRoutineToAdminRutina(routine, routine.blocks || []);
+      // Attach calculated values and DB id for reference
+      return {
+        ...adminRutina,
+        _dbId: routine.id,
+        _calculatedDuration: routine.calculatedDuration,
+        _calculatedImplements: routine.calculatedImplements,
+      };
+    });
+  }, [routinesData]);
 
   const getCategoriaColor = (categoria: string) => {
     const colors: Record<string, string> = {
@@ -209,46 +65,57 @@ const AdminRutinas = () => {
     return colors[categoria] || "bg-muted text-muted-foreground";
   };
 
-  const formatDuration = (segundos: number): string => {
-    const minutos = Math.round(segundos / 60);
+  const formatDuration = (minutos: number): string => {
     return `${minutos} min`;
   };
 
   const handleSaveRutina = (rutina: Rutina, publish: boolean) => {
-    if (rutina.id === 0) {
-      const newRutina = { ...rutina, id: Date.now(), vecesRealizada: 0 };
-      setRutinas([...rutinas, newRutina]);
-    } else {
-      setRutinas(rutinas.map((r) => (r.id === rutina.id ? rutina : r)));
-    }
+    // This will be handled by the modal which uses the mutation hooks
     setEditingRutina(null);
+    setIsCreateModalOpen(false);
   };
 
-  const handleEditRutina = (rutina: Rutina) => {
+  const handleEditRutina = (rutina: Rutina & { _dbId?: string }) => {
+    // Store the DB id for updates
     setEditingRutina(rutina);
   };
 
-  const handleDuplicateRutina = (rutina: Rutina) => {
+  const handleDuplicateRutina = (rutina: Rutina & { _dbId?: string }) => {
+    // Create a copy without the DB id to create a new routine
     const duplicada: Rutina = {
       ...rutina,
-      id: Date.now(),
+      id: 0,
       nombre: `${rutina.nombre} (copia)`,
       estado: "borrador",
       calificacion: undefined,
       vecesRealizada: 0,
     };
-    setRutinas([...rutinas, duplicada]);
+    // Remove DB reference
+    delete (duplicada as any)._dbId;
+    setEditingRutina(duplicada);
     toast({
-      title: "Rutina duplicada",
-      description: `"${rutina.nombre}" ha sido duplicada como borrador.`,
+      title: "Duplicando rutina",
+      description: `Guardando como "${duplicada.nombre}"`,
     });
   };
 
-  const handleDeleteRutina = (rutina: Rutina) => {
-    setRutinas(rutinas.filter((r) => r.id !== rutina.id));
-    toast({
-      title: "Rutina eliminada",
-      description: `"${rutina.nombre}" ha sido eliminada.`,
+  const handleDeleteRutina = (rutina: Rutina & { _dbId?: string }) => {
+    if (!rutina._dbId) return;
+    
+    deleteRoutineMutation.mutate(rutina._dbId, {
+      onSuccess: () => {
+        toast({
+          title: "Rutina eliminada",
+          description: `"${rutina.nombre}" ha sido eliminada.`,
+        });
+      },
+      onError: (err) => {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la rutina",
+          variant: "destructive",
+        });
+      },
     });
   };
 
@@ -272,11 +139,9 @@ const AdminRutinas = () => {
       result = [...result].sort((a, b) => {
         switch (sortBy) {
           case "rating-desc":
-            // Higher rating first, undefined ratings last
             const ratingA = a.calificacion ?? -1;
             const ratingB = b.calificacion ?? -1;
             if (ratingA === ratingB) {
-              // Tiebreaker: more completed first
               return (b.vecesRealizada ?? 0) - (a.vecesRealizada ?? 0);
             }
             return ratingB - ratingA;
@@ -291,7 +156,6 @@ const AdminRutinas = () => {
             const completedA = a.vecesRealizada ?? 0;
             const completedB = b.vecesRealizada ?? 0;
             if (completedA === completedB) {
-              // Tiebreaker: higher rating first
               return (b.calificacion ?? 0) - (a.calificacion ?? 0);
             }
             return completedB - completedA;
@@ -310,6 +174,23 @@ const AdminRutinas = () => {
 
     return result;
   }, [rutinas, searchTerm, filterCategoria, filterEstado, sortBy]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-destructive">
+        <p>Error al cargar rutinas</p>
+        <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -373,13 +254,14 @@ const AdminRutinas = () => {
         {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredAndSortedRutinas.map((rutina) => {
-            const duracion = calcularDuracionRutina(rutina);
-            const implementos = obtenerImplementosRutina(rutina);
+            // Use pre-calculated values from DB query
+            const duracionMinutos = (rutina as any)._calculatedDuration || 0;
+            const implementos = (rutina as any)._calculatedImplements || [];
             const totalEjercicios = rutina.bloques.reduce((acc, b) => acc + b.ejercicios.length, 0);
 
             return (
               <Card
-                key={rutina.id}
+                key={rutina._dbId || rutina.id}
                 className="bg-card border-border p-5 hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
@@ -423,7 +305,7 @@ const AdminRutinas = () => {
                   </div>
                   <div className="flex items-center gap-1">
                     <Timer className="h-3.5 w-3.5" />
-                    {duracion > 0 ? formatDuration(duracion) : "—"}
+                    {duracionMinutos > 0 ? formatDuration(duracionMinutos) : "—"}
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="font-medium">{rutina.vecesRealizada ?? 0}</span> realizadas
@@ -441,7 +323,7 @@ const AdminRutinas = () => {
                   <div className="flex flex-wrap gap-1">
                     {implementos.length > 0 ? (
                       <>
-                        {implementos.slice(0, 4).map((impl) => (
+                        {implementos.slice(0, 4).map((impl: string) => (
                           <Badge key={impl} variant="outline" className="text-xs border-border">
                             {impl}
                           </Badge>
@@ -502,6 +384,7 @@ const AdminRutinas = () => {
                       size="icon"
                       className="h-8 w-8 text-destructive"
                       onClick={() => handleDeleteRutina(rutina)}
+                      disabled={deleteRoutineMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
