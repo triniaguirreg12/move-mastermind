@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -17,74 +17,32 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
-
-// Activity types with colors
-// Verde: Rutinas (funcional, kinesiología) - affects radar
-// Amarillo: Padel (tracking días/horas) - calendar only
-// Rosa: Personalizado (sesiones con profesional)
-
-interface Activity {
-  id: number;
-  type: "rutina" | "padel" | "personalizado";
-  title: string;
-  time?: string;
-}
-
-// Mock calendar data
-const calendarActivities: Record<string, Activity[]> = {
-  "2025-08-04": [
-    { id: 1, type: "rutina", title: "Rutina Funcional" },
-    { id: 2, type: "rutina", title: "Activación matutina" },
-  ],
-  "2025-08-05": [{ id: 3, type: "rutina", title: "Kinesiología" }],
-  "2025-08-06": [{ id: 4, type: "rutina", title: "Rutina Core" }],
-  "2025-08-07": [{ id: 5, type: "padel", title: "Partido de Padel", time: "10:00 - 11:00" }],
-  "2025-08-09": [
-    { id: 6, type: "rutina", title: "Rutina Full Body" },
-    { id: 7, type: "padel", title: "Padel", time: "18:00 - 19:00" },
-  ],
-  "2025-08-11": [
-    { id: 8, type: "rutina", title: "Rutina" },
-    { id: 9, type: "rutina", title: "Kinesiología" },
-  ],
-  "2025-08-12": [
-    { id: 10, type: "rutina", title: "Rutina" },
-    { id: 11, type: "padel", title: "Partido de Padel", time: "13:00 - 14:00" },
-    { id: 12, type: "personalizado", title: "Sesión con Kinesióloga" },
-  ],
-  "2025-08-13": [{ id: 13, type: "rutina", title: "Rutina Funcional" }],
-  "2025-08-14": [{ id: 14, type: "padel", title: "Padel", time: "19:00 - 20:00" }],
-  "2025-08-18": [
-    { id: 15, type: "rutina", title: "Rutina" },
-    { id: 16, type: "rutina", title: "Rutina" },
-    { id: 17, type: "personalizado", title: "Consulta" },
-  ],
-  "2025-08-19": [{ id: 18, type: "rutina", title: "Kinesiología" }],
-  "2025-08-20": [{ id: 19, type: "rutina", title: "Rutina" }],
-  "2025-08-21": [{ id: 20, type: "padel", title: "Padel", time: "17:00 - 18:00" }],
-  "2025-08-23": [
-    { id: 21, type: "rutina", title: "Rutina" },
-    { id: 22, type: "rutina", title: "Rutina" },
-  ],
-  "2025-08-25": [
-    { id: 23, type: "rutina", title: "Rutina" },
-    { id: 24, type: "padel", title: "Padel", time: "10:00 - 11:00" },
-  ],
-  "2025-08-26": [{ id: 25, type: "rutina", title: "Kinesiología" }],
-  "2025-08-27": [{ id: 26, type: "rutina", title: "Rutina" }],
-  "2025-08-28": [{ id: 27, type: "padel", title: "Padel", time: "19:00 - 20:00" }],
-  "2025-08-30": [
-    { id: 28, type: "rutina", title: "Rutina" },
-    { id: 29, type: "rutina", title: "Rutina" },
-  ],
-};
+import { Link, useNavigate } from "react-router-dom";
+import {
+  useUserEvents,
+  useCleanupMissedEvents,
+  getActivityDotsForDate,
+  getDotColorClass,
+  UserEvent,
+  EventType,
+} from "@/hooks/useUserEvents";
+import { AgendarPadelModal } from "@/components/calendario/AgendarPadelModal";
 
 const weekDays = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
 
 const Calendario = () => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 7, 1)); // August 2025
-  const [selectedDate, setSelectedDate] = useState(new Date(2025, 7, 12));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isPadelModalOpen, setIsPadelModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const { data: events = [], isLoading } = useUserEvents();
+  const cleanupMissedEvents = useCleanupMissedEvents();
+
+  // Cleanup missed scheduled entrenamientos on mount
+  useEffect(() => {
+    cleanupMissedEvents.mutate();
+  }, []);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -98,34 +56,47 @@ const Calendario = () => {
     day = addDays(day, 1);
   }
 
-  const getActivityDots = (date: Date) => {
+  const getActivityDots = (date: Date): EventType[] => {
     const dateKey = format(date, "yyyy-MM-dd");
-    const activities = calendarActivities[dateKey] || [];
-    
-    // Get unique types
-    const types = [...new Set(activities.map((a) => a.type))];
-    return types.slice(0, 3); // Max 3 dots
+    return getActivityDotsForDate(events, dateKey);
   };
 
-  const getActivitiesForDate = (date: Date) => {
+  const getActivitiesForDate = (date: Date): UserEvent[] => {
     const dateKey = format(date, "yyyy-MM-dd");
-    return calendarActivities[dateKey] || [];
+    return events.filter((e) => e.event_date === dateKey);
   };
 
-  const getDotColor = (type: string) => {
-    switch (type) {
-      case "rutina":
-        return "bg-activity-training"; // Verde
-      case "padel":
-        return "bg-activity-padel"; // Amarillo
-      case "personalizado":
-        return "bg-activity-custom"; // Rosa
-      default:
-        return "bg-muted-foreground";
+  const selectedActivities = useMemo(
+    () => getActivitiesForDate(selectedDate),
+    [selectedDate, events]
+  );
+
+  const handleActivityClick = (event: UserEvent) => {
+    if (event.type === "entrenamiento" && event.metadata?.routine_id) {
+      navigate(`/rutina/${event.metadata.routine_id}`);
     }
   };
 
-  const selectedActivities = getActivitiesForDate(selectedDate);
+  const formatEventTime = (event: UserEvent) => {
+    if (event.time_start && event.time_end) {
+      return `${event.time_start.slice(0, 5)} - ${event.time_end.slice(0, 5)}`;
+    }
+    if (event.time_start) {
+      return event.time_start.slice(0, 5);
+    }
+    return null;
+  };
+
+  const getStatusBadge = (event: UserEvent) => {
+    if (event.status === "completed") {
+      return (
+        <span className="text-xs bg-activity-training/20 text-activity-training px-2 py-0.5 rounded-full">
+          Completado
+        </span>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -200,7 +171,7 @@ const Calendario = () => {
                   {dots.map((type, i) => (
                     <div
                       key={i}
-                      className={cn("w-1.5 h-1.5 rounded-full", getDotColor(type))}
+                      className={cn("w-1.5 h-1.5 rounded-full", getDotColorClass(type))}
                     />
                   ))}
                 </div>
@@ -210,27 +181,67 @@ const Calendario = () => {
         </div>
       </div>
 
+      {/* Color Legend */}
+      <div className="px-4 py-3 flex justify-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-activity-training" />
+          <span className="text-xs text-muted-foreground">Entrenamiento</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-activity-padel" />
+          <span className="text-xs text-muted-foreground">Pádel</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-activity-custom" />
+          <span className="text-xs text-muted-foreground">Profesional</span>
+        </div>
+      </div>
+
       {/* Selected Date Activities */}
       <div className="flex-1 px-4 py-4 pb-24">
         <h2 className="text-base font-semibold text-foreground mb-3 capitalize">
           {format(selectedDate, "d 'de' MMMM, yyyy", { locale: es })}
         </h2>
 
-        {selectedActivities.length > 0 ? (
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground text-center py-8">
+            Cargando eventos...
+          </div>
+        ) : selectedActivities.length > 0 ? (
           <div className="space-y-3">
-            {selectedActivities.map((activity) => (
+            {selectedActivities.map((event) => (
               <div
-                key={activity.id}
-                className="bg-card rounded-xl p-4 border border-border flex items-center gap-3 hover:border-primary/30 transition-colors cursor-pointer"
+                key={event.id}
+                onClick={() => handleActivityClick(event)}
+                className={cn(
+                  "bg-card rounded-xl p-4 border border-border flex items-center gap-3 transition-colors",
+                  event.type === "entrenamiento" && event.metadata?.routine_id
+                    ? "hover:border-primary/30 cursor-pointer"
+                    : ""
+                )}
               >
-                <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", getDotColor(activity.type))} />
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-foreground">{activity.title}</span>
-                  {activity.time && (
-                    <span className="text-sm text-muted-foreground ml-2">{activity.time}</span>
+                <div
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full flex-shrink-0",
+                    getDotColorClass(event.type)
+                  )}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {event.title}
+                    </span>
+                    {getStatusBadge(event)}
+                  </div>
+                  {formatEventTime(event) && (
+                    <span className="text-xs text-muted-foreground">
+                      {formatEventTime(event)}
+                    </span>
                   )}
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                {event.type === "entrenamiento" && event.metadata?.routine_id && (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                )}
               </div>
             ))}
           </div>
@@ -244,12 +255,20 @@ const Calendario = () => {
         <div className="mt-4">
           <Button
             variant="outline"
-            className="w-full h-12 rounded-full border-2 border-muted-foreground/30 text-foreground hover:bg-muted"
+            onClick={() => setIsPadelModalOpen(true)}
+            className="w-full h-12 rounded-full border-2 border-activity-padel/50 text-activity-padel hover:bg-activity-padel/10"
           >
-            + Agendar Padel
+            + Agendar Pádel
           </Button>
         </div>
       </div>
+
+      {/* Padel Modal */}
+      <AgendarPadelModal
+        isOpen={isPadelModalOpen}
+        onClose={() => setIsPadelModalOpen(false)}
+        initialDate={selectedDate}
+      />
 
       <BottomNav />
     </div>
