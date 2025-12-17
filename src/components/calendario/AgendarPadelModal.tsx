@@ -7,13 +7,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useSchedulePadel, PadelSubtype } from "@/hooks/useUserEvents";
+import { useToast } from "@/hooks/use-toast";
 
 interface AgendarPadelModalProps {
   isOpen: boolean;
@@ -38,24 +39,61 @@ export function AgendarPadelModal({
   const [timeEnd, setTimeEnd] = useState("");
 
   const schedulePadel = useSchedulePadel();
+  const { toast } = useToast();
+
+  const validateForm = (): string | null => {
+    if (!selectedDate) {
+      return "Debes seleccionar una fecha";
+    }
+    if (!selectedSubtype) {
+      return "Debes seleccionar un tipo de actividad";
+    }
+    if (timeStart && timeEnd && timeEnd <= timeStart) {
+      return "La hora de fin debe ser mayor a la hora de inicio";
+    }
+    return null;
+  };
 
   const handleSubmit = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      toast({
+        title: "Error de validación",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!selectedDate) return;
 
-    await schedulePadel.mutateAsync({
-      date: selectedDate,
-      timeStart: timeStart || undefined,
-      timeEnd: timeEnd || undefined,
-      subtype: selectedSubtype,
-    });
+    try {
+      await schedulePadel.mutateAsync({
+        date: selectedDate,
+        timeStart: timeStart || undefined,
+        timeEnd: timeEnd || undefined,
+        subtype: selectedSubtype,
+      });
 
-    onClose();
-    // Reset form
-    setSelectedDate(new Date());
-    setSelectedSubtype("partido");
-    setTimeStart("");
-    setTimeEnd("");
+      onClose();
+      // Reset form
+      setSelectedDate(new Date());
+      setSelectedSubtype("partido");
+      setTimeStart("");
+      setTimeEnd("");
+    } catch (error: any) {
+      // Error is already handled in the hook, but we can add specific logging
+      console.error("Padel scheduling failed:", {
+        date: selectedDate?.toISOString(),
+        subtype: selectedSubtype,
+        timeStart,
+        timeEnd,
+        error: error?.message,
+      });
+    }
   };
+
+  const isPastDate = selectedDate && selectedDate < new Date(new Date().setHours(0, 0, 0, 0));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -65,6 +103,9 @@ export function AgendarPadelModal({
             <CalendarIcon className="h-5 w-5 text-activity-padel" />
             Agendar Pádel
           </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Programa una actividad de pádel en tu calendario
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -93,13 +134,27 @@ export function AgendarPadelModal({
           {/* Calendar */}
           <div className="space-y-2">
             <Label className="text-sm text-muted-foreground">Fecha</Label>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              locale={es}
-              className="rounded-md border border-border"
-            />
+            <div className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                locale={es}
+                className="rounded-md border border-border bg-secondary/30"
+                classNames={{
+                  caption: "flex justify-center pt-1 relative items-center",
+                  caption_label: "text-sm font-medium capitalize text-foreground",
+                  nav_button: cn(
+                    "h-7 w-7 bg-transparent border-0 p-0 opacity-70 hover:opacity-100 hover:bg-secondary"
+                  ),
+                  head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                  day: "h-9 w-9 p-0 font-normal text-foreground hover:bg-secondary rounded-md",
+                  day_selected: "bg-activity-padel text-background hover:bg-activity-padel hover:text-background",
+                  day_today: "bg-accent text-accent-foreground",
+                  day_outside: "text-muted-foreground opacity-50",
+                }}
+              />
+            </div>
           </div>
 
           {/* Time Selection */}
@@ -109,11 +164,11 @@ export function AgendarPadelModal({
                 <Clock className="h-3 w-3" />
                 Hora inicio
               </Label>
-              <Input
+              <input
                 type="time"
                 value={timeStart}
                 onChange={(e) => setTimeStart(e.target.value)}
-                className="bg-secondary border-border"
+                className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-activity-padel focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [color-scheme:dark]"
               />
             </div>
             <div className="space-y-2">
@@ -121,17 +176,17 @@ export function AgendarPadelModal({
                 <Clock className="h-3 w-3" />
                 Hora fin
               </Label>
-              <Input
+              <input
                 type="time"
                 value={timeEnd}
                 onChange={(e) => setTimeEnd(e.target.value)}
-                className="bg-secondary border-border"
+                className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-activity-padel focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [color-scheme:dark]"
               />
             </div>
           </div>
 
           {/* Info about past dates */}
-          {selectedDate && selectedDate < new Date(new Date().setHours(0, 0, 0, 0)) && (
+          {isPastDate && (
             <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
               Al agendar en una fecha pasada, se marcará automáticamente como completado.
             </p>
