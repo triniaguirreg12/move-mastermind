@@ -125,6 +125,7 @@ export type Database = {
           sex: string
           updated_at: string
           user_id: string
+          weekly_training_goal: number
         }
         Insert: {
           birth_date: string
@@ -137,6 +138,7 @@ export type Database = {
           sex: string
           updated_at?: string
           user_id: string
+          weekly_training_goal?: number
         }
         Update: {
           birth_date?: string
@@ -149,6 +151,7 @@ export type Database = {
           sex?: string
           updated_at?: string
           user_id?: string
+          weekly_training_goal?: number
         }
         Relationships: []
       }
