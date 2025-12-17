@@ -467,9 +467,7 @@ export default function RutinaDetalle() {
           </Button>
           <Button
             className="flex-[2] h-12 text-sm font-semibold"
-            onClick={() => {
-              console.log("Starting routine:", routine.id);
-            }}
+            onClick={() => navigate(`/rutina/${routine.id}/ejecucion`)}
           >
             Comenzar rutina
           </Button>
