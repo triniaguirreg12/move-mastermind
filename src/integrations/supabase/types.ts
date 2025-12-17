@@ -208,6 +208,7 @@ export type Database = {
           descripcion: string | null
           dificultad: string
           dificultad_mode: string | null
+          duracion_semanas: number | null
           estado: string
           id: string
           nombre: string
@@ -227,6 +228,7 @@ export type Database = {
           descripcion?: string | null
           dificultad: string
           dificultad_mode?: string | null
+          duracion_semanas?: number | null
           estado?: string
           id?: string
           nombre: string
@@ -246,6 +248,7 @@ export type Database = {
           descripcion?: string | null
           dificultad?: string
           dificultad_mode?: string | null
+          duracion_semanas?: number | null
           estado?: string
           id?: string
           nombre?: string

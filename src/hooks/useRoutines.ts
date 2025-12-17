@@ -86,6 +86,62 @@ function transformRoutine(dbRoutine: Record<string, unknown>): Routine {
   } as Routine;
 }
 
+// Helper to calculate total duration matching Admin logic
+function calcularDuracionTotal(
+  routineBlocks: Array<{
+    id: string;
+    series: number | null;
+    repetir_bloque: boolean | null;
+    descanso_entre_ejercicios: number | null;
+    descanso_entre_series: number | null;
+    usar_mismo_descanso: boolean | null;
+  }>,
+  blockExercises: Array<{
+    block_id: string;
+    tiempo: number | null;
+    repeticiones: number | null;
+    tipo_ejecucion: string;
+  }>,
+  descansoEntreBloques: number
+): number {
+  const SEGUNDOS_POR_REP = 3;
+  let totalSegundos = 0;
+
+  routineBlocks.forEach((bloque, bloqueIndex) => {
+    const series = bloque.repetir_bloque ? (bloque.series || 1) : 1;
+    const ejerciciosDelBloque = blockExercises.filter(be => be.block_id === bloque.id);
+    
+    ejerciciosDelBloque.forEach((ej, ejIndex) => {
+      // Time for exercise
+      const tiempoEjercicio = ej.tipo_ejecucion === "tiempo" 
+        ? (ej.tiempo || 0)
+        : (ej.repeticiones || 0) * SEGUNDOS_POR_REP;
+      
+      // Rest after exercise (except last in block)
+      const descansoEj = ejIndex < ejerciciosDelBloque.length - 1 
+        ? (bloque.descanso_entre_ejercicios || 30)
+        : 0;
+      
+      totalSegundos += (tiempoEjercicio + descansoEj) * series;
+    });
+
+    // Rest between series (for repeated blocks)
+    if (bloque.repetir_bloque && series > 1) {
+      const descansoSeries = bloque.usar_mismo_descanso 
+        ? (bloque.descanso_entre_ejercicios || 30)
+        : (bloque.descanso_entre_series || 60);
+      totalSegundos += descansoSeries * (series - 1);
+    }
+
+    // Rest between blocks (except last)
+    if (bloqueIndex < routineBlocks.length - 1) {
+      totalSegundos += descansoEntreBloques;
+    }
+  });
+
+  return totalSegundos;
+}
+
 // Fetch all published routines with their blocks and exercises (for Library view)
 export function usePublishedRoutines() {
   return useQuery({
@@ -116,6 +172,8 @@ export function usePublishedRoutines() {
         block_id: string;
         exercise: { implementos: string[] | null; } | null;
         tiempo: number | null;
+        repeticiones: number | null;
+        tipo_ejecucion: string;
       }> = [];
       
       if (blockIds.length > 0) {
@@ -124,6 +182,8 @@ export function usePublishedRoutines() {
           .select(`
             block_id,
             tiempo,
+            repeticiones,
+            tipo_ejecucion,
             exercise:exercises(implementos)
           `)
           .in("block_id", blockIds);
@@ -136,11 +196,11 @@ export function usePublishedRoutines() {
       return routines.map(routine => {
         const routineBlocks = (blocks || []).filter(b => b.routine_id === routine.id);
         const routineBlockIds = routineBlocks.map(b => b.id);
-        const routineExercises = blockExercises.filter(be => routineBlockIds.includes(be.block_id));
+        const routineExercisesData = blockExercises.filter(be => routineBlockIds.includes(be.block_id));
         
         // Calculate unique implements from exercises
         const allImplements = new Set<string>();
-        routineExercises.forEach(be => {
+        routineExercisesData.forEach(be => {
           const exercise = be.exercise as { implementos: string[] | null } | null;
           if (exercise?.implementos) {
             exercise.implementos.forEach(imp => allImplements.add(imp));
@@ -153,14 +213,24 @@ export function usePublishedRoutines() {
           implements_arr = implements_arr.filter(i => i !== "Sin implemento");
         }
         
-        // Calculate total duration (sum of exercise times)
-        const totalTime = routineExercises.reduce((sum, be) => sum + (be.tiempo || 0), 0);
-        const durationMins = Math.ceil(totalTime / 60);
+        // Calculate total duration using same logic as Admin
+        const totalSeconds = calcularDuracionTotal(
+          routineBlocks,
+          routineExercisesData.map(be => ({
+            block_id: be.block_id,
+            tiempo: be.tiempo,
+            repeticiones: be.repeticiones,
+            tipo_ejecucion: be.tipo_ejecucion,
+          })),
+          routine.descanso_entre_bloques || 60
+        );
+        const durationMins = Math.round(totalSeconds / 60);
 
         return {
           ...transformRoutine(routine as unknown as Record<string, unknown>),
           calculatedImplements: implements_arr,
           calculatedDuration: durationMins,
+          duracion_semanas: (routine as Record<string, unknown>).duracion_semanas as number | null,
         };
       });
     },
@@ -333,6 +403,7 @@ export function useDeleteRoutine() {
 export interface RoutineWithCalculated extends Routine {
   calculatedImplements?: string[];
   calculatedDuration?: number;
+  duracion_semanas?: number | null;
 }
 
 // Helper to transform routine data to library card format
@@ -352,16 +423,27 @@ export function routineToLibraryCard(routine: RoutineWithCalculated) {
   // Use calculated implements or empty array
   const equipment = routine.calculatedImplements || [];
   
-  // Use calculated duration or fallback
-  const duration = routine.calculatedDuration 
-    ? `${routine.calculatedDuration} min` 
-    : "-- min";
+  // Duration depends on type: routines use minutes, programs use weeks
+  const isPrograma = routine.tipo === "programa";
+  let duration: string;
+  let durationValue: number | null;
+  
+  if (isPrograma) {
+    // Programs show weeks
+    durationValue = routine.duracion_semanas || null;
+    duration = durationValue ? `${durationValue} semanas` : "";
+  } else {
+    // Routines show minutes
+    durationValue = routine.calculatedDuration || null;
+    duration = durationValue ? `${durationValue} min` : "";
+  }
 
   return {
     id: routine.id,
     title: routine.nombre,
     subtitle: routine.descripcion || "",
     duration,
+    durationValue,
     difficulty: routine.dificultad,
     equipment,
     rating: routine.calificacion || 0,
