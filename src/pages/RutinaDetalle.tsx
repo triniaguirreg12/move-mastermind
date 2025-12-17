@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useRoutine } from "@/hooks/useRoutines";
+import { useRoutine, calcularDuracionTotal } from "@/hooks/useRoutines";
 import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 
@@ -172,6 +172,33 @@ function ExerciseItem({ exercise }: ExerciseItemProps) {
   );
 }
 
+// Calculate unique implements from routine blocks
+function calcularImplementosRutina(blocks: Array<{ exercises?: Array<{ exercise?: { implementos?: string[] | null } }> }>): string[] {
+  const allImplements = new Set<string>();
+  
+  blocks.forEach(block => {
+    block.exercises?.forEach(be => {
+      const exercise = be.exercise as { implementos?: string[] | null } | undefined;
+      if (exercise?.implementos && Array.isArray(exercise.implementos)) {
+        exercise.implementos.forEach(imp => allImplements.add(imp));
+      }
+    });
+  });
+  
+  // Filter out "Sin implemento" if there are real implements
+  let implements_arr = Array.from(allImplements).sort();
+  if (implements_arr.length > 1 && implements_arr.includes("Sin implemento")) {
+    implements_arr = implements_arr.filter(i => i !== "Sin implemento");
+  }
+  
+  // If no implements, show "Sin implemento"
+  if (implements_arr.length === 0) {
+    implements_arr = ["Sin implemento"];
+  }
+  
+  return implements_arr;
+}
+
 export default function RutinaDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -213,6 +240,35 @@ export default function RutinaDetalle() {
     (acc, block) => acc + (block.exercises?.length || 0),
     0
   ) || 0;
+
+  // Calculate duration using unified logic (same as Admin/Library)
+  const routineBlocksForCalc = (routine.blocks || []).map(b => ({
+    id: b.id,
+    series: b.series,
+    repetir_bloque: b.repetir_bloque,
+    descanso_entre_ejercicios: b.descanso_entre_ejercicios,
+    descanso_entre_series: b.descanso_entre_series,
+    usar_mismo_descanso: b.usar_mismo_descanso,
+  }));
+  
+  const exercisesForCalc = (routine.blocks || []).flatMap(block => 
+    (block.exercises || []).map(be => ({
+      block_id: block.id,
+      tiempo: be.tiempo,
+      repeticiones: be.repeticiones,
+      tipo_ejecucion: be.tipo_ejecucion,
+    }))
+  );
+  
+  const totalSeconds = calcularDuracionTotal(
+    routineBlocksForCalc,
+    exercisesForCalc,
+    routine.descanso_entre_bloques || 60
+  );
+  const durationMins = Math.round(totalSeconds / 60);
+
+  // Calculate ALL implements (no +N summary in detail view)
+  const allImplements = calcularImplementosRutina(routine.blocks || []);
 
   return (
     <div className="min-h-screen bg-background pb-28">
@@ -258,15 +314,41 @@ export default function RutinaDetalle() {
           {/* Meta info */}
           <div className="flex items-center gap-2 text-white/80">
             <Clock className="w-4 h-4" />
-            <span className="text-sm">-- min</span>
+            <span className="text-sm">{durationMins} min</span>
             <span className="text-white/40">·</span>
-            <span className="text-sm">{totalBlocks} bloques · {totalExercises} ejercicios</span>
+            <span className="text-sm">{totalBlocks} {totalBlocks === 1 ? 'bloque' : 'bloques'} · {totalExercises} ejercicios</span>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 pt-4">
+      {/* Content Section */}
+      <div className="px-4 pt-4 space-y-4">
+        {/* Category Badge - Low hierarchy */}
+        <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted/50 text-muted-foreground border border-border/30">
+          {routine.categoria}
+        </span>
+
+        {/* Description */}
+        {routine.descripcion && (
+          <p className="text-sm text-foreground/80 leading-relaxed">
+            {routine.descripcion}
+          </p>
+        )}
+
+        {/* Implements - Show ALL (no +N summary) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Dumbbell className="w-4 h-4 text-muted-foreground shrink-0" />
+          {allImplements.map((impl) => (
+            <span
+              key={impl}
+              className="px-2.5 py-1 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border/30"
+            >
+              {impl}
+            </span>
+          ))}
+        </div>
+
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-muted/50">
             <TabsTrigger 
@@ -284,122 +366,86 @@ export default function RutinaDetalle() {
           </TabsList>
 
           {/* Rutina Tab Content */}
-          <TabsContent value="rutina" className="mt-4 space-y-6">
-            {/* Description Section */}
-            {routine.descripcion && (
-              <section>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  Descripción
-                </h2>
-                <p className="text-sm text-foreground/80 leading-relaxed">
-                  {routine.descripcion}
-                </p>
-              </section>
-            )}
-
-            {/* Category Badge */}
-            <section>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Categoría
-              </h2>
-              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                {routine.categoria}
-              </span>
-            </section>
-
+          <TabsContent value="rutina" className="mt-4 space-y-4">
             {/* Exercise List by Blocks */}
             {routine.blocks && routine.blocks.length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Ejercicios
-                </h2>
-                
-                <div className="space-y-4">
-                  {routine.blocks.map((block, blockIndex) => (
-                    <div key={block.id} className="space-y-2">
-                      {/* Block separator */}
-                      {blockIndex > 0 && (
-                        <div className="py-2">
-                          <div className="h-px bg-border/50" />
-                        </div>
-                      )}
-                      
-                      {/* Block name */}
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
-                        {block.nombre}
-                        {block.repetir_bloque && block.series > 1 && (
-                          <span className="ml-2 text-primary">({block.series} series)</span>
-                        )}
-                      </p>
-
-                      {/* Exercises in block */}
-                      <div className="space-y-2">
-                        {block.exercises?.map((blockExercise) => {
-                          const exercise = (blockExercise as { exercise?: { id: string; nombre: string; thumbnail_url: string | null; video_url: string | null; tips: string | null } }).exercise;
-                          if (!exercise) return null;
-                          return (
-                            <ExerciseItem 
-                              key={blockExercise.id} 
-                              exercise={exercise}
-                            />
-                          );
-                        })}
+              <div className="space-y-4">
+                {routine.blocks.map((block, blockIndex) => (
+                  <div key={block.id} className="space-y-2">
+                    {/* Block separator */}
+                    {blockIndex > 0 && (
+                      <div className="py-2">
+                        <div className="h-px bg-border/50" />
                       </div>
+                    )}
+                    
+                    {/* Block name */}
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1">
+                      {block.nombre}
+                      {block.repetir_bloque && block.series > 1 && (
+                        <span className="ml-2 text-primary">({block.series} series)</span>
+                      )}
+                    </p>
+
+                    {/* Exercises in block */}
+                    <div className="space-y-2">
+                      {block.exercises?.map((blockExercise) => {
+                        const exercise = (blockExercise as { exercise?: { id: string; nombre: string; thumbnail_url: string | null; video_url: string | null; tips: string | null } }).exercise;
+                        if (!exercise) return null;
+                        return (
+                          <ExerciseItem 
+                            key={blockExercise.id} 
+                            exercise={exercise}
+                          />
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              </section>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* Empty exercises state */}
             {(!routine.blocks || routine.blocks.length === 0) && (
-              <section>
-                <div className="p-6 rounded-xl bg-card/50 border border-border/30 text-center">
-                  <p className="text-muted-foreground">
-                    Esta rutina aún no tiene ejercicios asignados.
-                  </p>
-                </div>
-              </section>
+              <div className="p-6 rounded-xl bg-card/50 border border-border/30 text-center">
+                <p className="text-muted-foreground">
+                  Esta rutina aún no tiene ejercicios asignados.
+                </p>
+              </div>
             )}
           </TabsContent>
 
           {/* Aptitudes Tab Content */}
           <TabsContent value="aptitudes" className="mt-4">
-            <section>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 text-center">
-                Mapa de Aptitudes
-              </h2>
-              
-              <div className="bg-card/30 rounded-2xl border border-border/30 p-4">
-                <RoutineRadarChart objetivo={routine.objetivo as unknown as Record<string, number> | null} />
-              </div>
+            <div className="bg-card/30 rounded-2xl border border-border/30 p-4">
+              <RoutineRadarChart objetivo={routine.objetivo as unknown as Record<string, number> | null} />
+            </div>
 
-              {/* Aptitudes legend */}
-              <div className="mt-6 grid grid-cols-2 gap-2">
-                {[
-                  { key: "fuerza", label: "Fuerza" },
-                  { key: "potencia", label: "Potencia" },
-                  { key: "agilidad", label: "Agilidad" },
-                  { key: "coordinacion", label: "Coordinación" },
-                  { key: "velocidad", label: "Velocidad" },
-                  { key: "estabilidad", label: "Estabilidad" },
-                  { key: "movilidad", label: "Movilidad" },
-                  { key: "resistencia", label: "Resistencia" },
-                ].map(({ key, label }) => {
-                  const objetivo = routine.objetivo as unknown as Record<string, number> | null;
-                  const value = objetivo?.[key] || 0;
-                  return (
-                    <div 
-                      key={key}
-                      className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
-                    >
-                      <span className="text-xs text-muted-foreground">{label}</span>
-                      <span className="text-xs font-semibold text-foreground">{value}/10</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+            {/* Aptitudes legend */}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {[
+                { key: "fuerza", label: "Fuerza" },
+                { key: "potencia", label: "Potencia" },
+                { key: "agilidad", label: "Agilidad" },
+                { key: "coordinacion", label: "Coordinación" },
+                { key: "velocidad", label: "Velocidad" },
+                { key: "estabilidad", label: "Estabilidad" },
+                { key: "movilidad", label: "Movilidad" },
+                { key: "resistencia", label: "Resistencia" },
+              ].map(({ key, label }) => {
+                const objetivo = routine.objetivo as unknown as Record<string, number> | null;
+                const value = objetivo?.[key] || 0;
+                return (
+                  <div 
+                    key={key}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
+                  >
+                    <span className="text-xs text-muted-foreground">{label}</span>
+                    <span className="text-xs font-semibold text-foreground">{value}/10</span>
+                  </div>
+                );
+              })}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
