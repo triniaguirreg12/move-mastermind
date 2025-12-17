@@ -1,10 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Dumbbell, Users } from "lucide-react";
+import { Home, Library, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
-  { icon: Dumbbell, label: "Entrenamiento", path: "/entrenamiento" },
+  { icon: Library, label: "Biblioteca", path: "/entrenamiento" },
   { icon: Users, label: "Profesionales", path: "/profesionales" },
 ];
 
