@@ -66,11 +66,12 @@ interface CreateRoutineModalProps {
   onOpenChange: (open: boolean) => void;
   onSave: (rutina: Rutina, publish: boolean) => void;
   rutina?: Rutina | null;
+  defaultTipo?: "rutina" | "programa";
 }
 
 const DIFICULTAD_VALUES = { Principiante: 1, Intermedio: 2, Avanzado: 3 };
 
-const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina }: CreateRoutineModalProps) => {
+const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina, defaultTipo = "rutina" }: CreateRoutineModalProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState<Rutina>(createEmptyRutina());
   const [hasChanges, setHasChanges] = useState(false);
@@ -79,10 +80,16 @@ const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina }: CreateRoutin
 
   useEffect(() => {
     if (open) {
-      setFormData(rutina ? { ...rutina } : createEmptyRutina());
+      if (rutina) {
+        setFormData({ ...rutina });
+      } else {
+        const empty = createEmptyRutina();
+        // Apply defaultTipo for new items
+        setFormData({ ...empty, tipo: defaultTipo } as Rutina);
+      }
       setHasChanges(false);
     }
-  }, [open, rutina]);
+  }, [open, rutina, defaultTipo]);
 
   // Get all exercises in routine
   const ejerciciosEnRutina = useMemo(() => {

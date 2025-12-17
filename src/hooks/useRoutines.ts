@@ -343,15 +343,22 @@ export function usePublishedRoutines() {
 }
 
 // Fetch all routines with full details (for Admin view)
-export function useAllRoutinesWithDetails() {
+// Optional tipo filter: "rutina" | "programa" | undefined (all)
+export function useAllRoutinesWithDetails(tipo?: "rutina" | "programa") {
   return useQuery({
-    queryKey: ["routines", "all", "details"],
+    queryKey: ["routines", "all", "details", tipo || "all"],
     queryFn: async () => {
-      // Fetch all routines
-      const { data: routines, error } = await supabase
+      // Fetch routines with optional tipo filter
+      let query = supabase
         .from("routines")
         .select("*")
         .order("created_at", { ascending: false });
+      
+      if (tipo) {
+        query = query.eq("tipo", tipo);
+      }
+      
+      const { data: routines, error } = await query;
 
       if (error) throw error;
       if (!routines || routines.length === 0) return [];

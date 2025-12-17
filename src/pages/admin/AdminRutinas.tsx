@@ -37,8 +37,8 @@ const AdminRutinas = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingRutina, setEditingRutina] = useState<Rutina | null>(null);
 
-  // Fetch real data from DB
-  const { data: routinesData, isLoading, error } = useAllRoutinesWithDetails();
+  // Fetch only RUTINAS from DB (tipo = "rutina")
+  const { data: routinesData, isLoading, error } = useAllRoutinesWithDetails("rutina");
   const deleteRoutineMutation = useDeleteRoutine();
 
   // Transform DB routines to Admin Rutina format
