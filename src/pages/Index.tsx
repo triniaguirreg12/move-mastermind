@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
@@ -45,8 +45,11 @@ const radarData = [
 const Index = () => {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [summaryPeriod, setSummaryPeriod] = useState<"semanal" | "mensual">("semanal");
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
 
   const { data: events = [] } = useUserEvents();
   const cleanupMissedEvents = useCleanupMissedEvents();
@@ -67,10 +70,19 @@ const Index = () => {
     );
   }, [events, weekStart, weekEnd]);
 
-  // Calculate weekly stats
-  const weeklyStats = useMemo(
-    () => calculateWeeklyStats(weekEvents),
-    [weekEvents]
+  // Filter events for current month
+  const monthEvents = useMemo(() => {
+    const startStr = format(monthStart, "yyyy-MM-dd");
+    const endStr = format(monthEnd, "yyyy-MM-dd");
+    return events.filter(
+      (e) => e.event_date >= startStr && e.event_date <= endStr
+    );
+  }, [events, monthStart, monthEnd]);
+
+  // Calculate stats based on selected period
+  const periodStats = useMemo(
+    () => calculateWeeklyStats(summaryPeriod === "semanal" ? weekEvents : monthEvents),
+    [weekEvents, monthEvents, summaryPeriod]
   );
 
   // Get activity dots for a date
@@ -199,7 +211,7 @@ const Index = () => {
                 <Info className="h-2.5 w-2.5 text-muted-foreground" />
               </button>
             </div>
-            <Select defaultValue="semanal">
+            <Select value={summaryPeriod} onValueChange={(v) => setSummaryPeriod(v as "semanal" | "mensual")}>
               <SelectTrigger className="w-[100px] h-7 text-xs bg-secondary border-0 rounded-full">
                 <SelectValue />
               </SelectTrigger>
@@ -221,19 +233,19 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                <span className="text-xs font-medium text-foreground">{weeklyStats.entrenamiento}</span>
+                <span className="text-xs font-medium text-foreground">{periodStats.entrenamiento}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Pádel</span>
                 <span className="text-xs font-medium text-foreground">
-                  {weeklyStats.padelCompleted}/{weeklyStats.padelTotal}
+                  {periodStats.padelCompleted}/{periodStats.padelTotal}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Profesional</span>
-                <span className="text-xs font-medium text-foreground">{weeklyStats.profesional}</span>
+                <span className="text-xs font-medium text-foreground">{periodStats.profesional}</span>
               </div>
             </div>
           </div>
