@@ -3,7 +3,6 @@ import { Search, Library } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CategoryCarousel } from "@/components/library/CategoryCarousel";
-import { LibraryFilters } from "@/components/library/LibraryFilters";
 
 // Category descriptions for info tooltips
 const categoryDescriptions = {
@@ -168,76 +167,18 @@ const mockRoutines = [
 const Entrenamiento = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({
-    category: [] as string[],
-    difficulty: [] as string[],
-    equipment: [] as string[],
-    duration: "",
-    aptitude: [] as string[],
-    sortBy: "",
-  });
 
-  // Filter and sort routines
+  // Filter routines by search only
   const filteredRoutines = useMemo(() => {
-    let result = [...mockRoutines];
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.title.toLowerCase().includes(query) ||
-          r.subtitle?.toLowerCase().includes(query)
-      );
-    }
-
-    // Category filter
-    if (filters.category.length > 0) {
-      result = result.filter((r) => filters.category.includes(r.category));
-    }
-
-    // Difficulty filter
-    if (filters.difficulty.length > 0) {
-      result = result.filter((r) => filters.difficulty.includes(r.difficulty));
-    }
-
-    // Duration filter
-    if (filters.duration) {
-      result = result.filter((r) => {
-        const mins = parseInt(r.duration);
-        if (filters.duration === "short") return mins < 15;
-        if (filters.duration === "medium") return mins >= 15 && mins <= 30;
-        if (filters.duration === "long") return mins > 30;
-        return true;
-      });
-    }
-
-    // Aptitude filter
-    if (filters.aptitude.length > 0) {
-      result = result.filter((r) => {
-        const topAptitude = r.aptitudes.sort((a, b) => b.value - a.value)[0];
-        return filters.aptitude.includes(topAptitude?.name);
-      });
-    }
-
-    // Sorting
-    if (filters.sortBy) {
-      result.sort((a, b) => {
-        switch (filters.sortBy) {
-          case "rating-desc":
-            return (b.rating || 0) - (a.rating || 0);
-          case "duration-asc":
-            return parseInt(a.duration) - parseInt(b.duration);
-          case "duration-desc":
-            return parseInt(b.duration) - parseInt(a.duration);
-          default:
-            return 0;
-        }
-      });
-    }
-
-    return result;
-  }, [searchQuery, filters]);
+    if (!searchQuery) return mockRoutines;
+    
+    const query = searchQuery.toLowerCase();
+    return mockRoutines.filter(
+      (r) =>
+        r.title.toLowerCase().includes(query) ||
+        r.subtitle?.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   // Group by category
   const routinesByCategory = useMemo(() => {
@@ -253,27 +194,19 @@ const Entrenamiento = () => {
     console.log("Navigate to routine:", id);
   };
 
-  const hasActiveFilters =
-    filters.category.length > 0 ||
-    filters.difficulty.length > 0 ||
-    filters.equipment.length > 0 ||
-    filters.aptitude.length > 0 ||
-    filters.duration ||
-    filters.sortBy;
+  const hasSearchResults = searchQuery && filteredRoutines.length > 0;
+  const hasNoResults = searchQuery && filteredRoutines.length === 0;
 
   return (
     <AppLayout>
       <div className="min-h-screen pb-8 space-y-6">
         {/* Header */}
         <header className="px-4 pt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Library className="w-6 h-6 text-primary" />
-              <h1 className="font-display text-2xl font-bold text-foreground">
-                Biblioteca
-              </h1>
-            </div>
-            <LibraryFilters filters={filters} onFiltersChange={setFilters} />
+          <div className="flex items-center gap-2">
+            <Library className="w-6 h-6 text-primary" />
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Biblioteca
+            </h1>
           </div>
 
           {/* Search */}
@@ -291,80 +224,53 @@ const Entrenamiento = () => {
 
         {/* Categories with Carousels */}
         <div className="space-y-8">
-          {/* Show filtered view or category carousels */}
-          {hasActiveFilters || searchQuery ? (
-            // Filtered results - show all matching
+          {hasNoResults ? (
             <div className="px-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                {filteredRoutines.length} resultado{filteredRoutines.length !== 1 ? "s" : ""}
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                {filteredRoutines.map((routine) => (
-                  <div key={routine.id} className="flex justify-center">
-                    <div className="w-full max-w-[160px]">
-                      <button
-                        onClick={() => handleRoutineClick(routine.id)}
-                        className="w-full group focus:outline-none"
-                      >
-                        {/* Reusing card structure inline for grid view */}
-                        <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-card border border-border/30 hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-xl">
-                          <div className={`absolute inset-0 bg-gradient-to-br ${
-                            routine.category === "funcional"
-                              ? "from-primary/80 to-primary/20"
-                              : routine.category === "kinesiologia"
-                              ? "from-[hsl(280,70%,60%)]/80 to-[hsl(280,70%,60%)]/20"
-                              : "from-warning/80 to-warning/20"
-                          }`} />
-                          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-                          
-                          {/* Top overlay */}
-                          <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-                            <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-                              <span className="text-[10px] font-semibold text-white">
-                                {routine.rating?.toFixed(1) || "—"}
-                              </span>
-                            </div>
-                            <div className="bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md flex gap-0.5">
-                              {[1, 2, 3].map((i) => (
-                                <div
-                                  key={i}
-                                  className={`w-2 h-2 rounded-full border border-white/50 ${
-                                    i <= (routine.difficulty === "Principiante" ? 1 : routine.difficulty === "Intermedio" ? 2 : 3)
-                                      ? "bg-white"
-                                      : "bg-transparent"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Bottom info */}
-                          <div className="absolute bottom-2 left-2 right-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] text-white bg-black/40 px-1.5 py-0.5 rounded">
-                                {routine.duration}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-left">
-                          <h3 className="font-medium text-sm text-foreground line-clamp-2 leading-tight">
-                            {routine.title}
-                          </h3>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              <div className="glass-card p-8 text-center">
+                <p className="text-muted-foreground">
+                  No se encontraron rutinas con esos criterios
+                </p>
               </div>
             </div>
+          ) : hasSearchResults ? (
+            // Search results - show matching routines grouped by category
+            <>
+              {routinesByCategory.funcional.length > 0 && (
+                <CategoryCarousel
+                  title="Funcional"
+                  description={categoryDescriptions.Funcional}
+                  routines={routinesByCategory.funcional}
+                  categoryKey="funcional"
+                  onRoutineClick={handleRoutineClick}
+                />
+              )}
+              {routinesByCategory.kinesiologia.length > 0 && (
+                <CategoryCarousel
+                  title="Kinesiología"
+                  description={categoryDescriptions.Kinesiología}
+                  routines={routinesByCategory.kinesiologia}
+                  categoryKey="kinesiologia"
+                  onRoutineClick={handleRoutineClick}
+                />
+              )}
+              {routinesByCategory.activacion.length > 0 && (
+                <CategoryCarousel
+                  title="Activación"
+                  description={categoryDescriptions.Activación}
+                  routines={routinesByCategory.activacion}
+                  categoryKey="activacion"
+                  onRoutineClick={handleRoutineClick}
+                />
+              )}
+            </>
           ) : (
-            // Default view - category carousels
+            // Default view - all category carousels
             <>
               <CategoryCarousel
                 title="Funcional"
                 description={categoryDescriptions.Funcional}
                 routines={routinesByCategory.funcional}
+                categoryKey="funcional"
                 onRoutineClick={handleRoutineClick}
               />
 
@@ -372,6 +278,7 @@ const Entrenamiento = () => {
                 title="Kinesiología"
                 description={categoryDescriptions.Kinesiología}
                 routines={routinesByCategory.kinesiologia}
+                categoryKey="kinesiologia"
                 onRoutineClick={handleRoutineClick}
               />
 
@@ -379,22 +286,12 @@ const Entrenamiento = () => {
                 title="Activación"
                 description={categoryDescriptions.Activación}
                 routines={routinesByCategory.activacion}
+                categoryKey="activacion"
                 onRoutineClick={handleRoutineClick}
               />
             </>
           )}
         </div>
-
-        {/* Empty state */}
-        {filteredRoutines.length === 0 && (
-          <div className="px-4">
-            <div className="glass-card p-8 text-center">
-              <p className="text-muted-foreground">
-                No se encontraron rutinas con esos criterios
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </AppLayout>
   );

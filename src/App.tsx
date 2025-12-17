@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Entrenamiento from "./pages/Entrenamiento";
+import BibliotecaCategory from "./pages/BibliotecaCategory";
 import Profesionales from "./pages/Profesionales";
 import Configuracion from "./pages/Configuracion";
 import Calendario from "./pages/Calendario";
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/calendario" element={<Calendario />} />
             <Route path="/entrenamiento" element={<Entrenamiento />} />
+            <Route path="/biblioteca/:category" element={<BibliotecaCategory />} />
             <Route path="/profesionales" element={<Profesionales />} />
             <Route path="/configuracion" element={<Configuracion />} />
             

@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { LibraryCard } from "./LibraryCard";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ interface CategoryCarouselProps {
   title: string;
   description: string;
   routines: Routine[];
+  categoryKey: "funcional" | "kinesiologia" | "activacion";
   onRoutineClick?: (id: string | number) => void;
 }
 
@@ -40,9 +42,11 @@ export function CategoryCarousel({
   title,
   description,
   routines,
+  categoryKey,
   onRoutineClick,
 }: CategoryCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -52,6 +56,10 @@ export function CategoryCarousel({
         behavior: "smooth",
       });
     }
+  };
+
+  const handleVerMas = () => {
+    navigate(`/biblioteca/${categoryKey}`);
   };
 
   if (routines.length === 0) return null;
@@ -85,24 +93,33 @@ export function CategoryCarousel({
           </TooltipProvider>
         </div>
 
-        {/* Navigation arrows (desktop) */}
-        <div className="hidden md:flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => scroll("left")}
+        {/* Ver más button + Navigation arrows (desktop) */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleVerMas}
+            className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
           >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => scroll("right")}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+            Ver más
+          </button>
+          
+          <div className="hidden md:flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => scroll("left")}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => scroll("right")}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

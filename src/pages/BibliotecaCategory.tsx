@@ -1,0 +1,587 @@
+import { useState, useMemo } from "react";
+import { Search, ArrowLeft, Filter, X } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { LibraryCard } from "@/components/library/LibraryCard";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+// Category info
+const categoryInfo = {
+  funcional: {
+    title: "Funcional",
+    description: "Rutinas diseñadas para mejorar el rendimiento físico general mediante movimientos compuestos y funcionales.",
+    color: "text-primary",
+  },
+  kinesiologia: {
+    title: "Kinesiología",
+    description: "Sesiones enfocadas en rehabilitación, prevención de lesiones y mejora de la movilidad articular.",
+    color: "text-[hsl(280,70%,60%)]",
+  },
+  activacion: {
+    title: "Activación",
+    description: "Rutinas cortas de calentamiento y activación muscular para preparar el cuerpo antes de la actividad.",
+    color: "text-warning",
+  },
+};
+
+// Mock data - same as in Entrenamiento
+const mockRoutines = [
+  {
+    id: "1",
+    title: "Fuerza Upper Body",
+    subtitle: "Tren superior intenso",
+    duration: "25 min",
+    difficulty: "Avanzado" as const,
+    equipment: ["Mancuerna", "Barra"],
+    rating: 4.6,
+    category: "funcional" as const,
+    aptitudes: [
+      { name: "Fuerza", value: 9 },
+      { name: "Potencia", value: 6 },
+      { name: "Estabilidad", value: 5 },
+      { name: "Resistencia", value: 4 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "2",
+    title: "Core & Estabilidad",
+    subtitle: "Fortalece tu centro",
+    duration: "20 min",
+    difficulty: "Intermedio" as const,
+    equipment: ["Banda", "Miniband"],
+    rating: 4.8,
+    category: "funcional" as const,
+    aptitudes: [
+      { name: "Estabilidad", value: 10 },
+      { name: "Fuerza", value: 6 },
+      { name: "Coordinación", value: 5 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "3",
+    title: "Piernas Explosivas",
+    subtitle: "Potencia y velocidad",
+    duration: "30 min",
+    difficulty: "Avanzado" as const,
+    equipment: ["Mancuerna", "Pesa rusa"],
+    rating: 4.3,
+    category: "funcional" as const,
+    aptitudes: [
+      { name: "Potencia", value: 9 },
+      { name: "Velocidad", value: 8 },
+      { name: "Fuerza", value: 7 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "4",
+    title: "Full Body Funcional",
+    subtitle: "Entrena todo el cuerpo",
+    duration: "35 min",
+    difficulty: "Intermedio" as const,
+    equipment: ["Mancuerna"],
+    rating: 4.5,
+    category: "funcional" as const,
+    aptitudes: [
+      { name: "Resistencia", value: 8 },
+      { name: "Fuerza", value: 7 },
+      { name: "Coordinación", value: 6 },
+    ],
+    type: "program" as const,
+  },
+  {
+    id: "5",
+    title: "Recuperación Activa",
+    subtitle: "Movilidad y estiramiento",
+    duration: "15 min",
+    difficulty: "Principiante" as const,
+    equipment: ["Sin implemento"],
+    rating: 4.9,
+    category: "kinesiologia" as const,
+    aptitudes: [
+      { name: "Movilidad", value: 10 },
+      { name: "Estabilidad", value: 5 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "6",
+    title: "Liberación Miofascial",
+    subtitle: "Foam roller session",
+    duration: "20 min",
+    difficulty: "Principiante" as const,
+    equipment: ["Foam roller"],
+    rating: 4.7,
+    category: "kinesiologia" as const,
+    aptitudes: [
+      { name: "Movilidad", value: 9 },
+      { name: "Estabilidad", value: 4 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "7",
+    title: "Hombro Saludable",
+    subtitle: "Prevención de lesiones",
+    duration: "18 min",
+    difficulty: "Principiante" as const,
+    equipment: ["Banda"],
+    rating: 4.6,
+    category: "kinesiologia" as const,
+    aptitudes: [
+      { name: "Movilidad", value: 8 },
+      { name: "Estabilidad", value: 7 },
+      { name: "Coordinación", value: 4 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "8",
+    title: "Activación Pre-Padel",
+    subtitle: "Prepara tu cuerpo",
+    duration: "10 min",
+    difficulty: "Principiante" as const,
+    equipment: ["Banda elástica"],
+    rating: 4.4,
+    category: "activacion" as const,
+    aptitudes: [
+      { name: "Agilidad", value: 8 },
+      { name: "Velocidad", value: 7 },
+      { name: "Coordinación", value: 6 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "9",
+    title: "Warm Up Dinámico",
+    subtitle: "Calentamiento completo",
+    duration: "12 min",
+    difficulty: "Principiante" as const,
+    equipment: ["Sin implemento"],
+    rating: 4.5,
+    category: "activacion" as const,
+    aptitudes: [
+      { name: "Movilidad", value: 7 },
+      { name: "Agilidad", value: 6 },
+      { name: "Velocidad", value: 5 },
+    ],
+    type: "routine" as const,
+  },
+  {
+    id: "10",
+    title: "Activación Neuromuscular",
+    subtitle: "Despierta tus músculos",
+    duration: "8 min",
+    difficulty: "Intermedio" as const,
+    equipment: ["Miniband"],
+    rating: 4.2,
+    category: "activacion" as const,
+    aptitudes: [
+      { name: "Coordinación", value: 8 },
+      { name: "Estabilidad", value: 6 },
+      { name: "Velocidad", value: 5 },
+    ],
+    type: "routine" as const,
+  },
+];
+
+// Filter options
+const difficulties = [
+  { id: "Principiante", label: "Principiante" },
+  { id: "Intermedio", label: "Intermedio" },
+  { id: "Avanzado", label: "Avanzado" },
+];
+
+const durations = [
+  { id: "short", label: "< 15 min" },
+  { id: "medium", label: "15-30 min" },
+  { id: "long", label: "> 30 min" },
+];
+
+const aptitudes = [
+  { id: "Fuerza", label: "Fuerza" },
+  { id: "Potencia", label: "Potencia" },
+  { id: "Agilidad", label: "Agilidad" },
+  { id: "Coordinación", label: "Coordinación" },
+  { id: "Estabilidad", label: "Estabilidad" },
+  { id: "Velocidad", label: "Velocidad" },
+  { id: "Resistencia", label: "Resistencia" },
+  { id: "Movilidad", label: "Movilidad" },
+];
+
+const sortOptions = [
+  { id: "rating-desc", label: "Mejor calificadas" },
+  { id: "completed-desc", label: "Más realizadas" },
+  { id: "duration-asc", label: "Más cortas" },
+  { id: "duration-desc", label: "Más largas" },
+];
+
+function FilterChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
+        selected
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-transparent text-muted-foreground border-border hover:border-primary/50"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FilterSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium text-foreground">{title}</h4>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+const BibliotecaCategory = () => {
+  const navigate = useNavigate();
+  const { category } = useParams<{ category: string }>();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [contentType, setContentType] = useState<"all" | "routines" | "programs">("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    difficulty: [] as string[],
+    equipment: [] as string[],
+    duration: "",
+    aptitude: [] as string[],
+    sortBy: "",
+  });
+
+  const currentCategory = categoryInfo[category as keyof typeof categoryInfo];
+
+  if (!currentCategory) {
+    navigate("/entrenamiento");
+    return null;
+  }
+
+  const isFuncional = category === "funcional";
+
+  // Filter and sort routines
+  const filteredRoutines = useMemo(() => {
+    let result = mockRoutines.filter((r) => r.category === category);
+
+    // Content type filter (only for funcional)
+    if (isFuncional && contentType !== "all") {
+      result = result.filter((r) => 
+        contentType === "routines" ? r.type === "routine" : r.type === "program"
+      );
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.title.toLowerCase().includes(query) ||
+          r.subtitle?.toLowerCase().includes(query)
+      );
+    }
+
+    // Difficulty filter
+    if (filters.difficulty.length > 0) {
+      result = result.filter((r) => filters.difficulty.includes(r.difficulty));
+    }
+
+    // Duration filter
+    if (filters.duration) {
+      result = result.filter((r) => {
+        const mins = parseInt(r.duration);
+        if (filters.duration === "short") return mins < 15;
+        if (filters.duration === "medium") return mins >= 15 && mins <= 30;
+        if (filters.duration === "long") return mins > 30;
+        return true;
+      });
+    }
+
+    // Aptitude filter
+    if (filters.aptitude.length > 0) {
+      result = result.filter((r) => {
+        const topAptitude = r.aptitudes.sort((a, b) => b.value - a.value)[0];
+        return filters.aptitude.includes(topAptitude?.name);
+      });
+    }
+
+    // Sorting
+    if (filters.sortBy) {
+      result.sort((a, b) => {
+        switch (filters.sortBy) {
+          case "rating-desc":
+            return (b.rating || 0) - (a.rating || 0);
+          case "duration-asc":
+            return parseInt(a.duration) - parseInt(b.duration);
+          case "duration-desc":
+            return parseInt(b.duration) - parseInt(a.duration);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return result;
+  }, [category, searchQuery, contentType, filters, isFuncional]);
+
+  const toggleArrayFilter = (key: keyof typeof filters, value: string) => {
+    const currentArray = filters[key] as string[];
+    const newArray = currentArray.includes(value)
+      ? currentArray.filter((v) => v !== value)
+      : [...currentArray, value];
+    setFilters({ ...filters, [key]: newArray });
+  };
+
+  const setFilter = (key: keyof typeof filters, value: string) => {
+    setFilters({ ...filters, [key]: value });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      difficulty: [],
+      equipment: [],
+      duration: "",
+      aptitude: [],
+      sortBy: "",
+    });
+  };
+
+  const activeFiltersCount =
+    filters.difficulty.length +
+    filters.equipment.length +
+    filters.aptitude.length +
+    (filters.duration ? 1 : 0) +
+    (filters.sortBy ? 1 : 0);
+
+  const handleRoutineClick = (id: string | number) => {
+    console.log("Navigate to routine:", id);
+  };
+
+  return (
+    <AppLayout>
+      <div className="min-h-screen pb-8 space-y-4">
+        {/* Header */}
+        <header className="px-4 pt-6 space-y-4">
+          {/* Back + Title */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => navigate("/entrenamiento")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className={cn("font-display text-2xl font-bold", currentCategory.color)}>
+              {currentCategory.title}
+            </h1>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar rutinas o programas..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            />
+          </div>
+
+          {/* Rutinas/Programas toggle (only for Funcional) + Filter */}
+          <div className="flex items-center justify-between">
+            {isFuncional ? (
+              <div className="flex bg-card rounded-lg p-1 border border-border/50">
+                <button
+                  onClick={() => setContentType("all")}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                    contentType === "all"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Todas
+                </button>
+                <button
+                  onClick={() => setContentType("routines")}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                    contentType === "routines"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Rutinas
+                </button>
+                <button
+                  onClick={() => setContentType("programs")}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                    contentType === "programs"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Programas
+                </button>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            {/* Filter Button */}
+            <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 relative">
+                  <Filter className="w-4 h-4" />
+                  Filtros
+                  {activeFiltersCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
+                <SheetHeader className="flex flex-row items-center justify-between">
+                  <SheetTitle>Filtros y orden</SheetTitle>
+                  {activeFiltersCount > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      <X className="w-4 h-4 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
+                </SheetHeader>
+
+                <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(85vh-120px)] pb-6">
+                  {/* Sort By */}
+                  <FilterSection title="Ordenar por">
+                    {sortOptions.map((option) => (
+                      <FilterChip
+                        key={option.id}
+                        selected={filters.sortBy === option.id}
+                        onClick={() =>
+                          setFilter("sortBy", filters.sortBy === option.id ? "" : option.id)
+                        }
+                      >
+                        {option.label}
+                      </FilterChip>
+                    ))}
+                  </FilterSection>
+
+                  {/* Difficulty */}
+                  <FilterSection title="Dificultad">
+                    {difficulties.map((option) => (
+                      <FilterChip
+                        key={option.id}
+                        selected={filters.difficulty.includes(option.id)}
+                        onClick={() => toggleArrayFilter("difficulty", option.id)}
+                      >
+                        {option.label}
+                      </FilterChip>
+                    ))}
+                  </FilterSection>
+
+                  {/* Duration */}
+                  <FilterSection title="Duración">
+                    {durations.map((option) => (
+                      <FilterChip
+                        key={option.id}
+                        selected={filters.duration === option.id}
+                        onClick={() =>
+                          setFilter("duration", filters.duration === option.id ? "" : option.id)
+                        }
+                      >
+                        {option.label}
+                      </FilterChip>
+                    ))}
+                  </FilterSection>
+
+                  {/* Aptitudes */}
+                  <FilterSection title="Aptitud principal">
+                    {aptitudes.map((option) => (
+                      <FilterChip
+                        key={option.id}
+                        selected={filters.aptitude.includes(option.id)}
+                        onClick={() => toggleArrayFilter("aptitude", option.id)}
+                      >
+                        {option.label}
+                      </FilterChip>
+                    ))}
+                  </FilterSection>
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+                  <SheetClose asChild>
+                    <Button className="w-full">Aplicar filtros</Button>
+                  </SheetClose>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </header>
+
+        {/* Results Grid */}
+        <div className="px-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            {filteredRoutines.length} resultado{filteredRoutines.length !== 1 ? "s" : ""}
+          </p>
+          
+          {filteredRoutines.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              {filteredRoutines.map((routine) => (
+                <div key={routine.id} className="flex justify-center">
+                  <div className="w-full max-w-[160px]">
+                    <LibraryCard
+                      {...routine}
+                      onClick={() => handleRoutineClick(routine.id)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card p-8 text-center">
+              <p className="text-muted-foreground">
+                No se encontraron rutinas con esos criterios
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+};
+
+export default BibliotecaCategory;
