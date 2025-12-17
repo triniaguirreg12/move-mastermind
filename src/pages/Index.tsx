@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Settings, ChevronRight, Info } from "lucide-react";
+import { Calendar, Settings, ChevronRight, Info, Trophy, Cone } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -22,6 +22,7 @@ import {
   getDotColorClass,
   calculateWeeklyStats,
   UserEvent,
+  PadelSubtype,
 } from "@/hooks/useUserEvents";
 
 // Import activity images
@@ -101,9 +102,32 @@ const Index = () => {
   };
 
   const getEventImage = (event: UserEvent) => {
-    if (event.type === "padel") return padelBallImg;
     if (event.type === "entrenamiento") return agilityImg;
     return agilityImg;
+  };
+
+  // Get padel icon based on subtype
+  const getPadelIcon = (subtype: PadelSubtype | undefined) => {
+    switch (subtype) {
+      case "torneo":
+        return <Trophy className="h-6 w-6 text-activity-padel" />;
+      case "clase":
+        return <Cone className="h-6 w-6 text-activity-padel" />;
+      case "partido":
+      default:
+        return (
+          <img 
+            src={padelBallImg} 
+            alt="Partido de Pádel" 
+            className="w-full h-full object-cover"
+          />
+        );
+    }
+  };
+
+  const isPadelWithIcon = (event: UserEvent) => {
+    return event.type === "padel" && 
+      (event.metadata?.padel_subtype === "torneo" || event.metadata?.padel_subtype === "clase");
   };
 
   return (
@@ -241,12 +265,19 @@ const Index = () => {
                     : ""
                 )}
               >
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-                  <img
-                    src={getEventImage(event)}
-                    alt={event.title || "Actividad"}
-                    className="w-full h-full object-cover"
-                  />
+                <div className={cn(
+                  "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center",
+                  isPadelWithIcon(event) ? "bg-activity-padel/10" : "bg-secondary"
+                )}>
+                  {event.type === "padel" ? (
+                    getPadelIcon(event.metadata?.padel_subtype as PadelSubtype)
+                  ) : (
+                    <img
+                      src={getEventImage(event)}
+                      alt={event.title || "Actividad"}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
