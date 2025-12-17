@@ -125,8 +125,10 @@ export function LibraryCard({
   onClick,
 }: LibraryCardProps) {
   const navigate = useNavigate();
-  // Equipment logic: filter out "Sin implemento" if real implements exist
-  const realEquipment = equipment.filter(e => e !== "Sin implemento");
+  // Equipment logic: filter out "Sin implemento" if real implements exist, sort alphabetically
+  const realEquipment = equipment
+    .filter(e => e !== "Sin implemento")
+    .sort(); // Alphabetical order for consistency
   const hasRealEquipment = realEquipment.length > 0;
   const displayEquipment = hasRealEquipment ? realEquipment : ["Sin implemento"];
   const extraEquipmentCount = hasRealEquipment ? realEquipment.length - 1 : 0;
