@@ -195,7 +195,7 @@ export function ScheduleRoutineModal({
                   row: "flex w-full mt-2",
                   cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                   day: "h-9 w-9 p-0 font-normal text-foreground hover:bg-secondary/80 rounded-full transition-colors",
-                  day_selected: "!bg-activity-training !text-background hover:!bg-activity-training/90 rounded-full",
+                  day_selected: "!bg-primary !text-primary-foreground hover:!bg-primary/90 rounded-full",
                   day_today: "ring-2 ring-foreground ring-inset !bg-transparent rounded-full",
                   day_outside: "text-muted-foreground opacity-50",
                   day_disabled: "text-muted-foreground opacity-50",
