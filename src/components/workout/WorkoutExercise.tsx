@@ -12,6 +12,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 interface WorkoutExerciseProps {
   exerciseName: string;
@@ -79,6 +86,24 @@ export function WorkoutExercise({
   const hasPlayedBeepRef = useRef(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const wasPausedBeforeInfoRef = useRef(false);
+
+  // Handle opening info drawer - pause if not already paused
+  const handleOpenInfo = () => {
+    wasPausedBeforeInfoRef.current = isPaused;
+    if (!isPaused) {
+      onPause();
+    }
+    setShowTips(true);
+  };
+
+  // Handle closing info drawer - resume only if wasn't paused before
+  const handleCloseInfo = () => {
+    setShowTips(false);
+    if (!wasPausedBeforeInfoRef.current) {
+      onResume();
+    }
+  };
 
   // Play beep when exercise starts (first render or reset)
   useEffect(() => {
@@ -180,7 +205,7 @@ export function WorkoutExercise({
             </h2>
             {tips && (
               <button
-                onClick={() => setShowTips(true)}
+                onClick={handleOpenInfo}
                 className="w-8 h-8 flex items-center justify-center rounded-full border border-white/30 text-white/70 hover:bg-white/10 transition-colors"
               >
                 <Info className="w-4 h-4" />
@@ -254,31 +279,29 @@ export function WorkoutExercise({
         <X className="w-5 h-5" />
       </button>
 
-      {/* Tips Modal */}
-      {showTips && tips && (
-        <div
-          className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setShowTips(false)}
-        >
-          <div
-            className="bg-card rounded-2xl p-6 max-w-sm w-full border border-border"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-foreground mb-3">
+      {/* Tips Drawer (Bottom Sheet) */}
+      <Drawer open={showTips} onOpenChange={(open) => !open && handleCloseInfo()}>
+        <DrawerContent className="bg-card border-border">
+          <DrawerHeader className="text-left pb-2">
+            <DrawerTitle className="text-xl font-bold text-foreground">
+              {exerciseName}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
+            <p className="text-sm font-medium text-muted-foreground mb-3">
               Tips de ejecución
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {tips}
             </p>
-            <Button
-              className="w-full mt-4"
-              onClick={() => setShowTips(false)}
-            >
-              Entendido
-            </Button>
+            <div className="text-base text-foreground leading-relaxed whitespace-pre-line text-left">
+              {tips}
+            </div>
+            <DrawerClose asChild>
+              <Button className="w-full mt-6" onClick={handleCloseInfo}>
+                Entendido
+              </Button>
+            </DrawerClose>
           </div>
-        </div>
-      )}
+        </DrawerContent>
+      </Drawer>
 
       {/* Paused overlay */}
       {isPaused && (
