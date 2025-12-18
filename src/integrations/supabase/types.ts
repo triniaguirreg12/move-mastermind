@@ -115,6 +115,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          aptitudes: Json | null
           birth_date: string
           city: string | null
           country: string | null
@@ -128,6 +129,7 @@ export type Database = {
           weekly_training_goal: number
         }
         Insert: {
+          aptitudes?: Json | null
           birth_date: string
           city?: string | null
           country?: string | null
@@ -141,6 +143,7 @@ export type Database = {
           weekly_training_goal?: number
         }
         Update: {
+          aptitudes?: Json | null
           birth_date?: string
           city?: string | null
           country?: string | null

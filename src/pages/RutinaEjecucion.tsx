@@ -139,10 +139,6 @@ export default function RutinaEjecucion() {
     navigate(`/rutina/${id}`);
   }, [navigate, id]);
 
-  const handleRepeat = useCallback(() => {
-    setWorkoutStarted(false);
-    // Reset will happen automatically when workoutStarted changes
-  }, []);
 
   const {
     currentStep,
@@ -275,7 +271,7 @@ export default function RutinaEjecucion() {
       <WorkoutComplete
         routineName={routine.nombre}
         routineId={routine.id}
-        onRepeat={handleRepeat}
+        routineObjetivo={routine.objetivo as unknown as Record<string, number> | null}
       />
     );
   }
