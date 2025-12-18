@@ -33,7 +33,7 @@ export function useWeeklyAptitudes(weeklyGoal: number = 4) {
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  // Fetch completed routines for current week with their objectives
+  // Fetch completed routines from user_events for current week
   const { data: completedRoutines = [], isLoading, refetch } = useQuery({
     queryKey: ["weekly-completed-routines", format(weekStart, "yyyy-MM-dd")],
     queryFn: async () => {
@@ -43,28 +43,48 @@ export function useWeeklyAptitudes(weeklyGoal: number = 4) {
       const startStr = format(weekStart, "yyyy-MM-dd");
       const endStr = format(weekEnd, "yyyy-MM-dd");
 
-      const { data, error } = await supabase
-        .from("scheduled_routines")
-        .select(`
-          id,
-          routine_id,
-          scheduled_date,
-          routines!inner(objetivo, categoria)
-        `)
+      // Get completed entrenamiento events from user_events
+      const { data: events, error: eventsError } = await supabase
+        .from("user_events")
+        .select("id, metadata")
         .eq("user_id", user.id)
-        .eq("status", "completada")
-        .gte("scheduled_date", startStr)
-        .lte("scheduled_date", endStr);
+        .eq("type", "entrenamiento")
+        .eq("status", "completed")
+        .gte("event_date", startStr)
+        .lte("event_date", endStr);
 
-      if (error) throw error;
+      if (eventsError) throw eventsError;
+      if (!events || events.length === 0) return [];
 
-      // Filter by valid categories and extract objetivo
-      return (data || [])
-        .filter((item: any) => VALID_CATEGORIES.includes(item.routines?.categoria))
-        .map((item: any) => ({
-          id: item.id,
-          routine_id: item.routine_id,
-          objetivo: item.routines?.objetivo as AptitudeScores | null,
+      // Extract unique routine IDs from events
+      const routineIds = [...new Set(
+        events
+          .map((e: any) => e.metadata?.routine_id)
+          .filter(Boolean)
+      )];
+
+      if (routineIds.length === 0) return [];
+
+      // Fetch routine objectives for valid categories
+      const { data: routines, error: routinesError } = await supabase
+        .from("routines")
+        .select("id, objetivo, categoria")
+        .in("id", routineIds)
+        .in("categoria", VALID_CATEGORIES);
+
+      if (routinesError) throw routinesError;
+
+      // Map each completed event to its routine's objective
+      const routineMap = new Map(
+        (routines || []).map((r: any) => [r.id, r.objetivo])
+      );
+
+      return events
+        .filter((e: any) => routineMap.has(e.metadata?.routine_id))
+        .map((e: any) => ({
+          id: e.id,
+          routine_id: e.metadata?.routine_id,
+          objetivo: routineMap.get(e.metadata?.routine_id) as AptitudeScores | null,
         })) as CompletedRoutineWithObjective[];
     },
   });
