@@ -215,16 +215,6 @@ export function WorkoutRest({
               <Play className="w-5 h-5 mr-2" />
               Continuar
             </Button>
-            
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={onSkip}
-              className="rounded-full px-8 border-white/60 text-white/60 hover:text-white hover:border-white hover:bg-white/10"
-            >
-              <SkipForward className="w-5 h-5 mr-2" />
-              Saltar descanso
-            </Button>
           </div>
         </div>
       )}
