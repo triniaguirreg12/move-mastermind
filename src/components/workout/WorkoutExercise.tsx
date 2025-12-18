@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Pause, Play, Info, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pause, Play, Info, X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkoutProgressDots } from "./WorkoutProgressDots";
 import {
@@ -220,27 +220,6 @@ export function WorkoutExercise({
                 <Pause className="w-5 h-5 mr-2" />
                 Pausar ejercicio
               </Button>
-
-              {/* Forward button - only via long press when not paused */}
-              <div
-                onMouseDown={handleForwardStart}
-                onMouseUp={handleForwardEnd}
-                onMouseLeave={handleForwardEnd}
-                onTouchStart={handleForwardStart}
-                onTouchEnd={handleForwardEnd}
-                className="relative"
-              >
-                <button
-                  disabled={true}
-                  className="w-12 h-12 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/30 cursor-not-allowed backdrop-blur-sm"
-                  title="Mantén presionado para avanzar"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-                {isLongPressing && (
-                  <div className="absolute inset-0 rounded-full border-2 border-primary animate-pulse" />
-                )}
-              </div>
             </div>
 
             {/* Timer */}
@@ -304,42 +283,18 @@ export function WorkoutExercise({
           <div className="flex flex-col items-center gap-4">
             <p className="text-2xl font-bold text-white mb-2">Pausado</p>
             
-            {/* Navigation buttons when paused */}
-            <div className="flex items-center gap-6 mb-4">
+            {/* Navigation button when paused - only back */}
+            {canGoBack && (
               <button
                 onClick={onGoBack}
-                disabled={!canGoBack}
-                className={`flex flex-col items-center gap-1 transition-all ${
-                  canGoBack 
-                    ? "text-white hover:text-primary" 
-                    : "text-white/30 cursor-not-allowed"
-                }`}
+                className="flex flex-col items-center gap-1 text-white hover:text-primary transition-all mb-4"
               >
-                <div className={`w-14 h-14 flex items-center justify-center rounded-full border-2 ${
-                  canGoBack ? "border-white/60 hover:border-primary" : "border-white/20"
-                }`}>
+                <div className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/60 hover:border-primary">
                   <ChevronLeft className="w-7 h-7" />
                 </div>
                 <span className="text-xs">Anterior</span>
               </button>
-
-              <button
-                onClick={onGoForward}
-                disabled={!canGoForward}
-                className={`flex flex-col items-center gap-1 transition-all ${
-                  canGoForward 
-                    ? "text-white hover:text-primary" 
-                    : "text-white/30 cursor-not-allowed"
-                }`}
-              >
-                <div className={`w-14 h-14 flex items-center justify-center rounded-full border-2 ${
-                  canGoForward ? "border-white/60 hover:border-primary" : "border-white/20"
-                }`}>
-                  <ChevronRight className="w-7 h-7" />
-                </div>
-                <span className="text-xs">Siguiente</span>
-              </button>
-            </div>
+            )}
 
             <Button
               size="lg"
