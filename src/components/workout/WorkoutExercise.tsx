@@ -245,7 +245,7 @@ export function WorkoutExercise({
 
       {/* Exit button - top left */}
       <button
-        onClick={onExit}
+        onClick={() => setShowFinishDialog(true)}
         className="absolute top-4 left-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
       >
         <X className="w-5 h-5" />
@@ -282,19 +282,6 @@ export function WorkoutExercise({
         <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <p className="text-2xl font-bold text-white mb-2">Pausado</p>
-            
-            {/* Navigation button when paused - only back */}
-            {canGoBack && (
-              <button
-                onClick={onGoBack}
-                className="flex flex-col items-center gap-1 text-white hover:text-primary transition-all mb-4"
-              >
-                <div className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/60 hover:border-primary">
-                  <ChevronLeft className="w-7 h-7" />
-                </div>
-                <span className="text-xs">Anterior</span>
-              </button>
-            )}
 
             <Button
               size="lg"
