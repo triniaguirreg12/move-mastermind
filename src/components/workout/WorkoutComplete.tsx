@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { JustMuvIcon } from "@/components/brand/JustMuvIcon";
 import { StarRating } from "@/components/workout/StarRating";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface WorkoutCompleteProps {
@@ -17,20 +17,17 @@ interface WorkoutCompleteProps {
 export function WorkoutComplete({
   routineName,
   routineId,
-  routineObjetivo,
 }: WorkoutCompleteProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
   const [hasRated, setHasRated] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleRating = async (value: number) => {
     setRating(value);
     setHasRated(true);
 
     try {
-      // Save rating to routine (average calculation could be done later)
       await supabase
         .from("routines")
         .update({ calificacion: value })
@@ -42,52 +39,9 @@ export function WorkoutComplete({
     }
   };
 
-  const handleGoHome = async () => {
-    if (isUpdating) return;
-    setIsUpdating(true);
-
-    try {
-      // Update user aptitudes based on routine objetivo
-      if (user && routineObjetivo) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("aptitudes")
-          .eq("user_id", user.id)
-          .single();
-
-        if (profile) {
-          const currentAptitudes = (profile.aptitudes as Record<string, number>) || {
-            fuerza: 0,
-            potencia: 0,
-            agilidad: 0,
-            coordinacion: 0,
-            estabilidad: 0,
-            velocidad: 0,
-            resistencia: 0,
-            movilidad: 0,
-          };
-
-          // Add routine's objetivo to user's aptitudes (small increment per workout)
-          const updatedAptitudes: Record<string, number> = {};
-          
-          Object.keys(currentAptitudes).forEach((key) => {
-            const routineValue = routineObjetivo[key] || 0;
-            const currentValue = currentAptitudes[key] || 0;
-            // Each workout adds a fraction of the routine's objective (capped at 100)
-            const increment = routineValue * 0.1; // 10% of routine objective per workout
-            updatedAptitudes[key] = Math.min(100, Math.round((currentValue + increment) * 10) / 10);
-          });
-
-          await supabase
-            .from("profiles")
-            .update({ aptitudes: updatedAptitudes })
-            .eq("user_id", user.id);
-        }
-      }
-    } catch (error) {
-      console.error("Error updating aptitudes:", error);
-    }
-
+  const handleGoHome = () => {
+    // Invalidate weekly aptitudes query to trigger recalculation on Home
+    queryClient.invalidateQueries({ queryKey: ["weekly-completed-routines"] });
     navigate("/");
   };
 
@@ -147,7 +101,6 @@ export function WorkoutComplete({
         <Button
           className="w-full h-12"
           onClick={handleGoHome}
-          disabled={isUpdating}
         >
           <Home className="w-5 h-5 mr-2" />
           Ir al inicio
