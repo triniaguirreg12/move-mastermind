@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { SkipForward, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { SkipForward, X, Pause, Play, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,8 +11,13 @@ interface WorkoutRestProps {
   seriesInfo?: string; // e.g., "Serie 2 de 3"
   videoUrl?: string | null;
   thumbnailUrl?: string | null;
+  isPaused: boolean;
+  canGoBack: boolean;
   onSkip: () => void;
   onExit: () => void;
+  onPause: () => void;
+  onResume: () => void;
+  onGoBack: () => void;
   onPlayBuzzer?: () => void;
 }
 
@@ -43,8 +48,13 @@ export function WorkoutRest({
   seriesInfo,
   videoUrl,
   thumbnailUrl,
+  isPaused,
+  canGoBack,
   onSkip,
   onExit,
+  onPause,
+  onResume,
+  onGoBack,
   onPlayBuzzer,
 }: WorkoutRestProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -129,16 +139,45 @@ export function WorkoutRest({
           )}
         </div>
 
-        {/* Skip button */}
-        <Button
-          variant="outline"
-          size="lg"
-          className="mt-8 rounded-full px-8 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
-          onClick={onSkip}
-        >
-          <SkipForward className="w-5 h-5 mr-2" />
-          Saltar descanso
-        </Button>
+        {/* Controls - only show when NOT paused */}
+        {!isPaused && (
+          <div className="mt-8 flex items-center gap-4">
+            {/* Back button */}
+            <button
+              onClick={onGoBack}
+              disabled={!canGoBack}
+              className={`w-12 h-12 flex items-center justify-center rounded-full backdrop-blur-sm transition-all ${
+                canGoBack 
+                  ? "bg-white/10 border border-white/30 text-white hover:bg-white/20" 
+                  : "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"
+              }`}
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Pause button */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full px-6 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+              onClick={onPause}
+            >
+              <Pause className="w-5 h-5 mr-2" />
+              Pausar
+            </Button>
+
+            {/* Skip button */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full px-6 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+              onClick={onSkip}
+            >
+              <SkipForward className="w-5 h-5 mr-2" />
+              Saltar
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Exit button */}
@@ -148,6 +187,47 @@ export function WorkoutRest({
       >
         <X className="w-5 h-5" />
       </button>
+
+      {/* Paused overlay */}
+      {isPaused && (
+        <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-2xl font-bold text-white mb-2">Pausado</p>
+            
+            {/* Back button when paused */}
+            {canGoBack && (
+              <button
+                onClick={onGoBack}
+                className="flex flex-col items-center gap-1 text-white hover:text-primary transition-all mb-4"
+              >
+                <div className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/60 hover:border-primary">
+                  <ChevronLeft className="w-7 h-7" />
+                </div>
+                <span className="text-xs">Anterior</span>
+              </button>
+            )}
+
+            <Button
+              size="lg"
+              onClick={onResume}
+              className="rounded-full px-8"
+            >
+              <Play className="w-5 h-5 mr-2" />
+              Continuar
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onSkip}
+              className="rounded-full px-8 border-white/60 text-white/60 hover:text-white hover:border-white hover:bg-white/10"
+            >
+              <SkipForward className="w-5 h-5 mr-2" />
+              Saltar descanso
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

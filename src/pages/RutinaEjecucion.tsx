@@ -347,7 +347,12 @@ export default function RutinaEjecucion() {
           }
           videoUrl={currentStep.nextExercise?.video_url}
           thumbnailUrl={currentStep.nextExercise?.thumbnail_url}
+          isPaused={isPaused}
+          canGoBack={canGoBack}
           onSkip={skipRest}
+          onPause={pause}
+          onResume={resume}
+          onGoBack={goBack}
           onExit={() => {
             exit();
             handleExit();
