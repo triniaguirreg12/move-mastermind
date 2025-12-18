@@ -184,7 +184,10 @@ export function WorkoutRest({
 
       {/* Exit button */}
       <button
-        onClick={onFinishEarly}
+        onClick={() => {
+          onPause();
+          onFinishEarly();
+        }}
         className="absolute top-4 left-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
       >
         <X className="w-5 h-5" />
