@@ -128,6 +128,19 @@ export function WorkoutExercise({
     }
   }, [timeRemaining, tipoEjecucion, onPlayBuzzer]);
 
+  // Pause/resume video based on isPaused state
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPaused) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play().catch(() => {
+          // Autoplay might be blocked, ignore error
+        });
+      }
+    }
+  }, [isPaused]);
+
   // Gender-dynamic confirmation title
   const getFinishTitle = () => {
     if (userGender === "Mujer") {
