@@ -1,6 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface UserAptitudes {
+  fuerza: number;
+  potencia: number;
+  agilidad: number;
+  coordinacion: number;
+  estabilidad: number;
+  velocidad: number;
+  resistencia: number;
+  movilidad: number;
+}
+
 export interface UserProfile {
   id: string;
   user_id: string;
@@ -11,6 +22,7 @@ export interface UserProfile {
   country: string | null;
   city: string | null;
   weekly_training_goal: number;
+  aptitudes: UserAptitudes | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,7 +41,12 @@ export function useUserProfile() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as UserProfile | null;
+      if (!data) return null;
+      
+      return {
+        ...data,
+        aptitudes: data.aptitudes as unknown as UserAptitudes | null,
+      } as UserProfile;
     },
   });
 }

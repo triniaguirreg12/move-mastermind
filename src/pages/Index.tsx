@@ -32,16 +32,19 @@ import agilityImg from "@/assets/agility-routine.png";
 
 const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
 
-const radarData = [
-  { label: "Fu", value: 85 },  // Fuerza
-  { label: "Po", value: 70 },  // Potencia
-  { label: "Ag", value: 75 },  // Agilidad
-  { label: "Co", value: 60 },  // Coordinación
-  { label: "Es", value: 80 },  // Estabilidad
-  { label: "Ve", value: 65 },  // Velocidad
-  { label: "Re", value: 72 },  // Resistencia
-  { label: "Mo", value: 78 },  // Movilidad
-];
+// Aptitude labels mapping
+const APTITUDES_LABELS: Record<string, string> = {
+  fuerza: "Fu",
+  potencia: "Po", 
+  agilidad: "Ag",
+  coordinacion: "Co",
+  estabilidad: "Es",
+  velocidad: "Ve",
+  resistencia: "Re",
+  movilidad: "Mo",
+};
+
+const APTITUDES_ORDER = ["fuerza", "potencia", "agilidad", "coordinacion", "estabilidad", "velocidad", "resistencia", "movilidad"];
 
 const Index = () => {
   const navigate = useNavigate();
@@ -92,6 +95,15 @@ const Index = () => {
     const dateKey = format(date, "yyyy-MM-dd");
     return getActivityDotsForDate(events, dateKey);
   };
+
+  // Build radar data from user aptitudes
+  const radarData = useMemo(() => {
+    const aptitudes = userProfile?.aptitudes || {};
+    return APTITUDES_ORDER.map((key) => ({
+      label: APTITUDES_LABELS[key] || key.slice(0, 2),
+      value: (aptitudes as Record<string, number>)[key] || 0,
+    }));
+  }, [userProfile?.aptitudes]);
 
   // Get activities for today
   const todayActivities = useMemo(() => {
