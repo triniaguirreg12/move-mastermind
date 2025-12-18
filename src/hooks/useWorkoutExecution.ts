@@ -220,10 +220,14 @@ export interface UseWorkoutExecutionReturn {
   totalDots: number;
   dotsByBlock: number[];
   currentDotIndex: number;
+  canGoBack: boolean;
+  canGoForward: boolean;
   start: () => void;
   pause: () => void;
   resume: () => void;
   skipRest: () => void;
+  goBack: () => void;
+  goForward: () => void;
   exit: () => void;
 }
 
@@ -320,6 +324,46 @@ export function useWorkoutExecution(
     }
   }, [steps, currentStepIndex]);
 
+  // Find previous exercise step index
+  const findPreviousExerciseIndex = useCallback((fromIndex: number): number => {
+    for (let i = fromIndex - 1; i >= 0; i--) {
+      if (steps[i]?.type === "exercise") {
+        return i;
+      }
+    }
+    return -1;
+  }, [steps]);
+
+  // Find next exercise step index
+  const findNextExerciseIndex = useCallback((fromIndex: number): number => {
+    for (let i = fromIndex + 1; i < steps.length; i++) {
+      if (steps[i]?.type === "exercise") {
+        return i;
+      }
+    }
+    return -1;
+  }, [steps]);
+
+  // Go back to previous exercise
+  const goBack = useCallback(() => {
+    const prevExerciseIndex = findPreviousExerciseIndex(currentStepIndex);
+    if (prevExerciseIndex >= 0) {
+      setCurrentStepIndex(prevExerciseIndex);
+      setTimeRemaining(steps[prevExerciseIndex]?.duration || 0);
+    }
+  }, [currentStepIndex, findPreviousExerciseIndex, steps]);
+
+  // Go forward to next exercise (only when paused)
+  const goForward = useCallback(() => {
+    if (!isPaused) return; // Only allow when paused
+    
+    const nextExerciseIndex = findNextExerciseIndex(currentStepIndex);
+    if (nextExerciseIndex >= 0) {
+      setCurrentStepIndex(nextExerciseIndex);
+      setTimeRemaining(steps[nextExerciseIndex]?.duration || 0);
+    }
+  }, [currentStepIndex, findNextExerciseIndex, steps, isPaused]);
+
   const exit = useCallback(() => {
     setIsPaused(true);
     onExit?.();
@@ -327,6 +371,8 @@ export function useWorkoutExecution(
 
   const currentStep = steps[currentStepIndex] || null;
   const currentDotIndex = getCurrentDotIndex(steps, currentStepIndex);
+  const canGoBack = findPreviousExerciseIndex(currentStepIndex) >= 0;
+  const canGoForward = isPaused && findNextExerciseIndex(currentStepIndex) >= 0;
 
   return {
     steps,
@@ -338,10 +384,14 @@ export function useWorkoutExecution(
     totalDots: progressInfo.total,
     dotsByBlock: progressInfo.byBlock,
     currentDotIndex,
+    canGoBack,
+    canGoForward,
     start,
     pause,
     resume,
     skipRest,
+    goBack,
+    goForward,
     exit,
   };
 }
