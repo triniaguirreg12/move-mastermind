@@ -167,8 +167,14 @@ export function WorkoutExercise({
             loop
             muted
             playsInline
+            crossOrigin="anonymous"
             className="w-full h-full object-cover"
             poster={thumbnailUrl || undefined}
+            onError={(e) => {
+              console.error("Video failed to load:", videoUrl);
+              // Hide the video element if it fails to load
+              (e.target as HTMLVideoElement).style.display = 'none';
+            }}
           />
         ) : thumbnailUrl ? (
           <img
