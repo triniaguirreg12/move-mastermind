@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +77,7 @@ interface UserProfile {
 const Configuracion = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showAccountSheet, setShowAccountSheet] = useState(false);
   const [showGoalSheet, setShowGoalSheet] = useState(false);
@@ -160,6 +162,10 @@ const Configuracion = () => {
       toast.error("Error al guardar el objetivo");
     } else {
       setProfile(prev => prev ? { ...prev, weekly_training_goal: editedProfile.weekly_training_goal } : null);
+      // Invalidate radar queries so they recalculate with the new goal
+      queryClient.invalidateQueries({ queryKey: ["aptitudes-weekly"] });
+      queryClient.invalidateQueries({ queryKey: ["aptitudes-monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
       toast.success("Objetivo actualizado");
       setShowGoalSheet(false);
     }

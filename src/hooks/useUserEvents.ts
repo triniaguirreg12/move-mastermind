@@ -113,6 +113,12 @@ export function useCreateEvent() {
       queryClient.invalidateQueries({ queryKey: ["user-events"] });
       queryClient.invalidateQueries({ queryKey: ["scheduled-routines"] });
       
+      // If this is a completed entrenamiento, invalidate radar queries
+      if (variables.type === "entrenamiento" && variables.status === "completed") {
+        queryClient.invalidateQueries({ queryKey: ["aptitudes-weekly"] });
+        queryClient.invalidateQueries({ queryKey: ["aptitudes-monthly"] });
+      }
+      
       const messages: Record<EventType, string> = {
         entrenamiento: "Entrenamiento agendado",
         padel: "Pádel agendado",

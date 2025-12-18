@@ -25,7 +25,7 @@ import {
   PadelSubtype,
 } from "@/hooks/useUserEvents";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useWeeklyAptitudes } from "@/hooks/useWeeklyAptitudes";
+import { useAptitudesRadar } from "@/hooks/useAptitudesRadar";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
@@ -58,7 +58,8 @@ const Index = () => {
 
   const { data: events = [] } = useUserEvents();
   const { data: userProfile } = useUserProfile();
-  const { weeklyAptitudes } = useWeeklyAptitudes(userProfile?.weekly_training_goal || 4);
+  const weeklyGoal = userProfile?.weekly_training_goal || 4;
+  const { weeklyAptitudes, monthlyAptitudes } = useAptitudesRadar(weeklyGoal);
   const cleanupMissedEvents = useCleanupMissedEvents();
 
   // Cleanup missed scheduled entrenamientos on mount
@@ -98,14 +99,15 @@ const Index = () => {
     return getActivityDotsForDate(events, dateKey);
   };
 
-  // Build radar data from weekly aptitudes (calculated from completed routines)
-  // RadarChart expects values 0-100, weeklyAptitudes are 0-1
+  // Build radar data from aptitudes based on selected period
+  // RadarChart expects values 0-100, aptitudes are 0-1 (after sqrt transform)
   const radarData = useMemo(() => {
+    const aptitudes = summaryPeriod === "semanal" ? weeklyAptitudes : monthlyAptitudes;
     return APTITUDES_ORDER.map((key) => ({
       label: APTITUDES_LABELS[key] || key.slice(0, 2),
-      value: Math.round((weeklyAptitudes[key as keyof typeof weeklyAptitudes] || 0) * 100),
+      value: Math.round((aptitudes[key as keyof typeof aptitudes] || 0) * 100),
     }));
-  }, [weeklyAptitudes]);
+  }, [weeklyAptitudes, monthlyAptitudes, summaryPeriod]);
 
   // Get activities for today
   const todayActivities = useMemo(() => {
