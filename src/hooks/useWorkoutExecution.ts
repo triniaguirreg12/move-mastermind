@@ -324,45 +324,32 @@ export function useWorkoutExecution(
     }
   }, [steps, currentStepIndex]);
 
-  // Find previous exercise step index
-  const findPreviousExerciseIndex = useCallback((fromIndex: number): number => {
-    for (let i = fromIndex - 1; i >= 0; i--) {
-      if (steps[i]?.type === "exercise") {
-        return i;
-      }
-    }
-    return -1;
-  }, [steps]);
-
-  // Find next exercise step index
-  const findNextExerciseIndex = useCallback((fromIndex: number): number => {
-    for (let i = fromIndex + 1; i < steps.length; i++) {
-      if (steps[i]?.type === "exercise") {
-        return i;
-      }
-    }
-    return -1;
-  }, [steps]);
-
-  // Go back to previous exercise
+  // Go back to previous step (exercise or rest, not countdown)
   const goBack = useCallback(() => {
-    const prevExerciseIndex = findPreviousExerciseIndex(currentStepIndex);
-    if (prevExerciseIndex >= 0) {
-      setCurrentStepIndex(prevExerciseIndex);
-      setTimeRemaining(steps[prevExerciseIndex]?.duration || 0);
+    if (currentStepIndex <= 0) return;
+    
+    // Find previous valid step (skip countdown)
+    let prevIndex = currentStepIndex - 1;
+    while (prevIndex >= 0 && steps[prevIndex]?.type === "countdown") {
+      prevIndex--;
     }
-  }, [currentStepIndex, findPreviousExerciseIndex, steps]);
+    
+    if (prevIndex >= 0) {
+      setCurrentStepIndex(prevIndex);
+      setTimeRemaining(steps[prevIndex]?.duration || 0);
+    }
+  }, [currentStepIndex, steps]);
 
   // Go forward to next exercise (only when paused)
   const goForward = useCallback(() => {
     if (!isPaused) return; // Only allow when paused
     
-    const nextExerciseIndex = findNextExerciseIndex(currentStepIndex);
-    if (nextExerciseIndex >= 0) {
-      setCurrentStepIndex(nextExerciseIndex);
-      setTimeRemaining(steps[nextExerciseIndex]?.duration || 0);
+    const nextIndex = currentStepIndex + 1;
+    if (nextIndex < steps.length && steps[nextIndex]?.type !== "complete") {
+      setCurrentStepIndex(nextIndex);
+      setTimeRemaining(steps[nextIndex]?.duration || 0);
     }
-  }, [currentStepIndex, findNextExerciseIndex, steps, isPaused]);
+  }, [currentStepIndex, steps, isPaused]);
 
   const exit = useCallback(() => {
     setIsPaused(true);
@@ -371,8 +358,10 @@ export function useWorkoutExecution(
 
   const currentStep = steps[currentStepIndex] || null;
   const currentDotIndex = getCurrentDotIndex(steps, currentStepIndex);
-  const canGoBack = findPreviousExerciseIndex(currentStepIndex) >= 0;
-  const canGoForward = isPaused && findNextExerciseIndex(currentStepIndex) >= 0;
+  
+  // Can go back if there's a previous step that's not a countdown
+  const canGoBack = currentStepIndex > 0 && steps.slice(0, currentStepIndex).some(s => s.type !== "countdown");
+  const canGoForward = isPaused && currentStepIndex < steps.length - 1 && steps[currentStepIndex + 1]?.type !== "complete";
 
   return {
     steps,
