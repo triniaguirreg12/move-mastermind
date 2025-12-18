@@ -70,6 +70,19 @@ export function WorkoutRest({
     }
   }, [timeRemaining, onPlayBuzzer]);
 
+  // Pause/resume video based on isPaused state
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPaused) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play().catch(() => {
+          // Autoplay might be blocked, ignore error
+        });
+      }
+    }
+  }, [isPaused]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Video Background - next exercise preview */}
