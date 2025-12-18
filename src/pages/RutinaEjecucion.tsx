@@ -12,20 +12,30 @@ import { WorkoutExercise } from "@/components/workout/WorkoutExercise";
 import { WorkoutRest } from "@/components/workout/WorkoutRest";
 import { WorkoutComplete } from "@/components/workout/WorkoutComplete";
 
-// Buzzer sound - using Web Audio API for reliability
-function createBuzzerSound() {
+// Audio context singleton for sounds
+let audioContextInstance: AudioContext | null = null;
+
+function getAudioContext() {
   if (typeof window === "undefined") return null;
-  
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  
+  if (!audioContextInstance) {
+    audioContextInstance = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return audioContextInstance;
+}
+
+// Buzzer sound - plays on countdown (3, 2, 1)
+function createBuzzerSound() {
   return () => {
+    const audioContext = getAudioContext();
+    if (!audioContext) return;
+    
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    oscillator.frequency.value = 800; // Hz
+    oscillator.frequency.value = 800; // Hz - medium tone
     oscillator.type = "sine";
     
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
@@ -33,6 +43,29 @@ function createBuzzerSound() {
     
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.2);
+  };
+}
+
+// Beep sound - plays when exercise starts (higher pitch, distinct)
+function createBeepSound() {
+  return () => {
+    const audioContext = getAudioContext();
+    if (!audioContext) return;
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 1200; // Hz - higher tone than buzzer
+    oscillator.type = "sine";
+    
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.15);
   };
 }
 
@@ -45,10 +78,12 @@ export default function RutinaEjecucion() {
   
   const [workoutStarted, setWorkoutStarted] = useState(false);
   const buzzerRef = useRef<(() => void) | null>(null);
+  const beepRef = useRef<(() => void) | null>(null);
 
-  // Initialize buzzer
+  // Initialize sounds
   useEffect(() => {
     buzzerRef.current = createBuzzerSound();
+    beepRef.current = createBeepSound();
   }, []);
 
   const playBuzzer = useCallback(() => {
@@ -56,6 +91,14 @@ export default function RutinaEjecucion() {
       buzzerRef.current?.();
     } catch (e) {
       console.log("Could not play buzzer sound");
+    }
+  }, []);
+
+  const playBeep = useCallback(() => {
+    try {
+      beepRef.current?.();
+    } catch (e) {
+      console.log("Could not play beep sound");
     }
   }, []);
 
@@ -109,10 +152,14 @@ export default function RutinaEjecucion() {
     totalDots,
     dotsByBlock,
     currentDotIndex,
+    canGoBack,
+    canGoForward,
     start,
     pause,
     resume,
     skipRest,
+    goBack,
+    goForward,
     exit,
   } = useWorkoutExecution(
     workoutStarted ? routine : null,
@@ -268,13 +315,19 @@ export default function RutinaEjecucion() {
           dotsByBlock={dotsByBlock}
           currentDotIndex={currentDotIndex}
           userGender={userProfile?.sex}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
           onPause={pause}
           onResume={resume}
+          onGoBack={goBack}
+          onGoForward={goForward}
           onExit={() => {
             exit();
             handleExit();
           }}
           onFinishEarly={handleFinishEarly}
+          onPlayBuzzer={playBuzzer}
+          onPlayBeep={playBeep}
         />
       );
 

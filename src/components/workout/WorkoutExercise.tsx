@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Pause, Play, Info, X } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Pause, Play, Info, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkoutProgressDots } from "./WorkoutProgressDots";
 import {
@@ -28,10 +28,16 @@ interface WorkoutExerciseProps {
   dotsByBlock: number[];
   currentDotIndex: number;
   userGender?: string;
+  canGoBack: boolean;
+  canGoForward: boolean;
   onPause: () => void;
   onResume: () => void;
+  onGoBack: () => void;
+  onGoForward: () => void;
   onExit: () => void;
   onFinishEarly: () => void;
+  onPlayBuzzer?: () => void;
+  onPlayBeep?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -55,13 +61,47 @@ export function WorkoutExercise({
   dotsByBlock,
   currentDotIndex,
   userGender,
+  canGoBack,
+  canGoForward,
   onPause,
   onResume,
+  onGoBack,
+  onGoForward,
   onExit,
   onFinishEarly,
+  onPlayBuzzer,
+  onPlayBeep,
 }: WorkoutExerciseProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
+  const [showTips, setShowTips] = useState(false);
+  const lastBuzzerRef = useRef<number | null>(null);
+  const hasPlayedBeepRef = useRef(false);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Play beep when exercise starts (first render or reset)
+  useEffect(() => {
+    if (!hasPlayedBeepRef.current && !isPaused) {
+      hasPlayedBeepRef.current = true;
+      onPlayBeep?.();
+    }
+  }, [onPlayBeep, isPaused]);
+
+  // Reset beep flag when exercise changes
+  useEffect(() => {
+    hasPlayedBeepRef.current = false;
+  }, [exerciseName]);
+
+  // Play buzzer on 3, 2, 1 for timed exercises
+  useEffect(() => {
+    if (tipoEjecucion === "tiempo" && timeRemaining <= 3 && timeRemaining >= 1) {
+      if (lastBuzzerRef.current !== timeRemaining) {
+        lastBuzzerRef.current = timeRemaining;
+        onPlayBuzzer?.();
+      }
+    }
+  }, [timeRemaining, tipoEjecucion, onPlayBuzzer]);
 
   // Gender-dynamic confirmation title
   const getFinishTitle = () => {
@@ -72,7 +112,23 @@ export function WorkoutExercise({
     }
     return "¿Quieres finalizar la rutina?";
   };
-  const [showTips, setShowTips] = useState(false);
+
+  // Long press handler for forward button
+  const handleForwardStart = () => {
+    if (!canGoForward) return;
+    longPressTimerRef.current = setTimeout(() => {
+      setIsLongPressing(true);
+      onGoForward();
+    }, 800); // 800ms long press
+  };
+
+  const handleForwardEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setIsLongPressing(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
@@ -139,8 +195,22 @@ export function WorkoutExercise({
         {/* Bottom Section - only show when NOT paused */}
         {!isPaused && (
           <div className="px-4 pb-12 space-y-6">
-            {/* Pause button */}
-            <div className="flex justify-center">
+            {/* Navigation and Pause controls */}
+            <div className="flex items-center justify-center gap-4">
+              {/* Back button - always visible if available */}
+              <button
+                onClick={onGoBack}
+                disabled={!canGoBack}
+                className={`w-12 h-12 flex items-center justify-center rounded-full backdrop-blur-sm transition-all ${
+                  canGoBack 
+                    ? "bg-white/10 border border-white/30 text-white hover:bg-white/20" 
+                    : "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"
+                }`}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              {/* Pause button */}
               <Button
                 variant="outline"
                 size="lg"
@@ -150,6 +220,27 @@ export function WorkoutExercise({
                 <Pause className="w-5 h-5 mr-2" />
                 Pausar ejercicio
               </Button>
+
+              {/* Forward button - only via long press when not paused */}
+              <div
+                onMouseDown={handleForwardStart}
+                onMouseUp={handleForwardEnd}
+                onMouseLeave={handleForwardEnd}
+                onTouchStart={handleForwardStart}
+                onTouchEnd={handleForwardEnd}
+                className="relative"
+              >
+                <button
+                  disabled={true}
+                  className="w-12 h-12 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/30 cursor-not-allowed backdrop-blur-sm"
+                  title="Mantén presionado para avanzar"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+                {isLongPressing && (
+                  <div className="absolute inset-0 rounded-full border-2 border-primary animate-pulse" />
+                )}
+              </div>
             </div>
 
             {/* Timer */}
@@ -162,7 +253,9 @@ export function WorkoutExercise({
                   <p className="text-lg text-white/60">repeticiones</p>
                 </div>
               ) : (
-                <p className="text-8xl font-bold text-white tracking-tight">
+                <p className={`text-8xl font-bold tracking-tight transition-colors ${
+                  timeRemaining <= 3 ? "text-primary" : "text-white"
+                }`}>
                   {formatTime(timeRemaining)}
                 </p>
               )}
@@ -205,11 +298,49 @@ export function WorkoutExercise({
         </div>
       )}
 
-      {/* Paused overlay - single button here */}
+      {/* Paused overlay */}
       {isPaused && (
         <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <p className="text-2xl font-bold text-white mb-2">Pausado</p>
+            
+            {/* Navigation buttons when paused */}
+            <div className="flex items-center gap-6 mb-4">
+              <button
+                onClick={onGoBack}
+                disabled={!canGoBack}
+                className={`flex flex-col items-center gap-1 transition-all ${
+                  canGoBack 
+                    ? "text-white hover:text-primary" 
+                    : "text-white/30 cursor-not-allowed"
+                }`}
+              >
+                <div className={`w-14 h-14 flex items-center justify-center rounded-full border-2 ${
+                  canGoBack ? "border-white/60 hover:border-primary" : "border-white/20"
+                }`}>
+                  <ChevronLeft className="w-7 h-7" />
+                </div>
+                <span className="text-xs">Anterior</span>
+              </button>
+
+              <button
+                onClick={onGoForward}
+                disabled={!canGoForward}
+                className={`flex flex-col items-center gap-1 transition-all ${
+                  canGoForward 
+                    ? "text-white hover:text-primary" 
+                    : "text-white/30 cursor-not-allowed"
+                }`}
+              >
+                <div className={`w-14 h-14 flex items-center justify-center rounded-full border-2 ${
+                  canGoForward ? "border-white/60 hover:border-primary" : "border-white/20"
+                }`}>
+                  <ChevronRight className="w-7 h-7" />
+                </div>
+                <span className="text-xs">Siguiente</span>
+              </button>
+            </div>
+
             <Button
               size="lg"
               onClick={onResume}
