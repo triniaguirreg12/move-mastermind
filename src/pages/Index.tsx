@@ -25,6 +25,7 @@ import {
   PadelSubtype,
 } from "@/hooks/useUserEvents";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useWeeklyAptitudes } from "@/hooks/useWeeklyAptitudes";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
@@ -57,6 +58,7 @@ const Index = () => {
 
   const { data: events = [] } = useUserEvents();
   const { data: userProfile } = useUserProfile();
+  const { weeklyAptitudes } = useWeeklyAptitudes(userProfile?.weekly_training_goal || 4);
   const cleanupMissedEvents = useCleanupMissedEvents();
 
   // Cleanup missed scheduled entrenamientos on mount
@@ -96,14 +98,13 @@ const Index = () => {
     return getActivityDotsForDate(events, dateKey);
   };
 
-  // Build radar data from user aptitudes
+  // Build radar data from weekly aptitudes (calculated from completed routines)
   const radarData = useMemo(() => {
-    const aptitudes = userProfile?.aptitudes || {};
     return APTITUDES_ORDER.map((key) => ({
       label: APTITUDES_LABELS[key] || key.slice(0, 2),
-      value: (aptitudes as Record<string, number>)[key] || 0,
+      value: weeklyAptitudes[key as keyof typeof weeklyAptitudes] || 0,
     }));
-  }, [userProfile?.aptitudes]);
+  }, [weeklyAptitudes]);
 
   // Get activities for today
   const todayActivities = useMemo(() => {
