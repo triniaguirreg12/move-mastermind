@@ -195,19 +195,6 @@ export function WorkoutRest({
         <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <p className="text-2xl font-bold text-white mb-2">Pausado</p>
-            
-            {/* Back button when paused */}
-            {canGoBack && (
-              <button
-                onClick={onGoBack}
-                className="flex flex-col items-center gap-1 text-white hover:text-primary transition-all mb-4"
-              >
-                <div className="w-14 h-14 flex items-center justify-center rounded-full border-2 border-white/60 hover:border-primary">
-                  <ChevronLeft className="w-7 h-7" />
-                </div>
-                <span className="text-xs">Anterior</span>
-              </button>
-            )}
 
             <Button
               size="lg"
