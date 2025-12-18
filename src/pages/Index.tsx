@@ -99,10 +99,11 @@ const Index = () => {
   };
 
   // Build radar data from weekly aptitudes (calculated from completed routines)
+  // RadarChart expects values 0-100, weeklyAptitudes are 0-1
   const radarData = useMemo(() => {
     return APTITUDES_ORDER.map((key) => ({
       label: APTITUDES_LABELS[key] || key.slice(0, 2),
-      value: weeklyAptitudes[key as keyof typeof weeklyAptitudes] || 0,
+      value: Math.round((weeklyAptitudes[key as keyof typeof weeklyAptitudes] || 0) * 100),
     }));
   }, [weeklyAptitudes]);
 
