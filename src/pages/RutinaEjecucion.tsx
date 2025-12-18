@@ -353,6 +353,7 @@ export default function RutinaEjecucion() {
           onPause={pause}
           onResume={resume}
           onGoBack={goBack}
+          onFinishEarly={handleFinishEarly}
           onExit={() => {
             exit();
             handleExit();
