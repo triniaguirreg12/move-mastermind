@@ -41,6 +41,7 @@ export function BookingPaymentStep({
       await confirmPayment.mutateAsync({
         appointmentId,
         paymentId: `PAY_${Date.now()}`,
+        professionalId: professional.id,
         professionalName: professional.name,
         appointmentDate: format(selectedDate, 'yyyy-MM-dd'),
         startTime: selectedTime + ':00',
