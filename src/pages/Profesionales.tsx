@@ -1,42 +1,24 @@
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProfessionalCard } from "@/components/professionals/ProfessionalCard";
-import { toast } from "sonner";
-
-const professionals = [
-  {
-    id: 1,
-    name: "Isabel Rencoret",
-    title: "Kinesióloga Deportiva",
-    specialty: "Especialista en rehabilitación deportiva y prevención de lesiones",
-    experience: "7 años de experiencia",
-    location: "Santiago, Chile",
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Carlos Mendoza",
-    title: "Kinesiólogo Deportivo",
-    specialty: "Entrenamiento funcional y readaptación física",
-    experience: "5 años de experiencia",
-    location: "Santiago, Chile",
-    available: true,
-  },
-  {
-    id: 3,
-    name: "María González",
-    title: "Kinesióloga Deportiva",
-    specialty: "Terapia manual y tratamiento de lesiones crónicas",
-    experience: "10 años de experiencia",
-    location: "Santiago, Chile",
-    available: false,
-  },
-];
+import { BookingFlow } from "@/components/professionals/BookingFlow";
+import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
+import { useProfessionals, Professional } from "@/hooks/useProfessionals";
+import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Profesionales = () => {
-  const handleSchedule = (name: string) => {
-    toast.success(`Solicitud enviada a ${name}`, {
-      description: "Te contactaremos pronto para confirmar la cita.",
-    });
+  const { data: professionals, isLoading } = useProfessionals();
+  const { user } = useAuth();
+  const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  const handleSchedule = (professional: Professional) => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+    setSelectedProfessional(professional);
   };
 
   return (
@@ -48,31 +30,56 @@ const Profesionales = () => {
             Profesionales
           </h1>
           <p className="text-muted-foreground mt-1">
-            Agenda una sesión con nuestros especialistas
+            Agenda una sesión personalizada con nuestros especialistas
           </p>
         </header>
 
         {/* Professionals List */}
         <div className="space-y-4">
-          {professionals.map((professional, index) => (
-            <div
-              key={professional.id}
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <ProfessionalCard
-                name={professional.name}
-                title={professional.title}
-                specialty={professional.specialty}
-                experience={professional.experience}
-                location={professional.location}
-                available={professional.available}
-                onSchedule={() => handleSchedule(professional.name)}
-              />
+          {isLoading ? (
+            // Loading skeleton
+            <div className="space-y-4">
+              {[1].map((i) => (
+                <Skeleton key={i} className="h-48 w-full rounded-2xl" />
+              ))}
             </div>
-          ))}
+          ) : professionals && professionals.length > 0 ? (
+            professionals.map((professional, index) => (
+              <div
+                key={professional.id}
+                className="animate-fade-in-up"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <ProfessionalCard
+                  professional={professional}
+                  onSchedule={() => handleSchedule(professional)}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              No hay profesionales disponibles en este momento.
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Booking Flow */}
+      {selectedProfessional && (
+        <BookingFlow
+          professional={selectedProfessional}
+          isOpen={!!selectedProfessional}
+          onClose={() => setSelectedProfessional(null)}
+        />
+      )}
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+        title="Necesitas una cuenta para continuar"
+        description="Para agendar una cita personalizada y guardar tu información, debes iniciar sesión o crear una cuenta."
+      />
     </AppLayout>
   );
 };
