@@ -25,6 +25,7 @@ export interface ProgramWeekRoutine {
     dificultad: string;
     estado: string;
     portada_url: string | null;
+    objetivo?: Json;
   };
 }
 
@@ -75,7 +76,7 @@ export function usePrograms() {
           .from("program_week_routines")
           .select(`
             *,
-            routine:routines(id, nombre, descripcion, categoria, dificultad, estado, portada_url)
+            routine:routines(id, nombre, descripcion, categoria, dificultad, estado, portada_url, objetivo)
           `)
           .in("week_id", weekIds)
           .order("orden", { ascending: true });
@@ -141,7 +142,7 @@ export function useProgram(id: string | undefined) {
           .from("program_week_routines")
           .select(`
             *,
-            routine:routines(id, nombre, descripcion, categoria, dificultad, estado, portada_url)
+            routine:routines(id, nombre, descripcion, categoria, dificultad, estado, portada_url, objetivo)
           `)
           .in("week_id", weekIds)
           .order("orden", { ascending: true });
@@ -359,7 +360,7 @@ export function useAvailableRoutines() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("routines")
-        .select("id, nombre, descripcion, categoria, dificultad, estado, portada_url")
+        .select("id, nombre, descripcion, categoria, dificultad, estado, portada_url, objetivo")
         .eq("tipo", "rutina")
         .eq("estado", "publicada")
         .order("nombre", { ascending: true });
