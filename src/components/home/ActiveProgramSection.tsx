@@ -50,93 +50,65 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
 
   return (
     <div className="px-4 py-2">
-      <div className="bg-card rounded-2xl p-4 border border-border overflow-hidden relative">
+      <div className="bg-card rounded-2xl p-3 border border-border overflow-hidden relative">
         {/* Decorative gradient */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
         
         {/* Header */}
-        <div className="flex items-start justify-between mb-3 relative z-10">
+        <div className="flex items-start justify-between mb-2 relative z-10">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-primary uppercase tracking-wide">
+            <div className="flex items-center gap-2 mb-0.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-medium text-primary uppercase tracking-wide">
                 Tu programa activo
               </span>
             </div>
-            <h3 className="text-lg font-semibold text-foreground line-clamp-1">
+            <h3 className="text-base font-semibold text-foreground line-clamp-1">
               {program.nombre}
             </h3>
           </div>
         </div>
 
         {/* Week progress */}
-        <div className="mb-4 relative z-10">
-          <div className="flex items-center justify-between text-sm mb-2">
+        <div className="mb-2 relative z-10">
+          <div className="flex items-center justify-between text-xs mb-1">
             <span className="text-muted-foreground">
               Semana {program.currentWeek} de {program.totalWeeks}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground">
               {program.completedWeeks} / {program.totalWeeks} completadas
             </span>
           </div>
-          <Progress value={progressPercent} className="h-2" />
+          <Progress value={progressPercent} className="h-1.5" />
         </div>
 
-        {/* Current week routines */}
-        <div className="space-y-2 mb-4 relative z-10">
-          <h4 className="text-sm font-medium text-foreground mb-2">
-            Rutinas de esta semana
-          </h4>
+        {/* Current week routines - compact list */}
+        <div className="space-y-1.5 mb-2 relative z-10">
           {routines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               No hay rutinas asignadas para esta semana
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-1.5">
               {routines.map((routine) => (
                 <button
                   key={routine.id}
                   onClick={() => handleRoutineClick(routine)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
+                    "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-all",
                     routine.isCompleted
-                      ? "bg-activity-training/10 border border-activity-training/20"
-                      : "bg-secondary/50 hover:bg-secondary border border-transparent hover:border-border"
+                      ? "bg-activity-training/10 text-activity-training border border-activity-training/20"
+                      : "bg-secondary/50 text-foreground hover:bg-secondary border border-transparent"
                   )}
                 >
-                  {/* Status icon */}
-                  <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
-                    routine.isCompleted
-                      ? "bg-activity-training text-background"
-                      : "border-2 border-muted-foreground/30"
-                  )}>
-                    {routine.isCompleted ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : (
-                      <Circle className="h-3 w-3 text-muted-foreground/30" />
-                    )}
-                  </div>
-
-                  {/* Routine info */}
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm font-medium truncate",
-                      routine.isCompleted ? "text-foreground/70" : "text-foreground"
-                    )}>
-                      {routine.routine?.nombre || "Rutina"}
-                    </p>
-                    {routine.routine?.categoria && (
-                      <p className="text-xs text-muted-foreground">
-                        {routine.routine.categoria}
-                      </p>
-                    )}
-                  </div>
-
-                  <ChevronRight className={cn(
-                    "h-4 w-4 flex-shrink-0",
-                    routine.isCompleted ? "text-muted-foreground/50" : "text-muted-foreground"
-                  )} />
+                  {routine.isCompleted ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Circle className="h-2.5 w-2.5 text-muted-foreground" />
+                  )}
+                  <span className="truncate max-w-[120px]">
+                    {routine.routine?.nombre || "Rutina"}
+                  </span>
                 </button>
               ))}
             </div>
@@ -146,22 +118,17 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
         {/* CTA */}
         <div className="relative z-10">
           {isWeekComplete ? (
-            <div className="bg-activity-training/10 rounded-xl p-3 text-center">
-              <p className="text-sm font-medium text-activity-training flex items-center justify-center gap-2">
-                <Check className="h-4 w-4" />
+            <div className="bg-activity-training/10 rounded-lg py-2 px-3 text-center">
+              <p className="text-xs font-medium text-activity-training flex items-center justify-center gap-1.5">
+                <Check className="h-3.5 w-3.5" />
                 ¡Semana completada!
               </p>
-              {program.currentWeek < program.totalWeeks && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  La próxima semana comenzará pronto
-                </p>
-              )}
             </div>
           ) : nextPendingRoutine ? (
             <Button 
               onClick={handleContinue}
               className="w-full"
-              size="lg"
+              size="sm"
             >
               Continuar programa
               <ChevronRight className="h-4 w-4 ml-1" />

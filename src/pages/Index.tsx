@@ -287,10 +287,8 @@ const Index = () => {
       </div>
 
       {/* Active Program Section */}
-      {activeProgram ? (
+      {activeProgram && (
         <ActiveProgramSection program={activeProgram} />
-      ) : (
-        <NoProgramCTA />
       )}
 
       {/* Activities */}
@@ -300,7 +298,7 @@ const Index = () => {
         </h2>
 
         {todayActivities.length === 0 ? (
-          <div className="p-6 rounded-xl bg-card/50 border border-dashed border-border/50 text-center">
+          <div className="p-4 rounded-xl bg-card/50 border border-dashed border-border/50 text-center">
             <p className="text-sm text-muted-foreground">
               No tienes actividades programadas para hoy
             </p>
@@ -360,6 +358,9 @@ const Index = () => {
             ))}
           </div>
         )}
+
+        {/* No Program CTA - shown below activities */}
+        {!activeProgram && <NoProgramCTA />}
       </div>
 
       <BottomNav />
