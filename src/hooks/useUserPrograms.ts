@@ -185,6 +185,30 @@ export function useScheduleProgramRoutines() {
   });
 }
 
+// Complete a program (mark as completed)
+export function useCompleteProgram() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (programId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from("user_programs")
+        .update({ status: "completed" })
+        .eq("user_id", user.id)
+        .eq("program_id", programId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-program"] });
+      queryClient.invalidateQueries({ queryKey: ["active-program"] });
+    },
+  });
+}
+
 // Unenroll from a program
 export function useUnenrollFromProgram() {
   const queryClient = useQueryClient();

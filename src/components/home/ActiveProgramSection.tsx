@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, Check, Circle, Sparkles, Star, Heart, Trophy } from "lucide-react";
+import { ChevronRight, Check, Circle, Sparkles, Star, Heart, Trophy, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { ActiveProgram, ActiveProgramRoutine } from "@/hooks/useActiveProgram";
 import { useIsFavorite, useToggleFavorite } from "@/hooks/useFavorites";
+import { useCompleteProgram } from "@/hooks/useUserPrograms";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
   const [hasRated, setHasRated] = useState(false);
   const { data: isFavorite = false } = useIsFavorite(program.id);
   const toggleFavorite = useToggleFavorite();
+  const completeProgram = useCompleteProgram();
 
   // Get current week data
   const currentWeekData = program.weeks.find(w => w.week_number === program.currentWeek);
@@ -68,8 +70,6 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
         .from("routines")
         .update({ calificacion: value })
         .eq("id", program.id);
-
-      toast.success("¡Gracias por tu evaluación!");
     } catch (error) {
       console.error("Error saving rating:", error);
     }
@@ -77,6 +77,14 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
 
   const handleToggleFavorite = () => {
     toggleFavorite.mutate({ routineId: program.id, isFavorite });
+  };
+
+  const handleSubmitFeedback = () => {
+    completeProgram.mutate(program.id, {
+      onSuccess: () => {
+        toast.success("¡Gracias por tu feedback! Programa finalizado.");
+      },
+    });
   };
 
   // Completed program view
@@ -146,7 +154,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
             onClick={handleToggleFavorite}
             disabled={toggleFavorite.isPending}
             className={cn(
-              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all relative z-10",
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all relative z-10 mb-3",
               isFavorite
                 ? "bg-destructive/10 border border-destructive/20 text-destructive"
                 : "bg-secondary/50 border border-border/30 text-muted-foreground hover:text-foreground"
@@ -162,6 +170,16 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
               {isFavorite ? "En favoritos" : "Agregar a favoritos"}
             </span>
           </button>
+
+          {/* Submit feedback button */}
+          <Button
+            onClick={handleSubmitFeedback}
+            disabled={completeProgram.isPending}
+            className="w-full relative z-10"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {completeProgram.isPending ? "Enviando..." : "Enviar y finalizar"}
+          </Button>
         </div>
       </div>
     );
