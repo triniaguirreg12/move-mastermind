@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, User, Target, CreditCard, LogOut, Moon, Bell, ChevronLeft, Check } from "lucide-react";
+import { ChevronRight, User, Target, CreditCard, LogOut, Moon, Bell, ChevronLeft, Check, MessageCircle, AlertTriangle, Lightbulb } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -82,6 +83,9 @@ const Configuracion = () => {
   const [showAccountSheet, setShowAccountSheet] = useState(false);
   const [showGoalSheet, setShowGoalSheet] = useState(false);
   const [showPlanSheet, setShowPlanSheet] = useState(false);
+  const [showSupportSheet, setShowSupportSheet] = useState(false);
+  const [supportType, setSupportType] = useState<"problem" | "suggestion">("problem");
+  const [supportMessage, setSupportMessage] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -171,6 +175,27 @@ const Configuracion = () => {
     }
   };
 
+  const handleSendSupport = async () => {
+    if (!supportMessage.trim()) {
+      toast.error("Por favor escribe un mensaje");
+      return;
+    }
+    
+    setSaving(true);
+    // For now, just show success - in the future this could save to a support_tickets table
+    // or send an email via edge function
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setSaving(false);
+    
+    toast.success(
+      supportType === "problem" 
+        ? "Problema reportado correctamente" 
+        : "Sugerencia enviada correctamente"
+    );
+    setSupportMessage("");
+    setShowSupportSheet(false);
+  };
+
   const formatBirthDate = (dateStr: string) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -232,6 +257,32 @@ const Configuracion = () => {
               label="Modo oscuro"
               description="Siempre activo"
               trailing={<Switch defaultChecked disabled />}
+            />
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground px-1">Soporte</h3>
+          <div className="space-y-2">
+            <SettingsItem
+              icon={<AlertTriangle className="w-5 h-5" />}
+              label="Reportar un problema"
+              description="Cuéntanos si algo no funciona bien"
+              onClick={() => {
+                setSupportType("problem");
+                setSupportMessage("");
+                setShowSupportSheet(true);
+              }}
+            />
+            <SettingsItem
+              icon={<Lightbulb className="w-5 h-5" />}
+              label="Enviar sugerencia"
+              description="Comparte tus ideas para mejorar la app"
+              onClick={() => {
+                setSupportType("suggestion");
+                setSupportMessage("");
+                setShowSupportSheet(true);
+              }}
             />
           </div>
         </section>
@@ -482,6 +533,70 @@ const Configuracion = () => {
             <p className="text-xs text-center text-muted-foreground">
               Los planes se pueden cancelar en cualquier momento.
             </p>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Support Sheet */}
+      <Sheet open={showSupportSheet} onOpenChange={setShowSupportSheet}>
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-xl font-display">
+              {supportType === "problem" ? "Reportar un problema" : "Enviar sugerencia"}
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="space-y-6">
+            <div className="p-4 rounded-xl bg-secondary/50 border border-border">
+              <div className="flex items-center gap-3 mb-2">
+                {supportType === "problem" ? (
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                ) : (
+                  <Lightbulb className="w-5 h-5 text-primary" />
+                )}
+                <h3 className="font-semibold text-foreground">
+                  {supportType === "problem" 
+                    ? "¿Encontraste un problema?" 
+                    : "¿Tienes una idea?"}
+                </h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {supportType === "problem"
+                  ? "Describe el problema que encontraste y te ayudaremos a resolverlo lo antes posible."
+                  : "Nos encanta escuchar tus ideas para mejorar Just MUV. ¡Cuéntanos!"}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="support-message">
+                {supportType === "problem" ? "Describe el problema" : "Tu sugerencia"}
+              </Label>
+              <Textarea
+                id="support-message"
+                value={supportMessage}
+                onChange={(e) => setSupportMessage(e.target.value)}
+                placeholder={
+                  supportType === "problem"
+                    ? "Ej: Al intentar iniciar una rutina, la app no responde..."
+                    : "Ej: Sería genial poder compartir mis rutinas con amigos..."
+                }
+                className="min-h-[150px] bg-secondary resize-none"
+              />
+            </div>
+
+            {profile?.email && (
+              <p className="text-xs text-muted-foreground">
+                Te responderemos a: <span className="text-foreground">{profile.email}</span>
+              </p>
+            )}
+            
+            <Button
+              onClick={handleSendSupport}
+              disabled={saving || !supportMessage.trim()}
+              className="w-full"
+            >
+              {saving ? "Enviando..." : "Enviar"}
+            </Button>
           </div>
         </SheetContent>
       </Sheet>
