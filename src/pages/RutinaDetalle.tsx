@@ -134,46 +134,48 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 animate-fade-in"
           onClick={handleBackdropClick}
         >
-          <div className="max-w-[280px] w-full space-y-3 relative animate-scale-in">
+          <div className="max-w-[240px] w-full space-y-2 relative animate-scale-in">
             {/* Close button */}
             <button
               type="button"
               onClick={handleClose}
-              className="absolute -top-10 right-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="absolute -top-9 right-0 w-7 h-7 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
               </svg>
             </button>
 
             {/* Exercise name */}
-            <h3 className="text-lg font-bold text-white text-center">
+            <h3 className="text-base font-bold text-white text-center">
               {exercise.nombre}
             </h3>
 
-            {/* Video - Vertical format */}
-            <div className="aspect-[9/16] rounded-xl overflow-hidden bg-muted max-h-[50vh]">
-              <video
-                ref={videoRef}
-                src={exercise.video_url || ""}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-                poster={exercise.thumbnail_url || "/placeholder.svg"}
-              />
+            {/* Video - Vertical format, centered and smaller */}
+            <div className="flex justify-center">
+              <div className="aspect-[9/16] w-32 rounded-lg overflow-hidden bg-muted">
+                <video
+                  ref={videoRef}
+                  src={exercise.video_url || ""}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  poster={exercise.thumbnail_url || "/placeholder.svg"}
+                />
+              </div>
             </div>
 
             {/* Tips as list */}
             {exercise.tips && (
-              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-3 border border-border/30">
-                <p className="text-[10px] font-semibold text-primary mb-2 uppercase tracking-wide">
+              <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2.5 border border-border/30">
+                <p className="text-[9px] font-semibold text-primary mb-1.5 uppercase tracking-wide">
                   Tips de Ejecución
                 </p>
-                <ul className="text-xs text-foreground/90 leading-relaxed space-y-1.5 text-left">
+                <ul className="text-[11px] text-foreground/90 leading-snug space-y-1 text-left">
                   {exercise.tips.split(/\d+\.\s*/).filter(Boolean).map((tip, index) => (
-                    <li key={index} className="flex gap-2">
+                    <li key={index} className="flex gap-1.5">
                       <span className="text-primary font-medium shrink-0">{index + 1}.</span>
                       <span>{tip.trim()}</span>
                     </li>
