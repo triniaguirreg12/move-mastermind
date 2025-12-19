@@ -327,11 +327,15 @@ export default function RutinaDetalle() {
   const allImplements = calcularImplementosRutina(routine.blocks || []);
 
   const handleGoBack = () => {
+    console.log("handleGoBack called");
+    console.log("history length:", window.history.length);
     // Check if there's history to go back to
     if (window.history.length > 1) {
+      console.log("navigating back");
       navigate(-1);
     } else {
       // Fallback to home if no history
+      console.log("navigating to home");
       navigate("/");
     }
   };
