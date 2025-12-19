@@ -331,7 +331,7 @@ export default function EditProgramRoutineModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <DialogTitle className="text-lg font-heading">
@@ -346,8 +346,8 @@ export default function EditProgramRoutineModal({
           </p>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-4">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1 overflow-auto">
+          <div className="px-6 py-4 space-y-6 pb-8">
             {/* Alert */}
             <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
