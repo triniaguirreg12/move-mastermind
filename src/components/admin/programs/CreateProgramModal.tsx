@@ -35,6 +35,8 @@ import {
   Loader2,
   ChevronUp,
   ChevronDown,
+  ImageIcon,
+  Upload,
 } from "lucide-react";
 import { useAvailableRoutines, useCreateProgram, useUpdateProgram } from "@/hooks/usePrograms";
 import ObjectiveRadarChart from "@/components/admin/routines/ObjectiveRadarChart";
@@ -71,6 +73,8 @@ interface ProgramFormData {
   nombre: string;
   descripcion: string;
   portada_url: string;
+  portada_type: "routine" | "external" | "";
+  portada_routine_id?: string;
   duracion_semanas: number;
   dificultad: DificultadRutina | "";
   estado: "borrador" | "publicada";
@@ -129,6 +133,7 @@ export default function CreateProgramModal({
     nombre: "",
     descripcion: "",
     portada_url: "",
+    portada_type: "",
     duracion_semanas: 4,
     dificultad: "",
     estado: "borrador",
@@ -209,6 +214,7 @@ export default function CreateProgramModal({
           nombre: program.nombre,
           descripcion: program.descripcion || "",
           portada_url: program.portada_url || "",
+          portada_type: program.portada_url ? "external" : "",
           duracion_semanas: program.duracion_semanas || 4,
           dificultad: (program.dificultad as DificultadRutina) || "",
           estado: program.estado as "borrador" | "publicada",
@@ -220,6 +226,7 @@ export default function CreateProgramModal({
           nombre: "",
           descripcion: "",
           portada_url: "",
+          portada_type: "",
           duracion_semanas: 4,
           dificultad: "",
           estado: "borrador",
@@ -617,76 +624,163 @@ export default function CreateProgramModal({
               </div>
 
               {/* Row 3: Cover and Radar */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Cover Photo */}
                 <div className="space-y-2">
-                  <Label htmlFor="portada">Portada del programa</Label>
+                  <Label>Portada del programa</Label>
                   <div className="flex gap-2">
-                    <Input
-                      id="portada"
-                      value={formData.portada_url}
-                      onChange={(e) => setFormData(prev => ({ ...prev, portada_url: e.target.value }))}
-                      placeholder="URL de imagen..."
-                      className="bg-card border-border flex-1"
-                    />
-                    {formData.portada_url && (
-                      <div className="h-9 w-9 rounded border border-border overflow-hidden flex-shrink-0">
+                    {/* Cover preview or drop zone */}
+                    <div 
+                      className={`h-20 w-20 rounded-lg border-2 border-dashed flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${
+                        formData.portada_url ? "border-border" : "border-border/50 hover:border-primary/50"
+                      }`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0 && files[0].type.startsWith("image/")) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              portada_url: event.target?.result as string,
+                              portada_type: "external"
+                            }));
+                          };
+                          reader.readAsDataURL(files[0]);
+                        }
+                      }}
+                    >
+                      {formData.portada_url ? (
                         <img 
                           src={formData.portada_url} 
                           alt="Portada"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = "";
                             (e.target as HTMLImageElement).style.display = "none";
                           }}
                         />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <Label>Aptitudes físicas (promedio de rutinas)</Label>
-                  <div className="flex items-center gap-4">
-                    {hasAptitudes ? (
-                      <div className="h-32 w-44">
-                        <ObjectiveRadarChart objetivo={calculatedObjetivo} />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-32 w-44 border-2 border-dashed border-border/50 rounded-lg text-muted-foreground text-xs text-center px-2">
-                        Agrega rutinas para ver el mapa de aptitudes
-                      </div>
-                    )}
-                    <div className="flex-1 text-xs text-muted-foreground space-y-1">
-                      <p>El mapa de aptitudes se calcula automáticamente promediando las aptitudes de todas las rutinas incluidas en el programa.</p>
-                      {hasAptitudes && (
-                        <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 mt-2">
-                          {APTITUDES_KEYS.map(key => (
-                            <div key={key} className="flex items-center justify-between">
-                              <span className="capitalize">{key.slice(0, 4)}.</span>
-                              <span className="font-medium text-foreground">{calculatedObjetivo[key]}</span>
-                            </div>
-                          ))}
+                      ) : (
+                        <div className="text-center p-1">
+                          <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                          <span className="text-[10px] text-muted-foreground">Drop image</span>
                         </div>
                       )}
                     </div>
+                    
+                    {/* Options */}
+                    <div className="flex-1 space-y-1.5">
+                      <Select
+                        value={formData.portada_type}
+                        onValueChange={(value) => {
+                          if (value === "routine" && availableRoutines && availableRoutines.length > 0) {
+                            const routineWithThumb = availableRoutines.find(r => r.portada_url);
+                            if (routineWithThumb) {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                portada_type: "routine",
+                                portada_url: routineWithThumb.portada_url || "",
+                                portada_routine_id: routineWithThumb.id
+                              }));
+                            }
+                          } else if (value === "external") {
+                            setFormData(prev => ({ ...prev, portada_type: "external", portada_url: "", portada_routine_id: undefined }));
+                          } else {
+                            setFormData(prev => ({ ...prev, portada_type: "", portada_url: "", portada_routine_id: undefined }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-card border-border h-8 text-xs">
+                          <SelectValue placeholder="Seleccionar tipo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="routine">De una rutina</SelectItem>
+                          <SelectItem value="external">Imagen externa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      {formData.portada_type === "routine" && (
+                        <Select
+                          value={formData.portada_routine_id || ""}
+                          onValueChange={(routineId) => {
+                            const routine = availableRoutines?.find(r => r.id === routineId);
+                            if (routine) {
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                portada_url: routine.portada_url || "",
+                                portada_routine_id: routineId
+                              }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-card border-border h-8 text-xs">
+                            <SelectValue placeholder="Seleccionar rutina..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(availableRoutines || []).filter(r => r.portada_url).map((routine) => (
+                              <SelectItem key={routine.id} value={routine.id}>
+                                {routine.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      
+                      {formData.portada_type === "external" && (
+                        <Input
+                          value={formData.portada_url}
+                          onChange={(e) => setFormData(prev => ({ ...prev, portada_url: e.target.value }))}
+                          placeholder="URL o arrastra imagen..."
+                          className="bg-card border-border h-8 text-xs"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Radar - more compact */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Aptitudes físicas (promedio)</Label>
+                  <div className="flex items-start gap-3">
+                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden">
+                      {hasAptitudes ? (
+                        <ObjectiveRadarChart objetivo={calculatedObjetivo} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full w-full border-2 border-dashed border-border/50 rounded text-muted-foreground text-[10px] text-center p-1">
+                          Sin rutinas
+                        </div>
+                      )}
+                    </div>
+                    {hasAptitudes && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0 text-xs flex-1">
+                        {APTITUDES_KEYS.map(key => (
+                          <div key={key} className="flex items-center justify-between py-0.5">
+                            <span className="text-muted-foreground capitalize text-[10px]">{key.slice(0, 4)}.</span>
+                            <span className="font-medium text-foreground text-xs">{calculatedObjetivo[key]}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Weeks */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+            {/* Weeks - Grid layout for better visibility */}
+            <ScrollArea className="flex-1 p-3">
+              <div className="grid grid-cols-2 gap-3">
                 {formData.weeks.map((week, weekIndex) => (
                   <div
                     key={week.id}
-                    className={`border rounded-lg p-4 transition-colors ${
+                    className={`border rounded-lg p-3 transition-colors min-h-[120px] ${
                       draggedRoutine ? "border-primary/50 bg-primary/5" : "border-border"
                     }`}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDropOnWeek(weekIndex)}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
                         <div className="flex flex-col">
                           <button
                             type="button"
@@ -694,7 +788,7 @@ export default function CreateProgramModal({
                             className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-30"
                             disabled={weekIndex === 0}
                           >
-                            <ChevronUp className="h-3 w-3" />
+                            <ChevronUp className="h-2.5 w-2.5" />
                           </button>
                           <button
                             type="button"
@@ -702,61 +796,60 @@ export default function CreateProgramModal({
                             className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-30"
                             disabled={weekIndex === formData.weeks.length - 1}
                           >
-                            <ChevronDown className="h-3 w-3" />
+                            <ChevronDown className="h-2.5 w-2.5" />
                           </button>
                         </div>
-                        <h3 className="font-semibold text-foreground">
-                          Semana {week.week_number}
-                        </h3>
-                        <Badge variant="secondary" className="text-xs">
-                          {week.routines.length} rutina{week.routines.length !== 1 ? "s" : ""}
+                        <span className="font-semibold text-foreground text-sm">
+                          S{week.week_number}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {week.routines.length}
                         </Badge>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground">
-                            <Copy className="h-3.5 w-3.5" />
-                            Duplicar
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
+                            <Copy className="h-3 w-3" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="bg-popover">
                           {formData.weeks.map((_, targetIndex) => (
                             targetIndex !== weekIndex && (
                               <DropdownMenuItem
                                 key={targetIndex}
                                 onClick={() => duplicateWeekToPosition(weekIndex, targetIndex + 1)}
                               >
-                                Copiar a Semana {targetIndex + 1}
+                                Copiar a S{targetIndex + 1}
                               </DropdownMenuItem>
                             )
                           ))}
                           <DropdownMenuItem onClick={() => duplicateWeekToNewWeek(weekIndex)}>
-                            <Plus className="h-3.5 w-3.5 mr-2" />
-                            Copiar a nueva semana
+                            <Plus className="h-3 w-3 mr-1" />
+                            Nueva semana
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
 
                     {week.routines.length === 0 ? (
-                      <div className="text-center py-6 text-muted-foreground text-sm border-2 border-dashed border-border/50 rounded-lg">
-                        Arrastra rutinas aquí
+                      <div className="text-center py-4 text-muted-foreground text-xs border border-dashed border-border/50 rounded">
+                        Arrastra rutinas
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {week.routines.map((routine, routineIndex) => (
                           <div
                             key={routine.id}
-                            className="flex items-center gap-2 p-2 bg-card rounded-lg border border-border group"
+                            className="flex items-center gap-1 p-1.5 bg-card rounded border border-border group text-xs"
                           >
-                            <div className="flex flex-col gap-0.5">
+                            <div className="flex flex-col">
                               <button
                                 type="button"
                                 onClick={() => moveRoutineInWeek(weekIndex, routineIndex, routineIndex - 1)}
                                 className="text-muted-foreground hover:text-foreground p-0.5"
                                 disabled={routineIndex === 0}
                               >
-                                <ChevronUp className="h-3 w-3" />
+                                <ChevronUp className="h-2.5 w-2.5" />
                               </button>
                               <button
                                 type="button"
@@ -764,30 +857,26 @@ export default function CreateProgramModal({
                                 className="text-muted-foreground hover:text-foreground p-0.5"
                                 disabled={routineIndex === week.routines.length - 1}
                               >
-                                <ChevronDown className="h-3 w-3" />
+                                <ChevronDown className="h-2.5 w-2.5" />
                               </button>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm truncate">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium truncate text-xs">
                                   {routine.nombre}
                                 </span>
                                 {routine.isCustomized && (
-                                  <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                                    En programa
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                    Ed
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{routine.categoria}</span>
-                                <span>•</span>
-                                <span>{routine.dificultad}</span>
-                              </div>
+                              <span className="text-[10px] text-muted-foreground">{routine.categoria}</span>
                             </div>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => {
                                 setEditingRoutine({
                                   weekIndex,
@@ -797,15 +886,15 @@ export default function CreateProgramModal({
                                 });
                               }}
                             >
-                              <Edit className="h-3.5 w-3.5" />
+                              <Edit className="h-2.5 w-2.5" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-5 w-5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => removeRoutineFromWeek(weekIndex, routineIndex)}
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <X className="h-2.5 w-2.5" />
                             </Button>
                           </div>
                         ))}
@@ -813,17 +902,17 @@ export default function CreateProgramModal({
                     )}
                   </div>
                 ))}
-
-                {/* Add week button */}
-                <Button
-                  variant="outline"
-                  className="w-full border-dashed"
-                  onClick={addNewWeek}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar semana
-                </Button>
               </div>
+
+              {/* Add week button */}
+              <Button
+                variant="outline"
+                className="w-full border-dashed mt-3"
+                onClick={addNewWeek}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar semana
+              </Button>
             </ScrollArea>
           </div>
 
