@@ -38,6 +38,7 @@ export interface Program {
   estado: string;
   portada_url: string | null;
   duracion_semanas: number | null;
+  assigned_user_id: string | null;
   created_at: string;
   weeks?: ProgramWeek[];
 }
@@ -178,6 +179,7 @@ export function useCreateProgram() {
       estado: string;
       portada_url?: string;
       duracion_semanas: number;
+      assigned_user_id?: string;
       weeks: Array<{
         week_number: number;
         routines: Array<{
@@ -198,6 +200,7 @@ export function useCreateProgram() {
           estado: data.estado,
           portada_url: data.portada_url || null,
           duracion_semanas: data.duracion_semanas,
+          assigned_user_id: data.assigned_user_id || null,
           tipo: "programa",
         })
         .select()
@@ -258,6 +261,7 @@ export function useUpdateProgram() {
       estado: string;
       portada_url?: string;
       duracion_semanas: number;
+      assigned_user_id?: string;
       weeks: Array<{
         id?: string;
         week_number: number;
@@ -280,6 +284,7 @@ export function useUpdateProgram() {
           estado: data.estado,
           portada_url: data.portada_url || null,
           duracion_semanas: data.duracion_semanas,
+          assigned_user_id: data.assigned_user_id || null,
         })
         .eq("id", data.id);
 
