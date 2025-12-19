@@ -89,7 +89,7 @@ const Calendario = () => {
 
   const handleActivityClick = (event: UserEvent) => {
     if (event.type === "entrenamiento" && event.metadata?.routine_id) {
-      navigate(`/rutina/${event.metadata.routine_id}`);
+      navigate(`/rutina/${event.metadata.routine_id}`, { state: { from: "/calendario" } });
     }
   };
 

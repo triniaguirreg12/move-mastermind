@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, useParams, Navigate } from "react-router-dom";
+import { useNavigate, useParams, Navigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -224,11 +224,15 @@ function calcularImplementosRutina(blocks: Array<{ exercises?: Array<{ exercise?
 
 export default function RutinaDetalle() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("rutina");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isProgram, setIsProgram] = useState<boolean | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  
+  // Get the "from" path from location state, if available
+  const fromPath = (location.state as { from?: string })?.from;
   
   const { user } = useAuth();
   const isAuthenticated = !!user;
@@ -327,8 +331,12 @@ export default function RutinaDetalle() {
   const allImplements = calcularImplementosRutina(routine.blocks || []);
 
   const handleGoBack = () => {
-    // Try to go back in history, fallback to home
-    // Using window.history.back() for more reliable behavior
+    // If we have a stored "from" path, use it
+    if (fromPath) {
+      navigate(fromPath);
+      return;
+    }
+    // Otherwise try to go back in history, fallback to home
     if (window.history.length > 2) {
       window.history.back();
     } else {

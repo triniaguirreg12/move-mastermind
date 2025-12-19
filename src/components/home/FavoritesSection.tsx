@@ -27,7 +27,7 @@ export function FavoritesSection() {
           return (
             <button
               key={fav.id}
-              onClick={() => navigate(`/rutina/${fav.routine_id}`)}
+              onClick={() => navigate(`/rutina/${fav.routine_id}`, { state: { from: "/" } })}
               className="flex-shrink-0 w-28 group focus:outline-none"
             >
               <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-card border border-border/30 hover:border-primary/50 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02]">

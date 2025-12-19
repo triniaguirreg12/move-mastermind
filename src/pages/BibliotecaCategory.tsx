@@ -271,7 +271,7 @@ const BibliotecaCategory = () => {
     (filters.sortBy ? 1 : 0);
 
   const handleRoutineClick = (id: string | number) => {
-    navigate(`/rutina/${id}`);
+    navigate(`/rutina/${id}`, { state: { from: window.location.pathname } });
   };
 
   return (

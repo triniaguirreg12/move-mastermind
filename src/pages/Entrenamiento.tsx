@@ -45,7 +45,7 @@ const Entrenamiento = () => {
   }, [filteredRoutines]);
 
   const handleRoutineClick = (id: string | number) => {
-    navigate(`/rutina/${id}`);
+    navigate(`/rutina/${id}`, { state: { from: "/entrenamiento" } });
   };
 
   const hasSearchResults = searchQuery && filteredRoutines.length > 0;

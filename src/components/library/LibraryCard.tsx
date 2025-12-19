@@ -141,7 +141,7 @@ export function LibraryCard({
     if (onClick) {
       onClick();
     } else {
-      navigate(`/rutina/${id}`);
+      navigate(`/rutina/${id}`, { state: { from: window.location.pathname } });
     }
   };
 
