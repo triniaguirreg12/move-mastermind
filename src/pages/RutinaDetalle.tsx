@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
-import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell } from "lucide-react";
+import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useRoutine, calcularDuracionTotal } from "@/hooks/useRoutines";
 import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
+import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { supabase } from "@/integrations/supabase/client";
 
 // Padel ball SVG component
@@ -208,6 +209,20 @@ export default function RutinaDetalle() {
   const [isProgram, setIsProgram] = useState<boolean | null>(null);
   
   const { data: routine, isLoading, error } = useRoutine(id);
+  const { data: activeProgram } = useActiveProgram();
+
+  // Check if this routine is part of the user's active program
+  const isPartOfActiveProgram = activeProgram?.weeks?.some(week => 
+    week.routines?.some(wr => wr.routine_id === id)
+  ) || false;
+
+  // Get program info if routine is part of active program
+  const programInfo = isPartOfActiveProgram ? {
+    name: activeProgram?.nombre,
+    weekNumber: activeProgram?.weeks?.find(week => 
+      week.routines?.some(wr => wr.routine_id === id)
+    )?.week_number,
+  } : null;
 
   // Check if this is a program and redirect if so
   useEffect(() => {
@@ -343,10 +358,23 @@ export default function RutinaDetalle() {
 
       {/* Content Section */}
       <div className="px-4 pt-4 space-y-4">
-        {/* Category Badge - Low hierarchy */}
-        <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted/50 text-muted-foreground border border-border/30">
-          {routine.categoria}
-        </span>
+        {/* Category Badge + Program Badge */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted/50 text-muted-foreground border border-border/30">
+            {routine.categoria}
+          </span>
+          
+          {/* Program indicator badge */}
+          {isPartOfActiveProgram && programInfo && (
+            <button
+              onClick={() => navigate(`/programa/${activeProgram?.id}`)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Semana {programInfo.weekNumber} · {programInfo.name}</span>
+            </button>
+          )}
+        </div>
 
         {/* Description */}
         {routine.descripcion && (
