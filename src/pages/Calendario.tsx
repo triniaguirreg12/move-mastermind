@@ -348,21 +348,37 @@ const Calendario = () => {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!eventToDelete} onOpenChange={() => setEventToDelete(null)}>
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">¿Eliminar evento?</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              ¿Estás segura de que quieres eliminar "{eventToDelete?.title}"? Esta acción no se puede deshacer.
+              {eventToDelete?.type === "profesional" 
+                ? "¿Deseas eliminar esta cita definitivamente o prefieres reagendarla?"
+                : `¿Estás segura de que quieres eliminar "${eventToDelete?.title}"? Esta acción no se puede deshacer.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className={eventToDelete?.type === "profesional" ? "flex-col sm:flex-row gap-2" : ""}>
             <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+            {eventToDelete?.type === "profesional" && (
+              <AlertDialogAction
+                onClick={() => {
+                  if (eventToDelete?.metadata?.professional_id && eventToDelete?.metadata?.appointment_id) {
+                    navigate(`/profesionales?reschedule=${eventToDelete.metadata.professional_id}&appointment=${eventToDelete.metadata.appointment_id}`);
+                    setEventToDelete(null);
+                  }
+                }}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Reagendar
+              </AlertDialogAction>
+            )}
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Eliminar
+              {eventToDelete?.type === "profesional" ? "Eliminar definitivamente" : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
