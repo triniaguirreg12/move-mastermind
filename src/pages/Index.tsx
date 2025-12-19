@@ -375,7 +375,7 @@ const Index = () => {
                     </a>
                   )}
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
                   {event.type === "padel" && event.status === "scheduled" && (
                     <button
                       onClick={(e) => {
@@ -398,15 +398,17 @@ const Index = () => {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                  <div
-                    className={cn(
-                      "w-2.5 h-2.5 rounded-full",
-                      getDotColorClass(event.type)
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "w-2.5 h-2.5 rounded-full",
+                        getDotColorClass(event.type)
+                      )}
+                    />
+                    {event.type === "entrenamiento" && event.metadata?.routine_id && (
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     )}
-                  />
-                  {event.type === "entrenamiento" && event.metadata?.routine_id && (
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  )}
+                  </div>
                 </div>
               </div>
             ))}
