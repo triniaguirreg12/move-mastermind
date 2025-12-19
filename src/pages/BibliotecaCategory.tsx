@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, ArrowLeft, Filter, X, Loader2 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LibraryCard } from "@/components/library/LibraryCard";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,7 @@ function FilterSection({
 const BibliotecaCategory = () => {
   const navigate = useNavigate();
   const { category } = useParams<{ category: string }>();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [contentType, setContentType] = useState<"routines" | "programs">("routines");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -128,6 +129,16 @@ const BibliotecaCategory = () => {
     aptitude: [] as string[],
     sortBy: "",
   });
+
+  // Apply query param filter for tipo
+  useEffect(() => {
+    const tipo = searchParams.get("tipo");
+    if (tipo === "programa") {
+      setContentType("programs");
+    } else if (tipo === "rutina") {
+      setContentType("routines");
+    }
+  }, [searchParams]);
 
   const { data: routines, isLoading, error } = usePublishedRoutines();
 

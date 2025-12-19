@@ -278,8 +278,14 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
 }
 
 export function NoProgramCTA() {
+  const navigate = useNavigate();
+
+  const handleExplore = () => {
+    navigate("/biblioteca/funcional?tipo=programa");
+  };
+
   return (
-    <div className="mt-3 bg-card/50 rounded-xl p-4 border border-dashed border-border/50">
+    <div className="mt-6 bg-card/50 rounded-xl p-4 border border-dashed border-border/50">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
           <Sparkles className="h-5 w-5 text-primary" />
@@ -289,13 +295,18 @@ export function NoProgramCTA() {
             ¿Quieres un plan estructurado?
           </h3>
           <p className="text-xs text-muted-foreground mb-3">
-            Solicita un programa personalizado diseñado para tus objetivos
+            Explora programas disponibles o solicita uno personalizado
           </p>
-          <Link to="/profesionales">
-            <Button variant="outline" size="sm">
-              Solicitar programa
+          <div className="flex gap-2">
+            <Button variant="default" size="sm" onClick={handleExplore}>
+              Explorar programas
             </Button>
-          </Link>
+            <Link to="/profesionales">
+              <Button variant="outline" size="sm">
+                Solicitar
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
