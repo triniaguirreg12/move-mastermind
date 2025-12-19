@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { FavoriteButton } from "@/components/ui/FavoriteButton";
 
 interface LibraryCardProps {
   id: string | number;
@@ -21,6 +22,7 @@ interface LibraryCardProps {
   category: "funcional" | "kinesiologia" | "activacion";
   tipo?: "rutina" | "programa";
   onClick?: () => void;
+  showFavorite?: boolean;
 }
 
 const categoryGradients = {
@@ -123,6 +125,7 @@ export function LibraryCard({
   category,
   tipo = "rutina",
   onClick,
+  showFavorite = true,
 }: LibraryCardProps) {
   const navigate = useNavigate();
   // Equipment logic: filter out "Sin implemento" if real implements exist, sort alphabetically
@@ -166,24 +169,35 @@ export function LibraryCard({
         {/* Top Gradient Overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
 
-        {/* Top Overlay: Difficulty + Rating */}
+        {/* Top Overlay: Difficulty + Rating/Favorite */}
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
           {/* Difficulty - Higher priority */}
           <div className="bg-black/40 backdrop-blur-sm px-1.5 py-1 rounded-md">
             <DifficultyIndicator level={difficulty} />
           </div>
 
-          {/* Rating */}
-          {rating !== undefined && rating > 0 ? (
-            <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-              <span className="text-[10px] font-semibold text-white">{rating.toFixed(1)}</span>
-              <Star className="w-2.5 h-2.5 text-warning fill-warning" />
-            </div>
-          ) : (
-            <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-              <span className="text-[10px] text-white/60">—</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1">
+            {/* Favorite Button */}
+            {showFavorite && (
+              <FavoriteButton 
+                routineId={String(id)} 
+                size="sm" 
+                variant="overlay"
+              />
+            )}
+
+            {/* Rating */}
+            {rating !== undefined && rating > 0 ? (
+              <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                <span className="text-[10px] font-semibold text-white">{rating.toFixed(1)}</span>
+                <Star className="w-2.5 h-2.5 text-warning fill-warning" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                <span className="text-[10px] text-white/60">—</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Bottom Overlay: Aptitudes, Duration, Equipment */}

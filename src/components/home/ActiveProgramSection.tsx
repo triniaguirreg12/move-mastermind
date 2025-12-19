@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, Check, Circle, Sparkles } from "lucide-react";
+import { ChevronRight, Check, Circle, Sparkles, Star, Heart, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { ActiveProgram, ActiveProgramRoutine } from "@/hooks/useActiveProgram";
+import { useIsFavorite, useToggleFavorite } from "@/hooks/useFavorites";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ActiveProgramSectionProps {
   program: ActiveProgram;
@@ -11,11 +15,18 @@ interface ActiveProgramSectionProps {
 
 export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
   const navigate = useNavigate();
+  const [rating, setRating] = useState(0);
+  const [hasRated, setHasRated] = useState(false);
+  const { data: isFavorite = false } = useIsFavorite(program.id);
+  const toggleFavorite = useToggleFavorite();
 
   // Get current week data
   const currentWeekData = program.weeks.find(w => w.week_number === program.currentWeek);
   const routines = currentWeekData?.routines || [];
   const isWeekComplete = currentWeekData?.isCompleted || false;
+
+  // Check if program is complete
+  const isProgramComplete = program.completedWeeks >= program.totalWeeks && program.totalWeeks > 0;
 
   // Find next pending routine
   const nextPendingRoutine = routines.find(r => !r.isCompleted);
@@ -47,6 +58,114 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
       },
     });
   };
+
+  const handleRating = async (value: number) => {
+    setRating(value);
+    setHasRated(true);
+
+    try {
+      await supabase
+        .from("routines")
+        .update({ calificacion: value })
+        .eq("id", program.id);
+
+      toast.success("¡Gracias por tu evaluación!");
+    } catch (error) {
+      console.error("Error saving rating:", error);
+    }
+  };
+
+  const handleToggleFavorite = () => {
+    toggleFavorite.mutate({ routineId: program.id, isFavorite });
+  };
+
+  // Completed program view
+  if (isProgramComplete) {
+    return (
+      <div className="px-4 py-2">
+        <div className="bg-gradient-to-br from-primary/10 via-card to-card rounded-2xl p-4 border border-primary/20 overflow-hidden relative">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/20 to-transparent rounded-bl-full pointer-events-none" />
+          <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-primary/5 rounded-full pointer-events-none" />
+          
+          {/* Header with trophy */}
+          <div className="flex items-center gap-3 mb-4 relative z-10">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <Trophy className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-medium text-primary uppercase tracking-wide">
+                ¡Programa completado!
+              </p>
+              <h3 className="text-lg font-semibold text-foreground">
+                {program.nombre}
+              </h3>
+            </div>
+          </div>
+
+          {/* Congratulations message */}
+          <div className="bg-card/50 rounded-xl p-3 mb-4 relative z-10">
+            <p className="text-sm text-foreground text-center">
+              ¡Felicitaciones! Has completado todas las semanas del programa.
+            </p>
+          </div>
+
+          {/* Rating section */}
+          <div className="bg-card/50 rounded-xl p-3 mb-3 relative z-10">
+            <p className="text-xs text-muted-foreground mb-2 text-center">
+              ¿Cómo calificarías este programa?
+            </p>
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => !hasRated && handleRating(star)}
+                  disabled={hasRated}
+                  className="p-1 transition-transform hover:scale-110 disabled:opacity-70"
+                >
+                  <Star
+                    className={cn(
+                      "h-6 w-6 transition-colors",
+                      star <= rating
+                        ? "text-warning fill-warning"
+                        : "text-muted-foreground/40"
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+            {hasRated && (
+              <p className="text-[10px] text-primary mt-2 text-center">
+                ¡Gracias por tu evaluación!
+              </p>
+            )}
+          </div>
+
+          {/* Favorite button */}
+          <button
+            onClick={handleToggleFavorite}
+            disabled={toggleFavorite.isPending}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all relative z-10",
+              isFavorite
+                ? "bg-destructive/10 border border-destructive/20 text-destructive"
+                : "bg-secondary/50 border border-border/30 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Heart
+              className={cn(
+                "h-4 w-4 transition-all",
+                isFavorite ? "fill-destructive" : ""
+              )}
+            />
+            <span className="text-sm font-medium">
+              {isFavorite ? "En favoritos" : "Agregar a favoritos"}
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-2">

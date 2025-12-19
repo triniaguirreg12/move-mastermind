@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home } from "lucide-react";
+import { Home, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,8 @@ import { JustMuvIcon } from "@/components/brand/JustMuvIcon";
 import { StarRating } from "@/components/workout/StarRating";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useIsFavorite, useToggleFavorite } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface WorkoutCompleteProps {
   routineName: string;
@@ -22,6 +24,8 @@ export function WorkoutComplete({
   const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
   const [hasRated, setHasRated] = useState(false);
+  const { data: isFavorite = false } = useIsFavorite(routineId);
+  const toggleFavorite = useToggleFavorite();
 
   const handleRating = async (value: number) => {
     setRating(value);
@@ -37,6 +41,10 @@ export function WorkoutComplete({
     } catch (error) {
       console.error("Error saving rating:", error);
     }
+  };
+
+  const handleToggleFavorite = () => {
+    toggleFavorite.mutate({ routineId, isFavorite });
   };
 
   const handleGoHome = () => {
@@ -87,6 +95,33 @@ export function WorkoutComplete({
             ¡Gracias por tu evaluación!
           </p>
         )}
+      </div>
+
+      {/* Favorite Button */}
+      <div className="w-full max-w-xs bg-card/50 rounded-2xl p-4 border border-border/30 mb-4 animate-fade-in">
+        <p className="text-sm text-muted-foreground mb-3">
+          ¿Te gustó esta rutina?
+        </p>
+        <button
+          onClick={handleToggleFavorite}
+          disabled={toggleFavorite.isPending}
+          className={cn(
+            "flex items-center justify-center gap-2 w-full py-2.5 rounded-xl transition-all",
+            isFavorite
+              ? "bg-destructive/10 border border-destructive/20 text-destructive"
+              : "bg-secondary/50 border border-border/30 text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Heart
+            className={cn(
+              "h-5 w-5 transition-all",
+              isFavorite ? "fill-destructive" : ""
+            )}
+          />
+          <span className="text-sm font-medium">
+            {isFavorite ? "En favoritos" : "Agregar a favoritos"}
+          </span>
+        </button>
       </div>
 
       {/* Motivation message */}

@@ -34,6 +34,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAptitudesRadar } from "@/hooks/useAptitudesRadar";
 import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { ActiveProgramSection, NoProgramCTA } from "@/components/home/ActiveProgramSection";
+import { FavoritesSection } from "@/components/home/FavoritesSection";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
@@ -362,6 +363,11 @@ const Index = () => {
         {/* No Program CTA - shown below activities */}
         {!activeProgram && <NoProgramCTA />}
       </div>
+
+      {/* Favorites Section */}
+      <FavoritesSection />
+
+      <div className="pb-20" />
 
       <BottomNav />
 
