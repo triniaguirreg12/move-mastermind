@@ -49,6 +49,7 @@ export interface Program {
   assigned_user_id: string | null;
   calificacion: number | null;
   veces_realizada: number | null;
+  objetivo: Json | null;
   created_at: string;
   weeks?: ProgramWeek[];
   // Computed fields
@@ -174,7 +175,7 @@ export function useProgram(id: string | undefined) {
 
       const { data: program, error } = await supabase
         .from("routines")
-        .select("*")
+        .select("*, objetivo")
         .eq("id", id)
         .eq("tipo", "programa")
         .maybeSingle();
