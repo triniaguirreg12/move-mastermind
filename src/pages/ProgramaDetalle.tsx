@@ -136,7 +136,7 @@ export default function ProgramaDetalle() {
   }
 
   const handleRoutineClick = (routineId: string) => {
-    navigate(`/rutina/${routineId}`);
+    navigate(`/rutina/${routineId}`, { state: { from: `/programa/${id}` } });
   };
 
   return (
@@ -392,7 +392,7 @@ export default function ProgramaDetalle() {
                 const currentWeek = program.weeks?.find(w => w.week_number === enrollment.current_week);
                 const firstRoutine = currentWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
                 if (firstRoutine) {
-                  navigate(`/rutina/${firstRoutine.routine_id}`);
+                  navigate(`/rutina/${firstRoutine.routine_id}`, { state: { from: `/programa/${id}` } });
                 }
               }}
               disabled={!program.weeks?.length}
@@ -438,7 +438,7 @@ export default function ProgramaDetalle() {
                     const firstWeek = program.weeks?.sort((a, b) => a.week_number - b.week_number)[0];
                     const firstRoutine = firstWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
                     if (firstRoutine) {
-                      navigate(`/rutina/${firstRoutine.routine_id}`);
+                      navigate(`/rutina/${firstRoutine.routine_id}`, { state: { from: `/programa/${id}` } });
                     }
                   } catch (error) {
                     toast.error("Error al activar el programa");

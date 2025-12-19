@@ -43,6 +43,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
       // Navigate to routine detail with program context
       navigate(`/rutina/${nextPendingRoutine.routine_id}`, {
         state: {
+          from: "/",
           fromProgram: true,
           programId: program.id,
           customData: nextPendingRoutine.custom_data,
@@ -54,6 +55,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
   const handleRoutineClick = (routine: ActiveProgramRoutine) => {
     navigate(`/rutina/${routine.routine_id}`, {
       state: {
+        from: "/",
         fromProgram: true,
         programId: program.id,
         customData: routine.custom_data,
