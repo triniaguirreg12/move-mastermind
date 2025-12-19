@@ -333,15 +333,19 @@ export default function RutinaDetalle() {
   const handleGoBack = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log("Back button clicked", { fromPath, historyLength: window.history.length, currentPath: location.pathname });
     // If we have a stored "from" path, use it
     if (fromPath) {
+      console.log("Navigating to fromPath:", fromPath);
       navigate(fromPath);
       return;
     }
     // Otherwise try to go back in history, fallback to home
     if (window.history.length > 2) {
+      console.log("Using window.history.back()");
       window.history.back();
     } else {
+      console.log("Navigating to home");
       navigate("/");
     }
   };
