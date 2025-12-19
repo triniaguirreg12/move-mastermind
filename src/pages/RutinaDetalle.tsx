@@ -131,58 +131,63 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
       {/* Preview Modal */}
       {showPreview && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fade-in"
           onClick={handleBackdropClick}
         >
-          <div className="max-w-[240px] w-full space-y-2 relative animate-scale-in">
+          <div 
+            className="bg-background/95 backdrop-blur-md rounded-2xl p-4 pt-10 relative animate-scale-in max-w-[260px] w-full border border-border/30"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Close button */}
             <button
               type="button"
               onClick={handleClose}
-              className="absolute -top-9 right-0 w-7 h-7 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
               </svg>
             </button>
 
-            {/* Exercise name */}
-            <h3 className="text-base font-bold text-white text-center">
-              {exercise.nombre}
-            </h3>
+            <div className="space-y-2">
+              {/* Exercise name */}
+              <h3 className="text-base font-bold text-foreground text-center">
+                {exercise.nombre}
+              </h3>
 
-            {/* Video - Vertical format, centered and smaller */}
-            <div className="flex justify-center">
-              <div className="aspect-[9/16] w-32 rounded-lg overflow-hidden bg-muted">
-                <video
-                  ref={videoRef}
-                  src={exercise.video_url || ""}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                  poster={exercise.thumbnail_url || "/placeholder.svg"}
-                />
+              {/* Video - Vertical format, centered and smaller */}
+              <div className="flex justify-center">
+                <div className="aspect-[9/16] w-32 rounded-lg overflow-hidden bg-muted">
+                  <video
+                    ref={videoRef}
+                    src={exercise.video_url || ""}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                    poster={exercise.thumbnail_url || "/placeholder.svg"}
+                  />
+                </div>
               </div>
+
+              {/* Tips as list */}
+              {exercise.tips && (
+                <div className="bg-muted/50 rounded-lg p-2.5">
+                  <p className="text-[9px] font-semibold text-primary mb-1.5 uppercase tracking-wide">
+                    Tips de Ejecución
+                  </p>
+                  <ul className="text-[11px] text-foreground/90 leading-snug space-y-1 text-left">
+                    {exercise.tips.split(/\d+\.\s*/).filter(Boolean).map((tip, index) => (
+                      <li key={index} className="flex gap-1.5">
+                        <span className="text-primary font-medium shrink-0">{index + 1}.</span>
+                        <span>{tip.trim()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-
-            {/* Tips as list */}
-            {exercise.tips && (
-              <div className="bg-card/80 backdrop-blur-sm rounded-lg p-2.5 border border-border/30">
-                <p className="text-[9px] font-semibold text-primary mb-1.5 uppercase tracking-wide">
-                  Tips de Ejecución
-                </p>
-                <ul className="text-[11px] text-foreground/90 leading-snug space-y-1 text-left">
-                  {exercise.tips.split(/\d+\.\s*/).filter(Boolean).map((tip, index) => (
-                    <li key={index} className="flex gap-1.5">
-                      <span className="text-primary font-medium shrink-0">{index + 1}.</span>
-                      <span>{tip.trim()}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         </div>
       )}
