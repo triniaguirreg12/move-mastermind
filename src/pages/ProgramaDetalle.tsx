@@ -6,9 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { useProgram } from "@/hooks/usePrograms";
-import { useUserProgramEnrollment, useEnrollInProgram } from "@/hooks/useUserPrograms";
+import { useUserProgramEnrollment, useEnrollInProgram, useScheduleProgramRoutines } from "@/hooks/useUserPrograms";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
-import { EnrollProgramModal } from "@/components/programa/EnrollProgramModal";
+import { ScheduleProgramModal } from "@/components/programa/ScheduleProgramModal";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -67,12 +67,13 @@ export default function ProgramaDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("programa");
-  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const { user } = useAuth();
   
   const { data: program, isLoading, error } = useProgram(id);
   const { data: enrollment } = useUserProgramEnrollment(id);
   const enrollMutation = useEnrollInProgram();
+  const scheduleMutation = useScheduleProgramRoutines();
 
   // Loading state
   if (isLoading) {
@@ -404,10 +405,17 @@ export default function ProgramaDetalle() {
               <Button
                 variant="outline"
                 className="flex-1 h-12 text-sm font-medium"
-                onClick={() => setEnrollModalOpen(true)}
+                onClick={() => {
+                  if (!user) {
+                    toast.error("Debes iniciar sesión para agendar un programa");
+                    navigate("/login");
+                    return;
+                  }
+                  setScheduleModalOpen(true);
+                }}
               >
                 <Calendar className="w-4 h-4 mr-2" />
-                Programar
+                Agendar rutinas
               </Button>
               <Button
                 className="flex-[2] h-12 text-sm font-semibold"
@@ -425,7 +433,7 @@ export default function ProgramaDetalle() {
                       startWeek: 1,
                     });
                     
-                    toast.success("¡Te has inscrito en el programa!");
+                    toast.success("¡Programa activado! Puedes ejecutar las rutinas libremente.");
                     
                     const firstWeek = program.weeks?.sort((a, b) => a.week_number - b.week_number)[0];
                     const firstRoutine = firstWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
@@ -433,7 +441,7 @@ export default function ProgramaDetalle() {
                       navigate(`/rutina/${firstRoutine.routine_id}`);
                     }
                   } catch (error) {
-                    toast.error("Error al inscribirse en el programa");
+                    toast.error("Error al activar el programa");
                   }
                 }}
                 disabled={!program.weeks?.length || !program.weeks[0]?.routines?.length || enrollMutation.isPending}
@@ -441,31 +449,47 @@ export default function ProgramaDetalle() {
                 {enrollMutation.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 mr-2" />
+                  <PlayCircle className="w-4 h-4 mr-2" />
                 )}
-                Comenzar programa
+                Comenzar ahora
               </Button>
             </>
           )}
         </div>
       </div>
 
-      {/* Enroll Modal */}
-      <EnrollProgramModal
-        open={enrollModalOpen}
-        onOpenChange={setEnrollModalOpen}
-        programId={program.id}
-        programName={program.nombre}
-        totalWeeks={totalWeeks}
-        onEnrollSuccess={() => {
-          const startWeek = 1; // Will be set by modal
-          const weekData = program.weeks?.find(w => w.week_number === startWeek);
-          const firstRoutine = weekData?.routines?.sort((a, b) => a.orden - b.orden)[0];
-          if (firstRoutine) {
-            navigate(`/rutina/${firstRoutine.routine_id}`);
-          }
-        }}
-      />
+      {/* Schedule Program Modal */}
+      {program.weeks && program.weeks.length > 0 && (
+        <ScheduleProgramModal
+          open={scheduleModalOpen}
+          onOpenChange={setScheduleModalOpen}
+          programName={program.nombre}
+          weekNumber={1}
+          routines={program.weeks
+            .sort((a, b) => a.week_number - b.week_number)[0]
+            ?.routines?.map(wr => ({
+              id: wr.id,
+              routine_id: wr.routine_id,
+              orden: wr.orden,
+              routine: wr.routine ? {
+                id: wr.routine.id,
+                nombre: wr.routine.nombre,
+                portada_url: wr.routine.portada_url,
+                categoria: wr.routine.categoria,
+              } : null,
+            })) || []}
+          onSchedule={async (assignments) => {
+            await scheduleMutation.mutateAsync({
+              programId: program.id,
+              startWeek: 1,
+              assignments,
+            });
+            toast.success("¡Rutinas agendadas! Las verás en tu calendario y Home.");
+            setScheduleModalOpen(false);
+          }}
+          isLoading={scheduleMutation.isPending}
+        />
+      )}
     </div>
   );
 }

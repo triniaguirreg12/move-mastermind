@@ -55,7 +55,7 @@ export function useActiveUserProgram() {
   });
 }
 
-// Enroll in a program
+// Enroll in a program (without scheduling - free mode)
 export function useEnrollInProgram() {
   const queryClient = useQueryClient();
 
@@ -108,6 +108,79 @@ export function useEnrollInProgram() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-program"] });
       queryClient.invalidateQueries({ queryKey: ["active-program"] });
+    },
+  });
+}
+
+// Schedule program routines to specific dates
+export function useScheduleProgramRoutines() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      programId,
+      startWeek,
+      assignments,
+    }: {
+      programId: string;
+      startWeek: number;
+      assignments: { routineId: string; date: Date }[];
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // First enroll in the program
+      const { data: existing } = await supabase
+        .from("user_programs")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("program_id", programId)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("user_programs")
+          .update({
+            start_week: startWeek,
+            current_week: startWeek,
+            status: "active",
+          })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("user_programs")
+          .insert({
+            user_id: user.id,
+            program_id: programId,
+            start_week: startWeek,
+            current_week: startWeek,
+            status: "active",
+          });
+      }
+
+      // Create scheduled_routines for each assignment
+      if (assignments.length > 0) {
+        const scheduledRoutines = assignments.map((a) => ({
+          user_id: user.id,
+          routine_id: a.routineId,
+          scheduled_date: a.date.toISOString().split("T")[0],
+          status: "programada",
+        }));
+
+        const { error: scheduleError } = await supabase
+          .from("scheduled_routines")
+          .insert(scheduledRoutines);
+
+        if (scheduleError) throw scheduleError;
+      }
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-program"] });
+      queryClient.invalidateQueries({ queryKey: ["active-program"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-routines"] });
+      queryClient.invalidateQueries({ queryKey: ["routine-schedules"] });
     },
   });
 }
