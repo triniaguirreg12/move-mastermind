@@ -278,6 +278,7 @@ export type Database = {
       }
       routines: {
         Row: {
+          assigned_user_id: string | null
           calificacion: number | null
           categoria: string
           created_at: string
@@ -298,6 +299,7 @@ export type Database = {
           veces_realizada: number | null
         }
         Insert: {
+          assigned_user_id?: string | null
           calificacion?: number | null
           categoria: string
           created_at?: string
@@ -318,6 +320,7 @@ export type Database = {
           veces_realizada?: number | null
         }
         Update: {
+          assigned_user_id?: string | null
           calificacion?: number | null
           categoria?: string
           created_at?: string
