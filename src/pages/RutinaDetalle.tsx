@@ -330,7 +330,9 @@ export default function RutinaDetalle() {
   // Calculate ALL implements (no +N summary in detail view)
   const allImplements = calcularImplementosRutina(routine.blocks || []);
 
-  const handleGoBack = () => {
+  const handleGoBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     // If we have a stored "from" path, use it
     if (fromPath) {
       navigate(fromPath);
@@ -554,6 +556,7 @@ export default function RutinaDetalle() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
         <div className="flex gap-3 max-w-lg mx-auto">
           <Button
+            type="button"
             variant="outline"
             className="flex-1 h-12 text-sm font-medium"
             onClick={() => setScheduleModalOpen(true)}
@@ -562,8 +565,9 @@ export default function RutinaDetalle() {
             Programar
           </Button>
           <Button
+            type="button"
             className="flex-[2] h-12 text-sm font-semibold"
-            onClick={() => navigate(`/rutina/${routine.id}/ejecucion`)}
+            onClick={() => navigate(`/rutina/${routine.id}/ejecucion`, { state: { from: location.pathname } })}
           >
             Comenzar rutina
           </Button>
