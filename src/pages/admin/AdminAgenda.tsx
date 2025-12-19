@@ -2,101 +2,63 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, User, Video, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, addDays, startOfWeek } from "date-fns";
+import { Calendar, Clock, User, Video, MapPin, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { format, addDays, startOfWeek, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-
-const kinesiologos = [
-  {
-    id: 1,
-    nombre: "Isabel Rencoret",
-    especialidad: "Rehabilitación deportiva",
-    avatar: "IR",
-    color: "bg-primary",
-  },
-  {
-    id: 2,
-    nombre: "Magdalena Torres",
-    especialidad: "Kinesiología general",
-    avatar: "MT",
-    color: "bg-accent",
-  },
-  {
-    id: 3,
-    nombre: "Diego Fuentes",
-    especialidad: "Traumatología",
-    avatar: "DF",
-    color: "bg-success",
-  },
-];
-
-const citas = [
-  {
-    id: 1,
-    kinesiologo: "Isabel Rencoret",
-    paciente: "Rosario González",
-    fecha: new Date(),
-    hora: "09:00",
-    duracion: 60,
-    tipo: "presencial",
-    estado: "confirmada",
-  },
-  {
-    id: 2,
-    kinesiologo: "Isabel Rencoret",
-    paciente: "Carlos López",
-    fecha: new Date(),
-    hora: "10:30",
-    duracion: 45,
-    tipo: "online",
-    estado: "confirmada",
-  },
-  {
-    id: 3,
-    kinesiologo: "Magdalena Torres",
-    paciente: "María Fernández",
-    fecha: new Date(),
-    hora: "11:00",
-    duracion: 60,
-    tipo: "presencial",
-    estado: "pendiente",
-  },
-  {
-    id: 4,
-    kinesiologo: "Diego Fuentes",
-    paciente: "Pepito Pérez",
-    fecha: addDays(new Date(), 1),
-    hora: "14:00",
-    duracion: 60,
-    tipo: "presencial",
-    estado: "confirmada",
-  },
-  {
-    id: 5,
-    kinesiologo: "Isabel Rencoret",
-    paciente: "Ana Martínez",
-    fecha: addDays(new Date(), 2),
-    hora: "16:00",
-    duracion: 30,
-    tipo: "online",
-    estado: "confirmada",
-  },
-];
+import { useAllProfessionals, useAllAppointments } from "@/hooks/useProfessionals";
 
 const AdminAgenda = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const weekStart = startOfWeek(currentDate, { locale: es });
 
+  const { data: professionals = [], isLoading: loadingProfessionals } = useAllProfessionals();
+  const { data: appointments = [], isLoading: loadingAppointments } = useAllAppointments();
+
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const getKinesiologo = (nombre: string) =>
-    kinesiologos.find((k) => k.nombre === nombre);
+  const getProfessional = (id: string) =>
+    professionals.find((p) => p.id === id);
 
-  const getCitasByDay = (date: Date) =>
-    citas.filter(
-      (c) => format(c.fecha, "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+  const getAppointmentsByDay = (date: Date) =>
+    appointments.filter(
+      (a) => a.appointment_date === format(date, "yyyy-MM-dd") && a.status !== 'cancelled'
     );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-success/20 text-success';
+      case 'pending_payment':
+        return 'bg-warning/20 text-warning';
+      case 'completed':
+        return 'bg-muted text-muted-foreground';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'Confirmada';
+      case 'pending_payment':
+        return 'Pago pendiente';
+      case 'completed':
+        return 'Completada';
+      case 'cancelled':
+        return 'Cancelada';
+      default:
+        return status;
+    }
+  };
+
+  const isLoading = loadingProfessionals || loadingAppointments;
+
+  // Generate color for professional based on index
+  const getProfessionalColor = (index: number) => {
+    const colors = ['bg-primary', 'bg-accent', 'bg-success', 'bg-warning', 'bg-destructive'];
+    return colors[index % colors.length];
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -107,31 +69,42 @@ const AdminAgenda = () => {
           <p className="text-muted-foreground">Gestión de citas y sesiones</p>
         </div>
         <Button className="gap-2">
-          <Calendar className="h-4 w-4" />
+          <Plus className="h-4 w-4" />
           Nueva Cita
         </Button>
       </div>
 
-      {/* Kinesiologos */}
+      {/* Professionals */}
       <div className="flex gap-3 overflow-x-auto pb-2">
-        {kinesiologos.map((k) => (
-          <Card
-            key={k.id}
-            className="bg-card border-border p-4 min-w-[200px] hover:border-primary/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-full ${k.color} flex items-center justify-center`}
-              >
-                <span className="text-white text-sm font-medium">{k.avatar}</span>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Cargando profesionales...
+          </div>
+        ) : professionals.length === 0 ? (
+          <p className="text-muted-foreground">No hay profesionales registrados.</p>
+        ) : (
+          professionals.map((p, index) => (
+            <Card
+              key={p.id}
+              className="bg-card border-border p-4 min-w-[200px] hover:border-primary/30 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-full ${getProfessionalColor(index)} flex items-center justify-center`}
+                >
+                  <span className="text-white text-sm font-medium">
+                    {p.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{p.name}</p>
+                  <p className="text-xs text-muted-foreground">{p.title}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-foreground">{k.nombre}</p>
-                <p className="text-xs text-muted-foreground">{k.especialidad}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Week Navigation */}
@@ -159,7 +132,7 @@ const AdminAgenda = () => {
       {/* Week View */}
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => {
-          const dayCitas = getCitasByDay(day);
+          const dayAppointments = getAppointmentsByDay(day);
           const isToday =
             format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
@@ -177,59 +150,56 @@ const AdminAgenda = () => {
               </div>
 
               <div className="space-y-2 min-h-[300px]">
-                {dayCitas.map((cita) => {
-                  const k = getKinesiologo(cita.kinesiologo);
-                  return (
-                    <Card
-                      key={cita.id}
-                      className="bg-card border-border p-3 hover:border-primary/30 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className={`w-6 h-6 rounded-full ${k?.color} flex items-center justify-center`}
-                        >
-                          <span className="text-white text-[10px] font-medium">
-                            {k?.avatar}
+                {isLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  dayAppointments.map((appointment) => {
+                    const professional = getProfessional(appointment.professional_id);
+                    const profIndex = professionals.findIndex(p => p.id === appointment.professional_id);
+                    return (
+                      <Card
+                        key={appointment.id}
+                        className="bg-card border-border p-3 hover:border-primary/30 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div
+                            className={`w-6 h-6 rounded-full ${getProfessionalColor(profIndex)} flex items-center justify-center`}
+                          >
+                            <span className="text-white text-[10px] font-medium">
+                              {professional?.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {professional?.name.split(" ")[0]}
                           </span>
                         </div>
-                        <span className="text-xs text-muted-foreground truncate">
-                          {cita.kinesiologo.split(" ")[0]}
-                        </span>
-                      </div>
 
-                      <div className="flex items-center gap-1 text-xs text-foreground mb-1">
-                        <Clock className="h-3 w-3" />
-                        {cita.hora} ({cita.duracion}min)
-                      </div>
+                        <div className="flex items-center gap-1 text-xs text-foreground mb-1">
+                          <Clock className="h-3 w-3" />
+                          {appointment.start_time.substring(0, 5)} (60min)
+                        </div>
 
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                        <User className="h-3 w-3" />
-                        {cita.paciente}
-                      </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                          <User className="h-3 w-3" />
+                          {appointment.consultation_goal.substring(0, 20)}...
+                        </div>
 
-                      <div className="flex items-center gap-1">
-                        {cita.tipo === "online" ? (
-                          <Badge variant="secondary" className="text-[10px] gap-1">
-                            <Video className="h-2 w-2" /> Online
-                          </Badge>
-                        ) : (
+                        <div className="flex items-center gap-1">
                           <Badge variant="outline" className="text-[10px] gap-1 border-border">
                             <MapPin className="h-2 w-2" /> Presencial
                           </Badge>
-                        )}
-                        <Badge
-                          className={`text-[10px] ${
-                            cita.estado === "confirmada"
-                              ? "bg-success/20 text-success"
-                              : "bg-warning/20 text-warning"
-                          }`}
-                        >
-                          {cita.estado}
-                        </Badge>
-                      </div>
-                    </Card>
-                  );
-                })}
+                          <Badge
+                            className={`text-[10px] ${getStatusColor(appointment.status)}`}
+                          >
+                            {getStatusLabel(appointment.status)}
+                          </Badge>
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
               </div>
             </div>
           );

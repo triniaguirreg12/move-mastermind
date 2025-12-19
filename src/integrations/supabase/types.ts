@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          additional_comments: string | null
+          appointment_date: string
+          available_equipment: string[] | null
+          consultation_goal: string
+          created_at: string
+          end_time: string
+          id: string
+          injury_condition: string
+          payment_id: string | null
+          payment_status: string
+          price_amount: number
+          professional_id: string
+          start_time: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          additional_comments?: string | null
+          appointment_date: string
+          available_equipment?: string[] | null
+          consultation_goal: string
+          created_at?: string
+          end_time: string
+          id?: string
+          injury_condition: string
+          payment_id?: string | null
+          payment_status?: string
+          price_amount?: number
+          professional_id: string
+          start_time: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          additional_comments?: string | null
+          appointment_date?: string
+          available_equipment?: string[] | null
+          consultation_goal?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          injury_condition?: string
+          payment_id?: string | null
+          payment_status?: string
+          price_amount?: number
+          professional_id?: string
+          start_time?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       block_exercises: {
         Row: {
           block_id: string
@@ -110,6 +175,83 @@ export type Database = {
           tips?: string | null
           updated_at?: string
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      professional_availability: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          professional_id: string
+          slot_duration_minutes: number
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          professional_id: string
+          slot_duration_minutes?: number
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          professional_id?: string
+          slot_duration_minutes?: number
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professionals: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          specialty: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          specialty?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          specialty?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }

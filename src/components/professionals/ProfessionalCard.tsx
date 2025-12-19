@@ -1,36 +1,27 @@
 import { Button } from "@/components/ui/button";
-import { MapPin, Award } from "lucide-react";
+import { MapPin, Award, Calendar } from "lucide-react";
+import { Professional } from "@/hooks/useProfessionals";
 
 interface ProfessionalCardProps {
-  name: string;
-  title: string;
-  specialty: string;
-  experience: string;
-  location?: string;
-  imageUrl?: string;
-  available?: boolean;
+  professional: Professional;
   onSchedule?: () => void;
 }
 
 export function ProfessionalCard({
-  name,
-  title,
-  specialty,
-  experience,
-  location,
-  imageUrl,
-  available = true,
+  professional,
   onSchedule,
 }: ProfessionalCardProps) {
+  const { name, title, specialty, description, avatar_url } = professional;
+  
   return (
     <div className="glass-card p-5 space-y-4">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className="relative">
           <div className="w-20 h-20 rounded-2xl overflow-hidden bg-muted">
-            {imageUrl ? (
+            {avatar_url ? (
               <img
-                src={imageUrl}
+                src={avatar_url}
                 alt={name}
                 className="w-full h-full object-cover"
               />
@@ -40,40 +31,35 @@ export function ProfessionalCard({
               </div>
             )}
           </div>
-          {available && (
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-card" />
-          )}
+          {/* Available indicator */}
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-card" />
         </div>
 
         {/* Info */}
         <div className="flex-1">
           <h3 className="font-display font-semibold text-foreground text-lg">{name}</h3>
           <p className="text-accent text-sm font-medium">{title}</p>
-          <p className="text-muted-foreground text-sm mt-1">{specialty}</p>
+          {specialty && (
+            <p className="text-muted-foreground text-sm mt-1">{specialty}</p>
+          )}
         </div>
       </div>
 
-      {/* Details */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Award className="w-4 h-4 text-warning" />
-          <span>{experience}</span>
-        </div>
-        {location && (
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-4 h-4" />
-            <span>{location}</span>
-          </div>
-        )}
-      </div>
+      {/* Description */}
+      {description && (
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {description}
+        </p>
+      )}
 
       {/* Action */}
       <Button
         variant="accent"
-        className="w-full"
+        className="w-full gap-2"
         onClick={onSchedule}
       >
-        Revisar disponibilidad
+        <Calendar className="w-4 h-4" />
+        Agendar cita personalizada
       </Button>
     </div>
   );
