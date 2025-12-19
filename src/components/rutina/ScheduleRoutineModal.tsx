@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon, CheckCircle2, Clock, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useRoutineEventSchedules, useScheduleRoutineEvent } from "@/hooks/useUserEvents";
+import { useRoutineEventSchedules, useScheduleRoutineEvent, useUserEvents, getDotColorClass, EventType } from "@/hooks/useUserEvents";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
 
@@ -35,8 +35,10 @@ export function ScheduleRoutineModal({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const { data: schedules, isLoading } = useRoutineEventSchedules(routineId);
   const { mutate: scheduleRoutine, isPending } = useScheduleRoutineEvent();
+  const { data: allEvents = [] } = useUserEvents();
 
   // Check auth status on mount
   useEffect(() => {
@@ -48,6 +50,21 @@ export function ScheduleRoutineModal({
       checkAuth();
     }
   }, [open]);
+
+  // Get events grouped by date for the current month view
+  const eventsByDate = useMemo(() => {
+    const grouped: Record<string, EventType[]> = {};
+    allEvents.forEach(event => {
+      const dateKey = event.event_date;
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      if (!grouped[dateKey].includes(event.type)) {
+        grouped[dateKey].push(event.type);
+      }
+    });
+    return grouped;
+  }, [allEvents]);
 
   const handleSchedule = () => {
     // Check authentication first
@@ -104,7 +121,7 @@ export function ScheduleRoutineModal({
             <p className="text-sm font-medium text-foreground">{routineName}</p>
           </div>
 
-          {/* Existing schedules */}
+          {/* Existing schedules - max 2 future + max 2 past */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Historial de programaciones
@@ -123,8 +140,8 @@ export function ScheduleRoutineModal({
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Future schedules (highlighted) */}
-                {schedules?.future.map((event) => (
+                {/* Future schedules - max 2 */}
+                {schedules?.future.slice(0, 2).map((event) => (
                   <div
                     key={event.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20"
@@ -182,6 +199,7 @@ export function ScheduleRoutineModal({
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
+                onMonthChange={setCurrentMonth}
                 disabled={(date) => date < today}
                 locale={es}
                 className="rounded-lg border border-border p-3 pointer-events-auto"
@@ -199,6 +217,31 @@ export function ScheduleRoutineModal({
                   day_today: "ring-2 ring-foreground ring-inset !bg-transparent rounded-full",
                   day_outside: "text-muted-foreground opacity-50",
                   day_disabled: "text-muted-foreground opacity-50",
+                }}
+                components={{
+                  DayContent: ({ date }) => {
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    const eventTypes = eventsByDate[dateStr] || [];
+                    
+                    return (
+                      <div className="relative flex flex-col items-center">
+                        <span>{date.getDate()}</span>
+                        {eventTypes.length > 0 && (
+                          <div className="absolute -bottom-1 flex gap-0.5">
+                            {eventTypes.slice(0, 3).map((type, i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "w-1 h-1 rounded-full",
+                                  getDotColorClass(type)
+                                )}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  },
                 }}
               />
             </div>
