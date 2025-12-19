@@ -9,6 +9,8 @@ import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
 
 // Padel ball SVG component
 function PadelBall({ filled, size = "md" }: { filled: boolean; size?: "sm" | "md" }) {
@@ -69,14 +71,25 @@ interface ExerciseItemProps {
     video_url: string | null;
     tips: string | null;
   };
+  exerciseIndex: number;
+  isAuthenticated: boolean;
+  onAuthRequired: () => void;
 }
 
-function ExerciseItem({ exercise }: ExerciseItemProps) {
+function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired }: ExerciseItemProps) {
   const [showPreview, setShowPreview] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Guest users can only preview first 2 exercises (index 0 and 1)
+  const canPreview = isAuthenticated || exerciseIndex < 2;
+
   const handleTouchStart = () => {
+    if (!canPreview) {
+      // Show auth prompt immediately for restricted exercises
+      onAuthRequired();
+      return;
+    }
     timerRef.current = setTimeout(() => {
       setShowPreview(true);
     }, 500);
@@ -135,6 +148,11 @@ function ExerciseItem({ exercise }: ExerciseItemProps) {
           onTouchEnd={handleTouchEnd}
         >
           <div className="max-w-md w-full space-y-4">
+            {/* Exercise name */}
+            <h3 className="text-xl font-bold text-white text-center">
+              {exercise.nombre}
+            </h3>
+
             {/* Video */}
             <div className="aspect-video rounded-xl overflow-hidden bg-muted">
               <video
@@ -149,16 +167,14 @@ function ExerciseItem({ exercise }: ExerciseItemProps) {
               />
             </div>
 
-            {/* Exercise name */}
-            <h3 className="text-lg font-semibold text-white text-center">
-              {exercise.nombre}
-            </h3>
-
             {/* Tips */}
             {exercise.tips && (
               <div className="bg-card/80 backdrop-blur-sm rounded-xl p-4 border border-border/30">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  💡 {exercise.tips}
+                <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
+                  Tips de Ejecución
+                </p>
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  {exercise.tips}
                 </p>
               </div>
             )}
@@ -207,6 +223,10 @@ export default function RutinaDetalle() {
   const [activeTab, setActiveTab] = useState("rutina");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isProgram, setIsProgram] = useState<boolean | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   
   const { data: routine, isLoading, error } = useRoutine(id);
   const { data: activeProgram } = useActiveProgram();
@@ -447,13 +467,22 @@ export default function RutinaDetalle() {
 
                     {/* Exercises in block */}
                     <div className="space-y-2">
-                      {block.exercises?.map((blockExercise) => {
+                      {block.exercises?.map((blockExercise, exerciseIndexInBlock) => {
                         const exercise = (blockExercise as { exercise?: { id: string; nombre: string; thumbnail_url: string | null; video_url: string | null; tips: string | null } }).exercise;
                         if (!exercise) return null;
+                        
+                        // Calculate global exercise index across all blocks
+                        const globalExerciseIndex = routine.blocks?.slice(0, blockIndex).reduce(
+                          (acc, b) => acc + (b.exercises?.length || 0), 0
+                        ) + exerciseIndexInBlock;
+                        
                         return (
                           <ExerciseItem 
                             key={blockExercise.id} 
                             exercise={exercise}
+                            exerciseIndex={globalExerciseIndex}
+                            isAuthenticated={isAuthenticated}
+                            onAuthRequired={() => setShowAuthPrompt(true)}
                           />
                         );
                       })}
@@ -536,6 +565,14 @@ export default function RutinaDetalle() {
         routineName={routine.nombre}
         routineCategory={routine.categoria}
         routineCoverUrl={routine.portada_url || undefined}
+      />
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+        title="Desbloquea todos los ejercicios"
+        description="Regístrate para ver los detalles de todos los ejercicios, incluyendo videos y tips de ejecución."
       />
     </div>
   );
