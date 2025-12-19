@@ -27,10 +27,22 @@ export interface WorkoutStep {
   duration: number; // in seconds
   tipoEjecucion?: "tiempo" | "repeticiones";
   repeticiones?: number;
+  comment?: string | null; // Personalized comment for this exercise
+}
+
+// Custom data structure for program routines
+export interface ProgramCustomData {
+  blocks?: Record<string, {
+    exercises?: Record<string, {
+      tiempo?: number;
+      repeticiones?: number;
+      comentario?: string;
+    }>;
+  }>;
 }
 
 // Build the full workout sequence from routine data
-export function buildWorkoutSequence(routine: Routine): WorkoutStep[] {
+export function buildWorkoutSequence(routine: Routine, customData?: ProgramCustomData | null): WorkoutStep[] {
   const steps: WorkoutStep[] = [];
   const blocks = routine.blocks || [];
 
@@ -38,12 +50,19 @@ export function buildWorkoutSequence(routine: Routine): WorkoutStep[] {
     const exercises = block.exercises || [];
     const totalSeries = block.repetir_bloque ? block.series : 1;
 
+    // Get custom data for this block
+    const blockCustom = customData?.blocks?.[block.id];
+
     for (let seriesIndex = 1; seriesIndex <= totalSeries; seriesIndex++) {
       exercises.forEach((blockExercise, exerciseIndex) => {
         const exercise = blockExercise.exercise;
         const isLastExercise = exerciseIndex === exercises.length - 1;
         const isLastSeries = seriesIndex === totalSeries;
         const isLastBlock = blockIndex === blocks.length - 1;
+
+        // Get custom data for this exercise (comment)
+        const exerciseCustom = blockCustom?.exercises?.[blockExercise.id];
+        const comment = exerciseCustom?.comentario || null;
 
         // Add countdown before first exercise of first series
         if (seriesIndex === 1 && exerciseIndex === 0 && blockIndex === 0) {
@@ -63,13 +82,20 @@ export function buildWorkoutSequence(routine: Routine): WorkoutStep[] {
               tips: exercise.tips,
             } : undefined,
             duration: 5, // 5 second countdown
+            comment,
           });
         }
 
+        // Get custom time/reps if defined
+        const customTiempo = exerciseCustom?.tiempo;
+        const customReps = exerciseCustom?.repeticiones;
+        const effectiveTiempo = customTiempo ?? blockExercise.tiempo;
+        const effectiveReps = customReps ?? blockExercise.repeticiones;
+
         // Add exercise step
         const exerciseDuration = blockExercise.tipo_ejecucion === "tiempo" 
-          ? blockExercise.tiempo 
-          : blockExercise.repeticiones * 3; // 3 seconds per rep estimate
+          ? effectiveTiempo 
+          : effectiveReps * 3; // 3 seconds per rep estimate
 
         steps.push({
           type: "exercise",
@@ -88,7 +114,8 @@ export function buildWorkoutSequence(routine: Routine): WorkoutStep[] {
           } : undefined,
           duration: exerciseDuration,
           tipoEjecucion: blockExercise.tipo_ejecucion,
-          repeticiones: blockExercise.repeticiones,
+          repeticiones: effectiveReps,
+          comment,
         });
 
         // Add rest after exercise (if not last exercise in block)
@@ -234,7 +261,8 @@ export interface UseWorkoutExecutionReturn {
 export function useWorkoutExecution(
   routine: Routine | null,
   onComplete?: () => void,
-  onExit?: () => void
+  onExit?: () => void,
+  customData?: ProgramCustomData | null
 ): UseWorkoutExecutionReturn {
   const [steps, setSteps] = useState<WorkoutStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -248,7 +276,7 @@ export function useWorkoutExecution(
   // Initialize workout
   useEffect(() => {
     if (routine) {
-      const workoutSteps = buildWorkoutSequence(routine);
+      const workoutSteps = buildWorkoutSequence(routine, customData);
       const progress = calculateProgressDots(routine);
       setSteps(workoutSteps);
       setProgressInfo(progress);
@@ -257,7 +285,7 @@ export function useWorkoutExecution(
       setIsPaused(true);
       setIsComplete(false);
     }
-  }, [routine]);
+  }, [routine, customData]);
 
   // Timer logic
   useEffect(() => {

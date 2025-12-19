@@ -307,6 +307,7 @@ export default function RutinaEjecucion() {
           videoUrl={currentStep.exercise?.video_url}
           thumbnailUrl={currentStep.exercise?.thumbnail_url}
           tips={currentStep.exercise?.tips}
+          comment={currentStep.comment}
           isPaused={isPaused}
           dotsByBlock={dotsByBlock}
           currentDotIndex={currentDotIndex}
