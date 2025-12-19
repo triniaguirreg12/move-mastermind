@@ -177,16 +177,7 @@ export function LibraryCard({
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Favorite Button */}
-            {showFavorite && (
-              <FavoriteButton 
-                routineId={String(id)} 
-                size="sm" 
-                variant="overlay"
-              />
-            )}
-
-            {/* Rating */}
+            {/* Rating - now on left */}
             {rating !== undefined && rating > 0 ? (
               <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
                 <span className="text-[10px] font-semibold text-white">{rating.toFixed(1)}</span>
@@ -196,6 +187,15 @@ export function LibraryCard({
               <div className="flex items-center gap-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
                 <span className="text-[10px] text-white/60">—</span>
               </div>
+            )}
+
+            {/* Favorite Button - now on right */}
+            {showFavorite && (
+              <FavoriteButton 
+                routineId={String(id)} 
+                size="sm" 
+                variant="overlay"
+              />
             )}
           </div>
         </div>
