@@ -62,6 +62,11 @@ const Profesionales = () => {
             </div>
           )}
         </div>
+
+        {/* Coming Soon Notice */}
+        <div className="text-center py-6 text-muted-foreground text-sm">
+          <p>🔒 Próximamente podrás acceder a más profesionales certificados Just Muv.</p>
+        </div>
       </div>
 
       {/* Booking Flow */}
