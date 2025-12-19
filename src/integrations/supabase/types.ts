@@ -158,6 +158,77 @@ export type Database = {
         }
         Relationships: []
       }
+      program_week_routines: {
+        Row: {
+          created_at: string
+          custom_data: Json | null
+          id: string
+          orden: number
+          routine_id: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_data?: Json | null
+          id?: string
+          orden?: number
+          routine_id: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_data?: Json | null
+          id?: string
+          orden?: number
+          routine_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_week_routines_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_week_routines_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "program_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_weeks: {
+        Row: {
+          created_at: string
+          id: string
+          program_id: string
+          week_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          program_id: string
+          week_number?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          program_id?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_weeks_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routine_blocks: {
         Row: {
           created_at: string
