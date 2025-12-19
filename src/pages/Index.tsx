@@ -360,14 +360,12 @@ const Index = () => {
           </div>
         )}
 
-        {/* No Program CTA - shown below activities */}
+        {/* Favorites Section - right after activities */}
+        <FavoritesSection />
+
+        {/* No Program CTA - shown at the bottom */}
         {!activeProgram && <NoProgramCTA />}
       </div>
-
-      {/* Favorites Section */}
-      <FavoritesSection />
-
-      <div className="pb-20" />
 
       <BottomNav />
 
