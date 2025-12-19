@@ -45,6 +45,9 @@ export function ScheduleProgramModal({
   const today = startOfDay(new Date());
   const [weekOffset, setWeekOffset] = useState(0);
   
+  // Max 2 weeks allowed (current week + next week)
+  const MAX_WEEK_OFFSET = 1;
+  
   // Track assignments: routineId -> Date
   const [assignments, setAssignments] = useState<Record<string, Date>>({});
 
@@ -182,7 +185,7 @@ export function ScheduleProgramModal({
             </div>
           )}
 
-          {/* Week navigation */}
+          {/* Week navigation - limited to current + next week */}
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
@@ -194,11 +197,14 @@ export function ScheduleProgramModal({
             </Button>
             <span className="text-sm font-medium text-muted-foreground">
               {format(days[0], "d MMM", { locale: es })} - {format(days[6], "d MMM", { locale: es })}
+              {weekOffset === 0 && " (Esta semana)"}
+              {weekOffset === 1 && " (Próxima semana)"}
             </span>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setWeekOffset(weekOffset + 1)}
+              onClick={() => setWeekOffset(Math.min(MAX_WEEK_OFFSET, weekOffset + 1))}
+              disabled={weekOffset >= MAX_WEEK_OFFSET}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
