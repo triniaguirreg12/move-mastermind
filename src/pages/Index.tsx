@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2 } from "lucide-react";
+import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2, CalendarClock } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -17,6 +17,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -64,6 +74,7 @@ const Index = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [summaryPeriod, setSummaryPeriod] = useState<"semanal" | "mensual">("semanal");
   const [showRadarInfo, setShowRadarInfo] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<UserEvent | null>(null);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
   const monthStart = startOfMonth(selectedDate);
@@ -388,10 +399,22 @@ const Index = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {event.type === "profesional" && event.status === "scheduled" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/profesionales?reschedule=${event.metadata?.professional_id}`);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                      title="Reagendar cita"
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteEvent.mutate(event.id);
+                      setEventToDelete(event);
                     }}
                     className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                     title="Eliminar evento"
@@ -487,6 +510,35 @@ const Index = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {eventToDelete?.type === "profesional" 
+                ? "¿Estás seguro/a de que deseas eliminar esta cita? Esta acción no se puede deshacer."
+                : "¿Estás seguro/a de que deseas eliminar este evento? Esta acción no se puede deshacer."
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (eventToDelete) {
+                  deleteEvent.mutate(eventToDelete.id);
+                  setEventToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
