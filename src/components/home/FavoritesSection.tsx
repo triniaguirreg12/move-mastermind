@@ -33,10 +33,7 @@ export function FavoritesSection() {
 
   return (
     <div className="mt-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Heart className="h-4 w-4 text-destructive fill-destructive" />
-        <h2 className="text-base font-semibold text-foreground">Favoritos</h2>
-      </div>
+      <h2 className="text-base font-semibold text-foreground mb-3">Favoritos</h2>
 
       <div className="space-y-4">
         {Object.entries(groupedFavorites).map(([category, items]) => (
