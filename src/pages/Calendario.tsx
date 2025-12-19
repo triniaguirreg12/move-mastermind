@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -33,6 +33,7 @@ import {
   useUserEvents,
   useCleanupMissedEvents,
   useDeleteEvent,
+  useUpdateEventStatus,
   getActivityDotsForDate,
   getDotColorClass,
   UserEvent,
@@ -52,6 +53,7 @@ const Calendario = () => {
   const { data: events = [], isLoading } = useUserEvents();
   const cleanupMissedEvents = useCleanupMissedEvents();
   const deleteEvent = useDeleteEvent();
+  const updateEventStatus = useUpdateEventStatus();
 
   // Cleanup missed scheduled entrenamientos on mount
   useEffect(() => {
@@ -294,6 +296,18 @@ const Calendario = () => {
                       </a>
                     )}
                   </div>
+                  {event.type === "padel" && event.status === "scheduled" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateEventStatus.mutate({ eventId: event.id, status: "completed" });
+                      }}
+                      className="p-2 rounded-lg hover:bg-success/10 text-muted-foreground hover:text-success transition-colors flex-shrink-0"
+                      title="Marcar como completado"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => handleDeleteClick(e, event)}
                     className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
