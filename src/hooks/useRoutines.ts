@@ -258,15 +258,17 @@ export function dbRoutineToAdminRutina(
 }
 
 // Fetch all published routines with their blocks and exercises (for Library view)
+// Excludes routines/programs assigned to specific users (private)
 export function usePublishedRoutines() {
   return useQuery({
     queryKey: ["routines", "published"],
     queryFn: async () => {
-      // Fetch published routines
+      // Fetch published routines that are NOT assigned to a specific user
       const { data: routines, error } = await supabase
         .from("routines")
         .select("*")
         .eq("estado", "publicada")
+        .is("assigned_user_id", null) // Only public routines/programs
         .order("created_at", { ascending: false });
 
       if (error) throw error;
