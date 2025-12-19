@@ -131,28 +131,28 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
       {/* Preview Modal */}
       {showPreview && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 animate-fade-in"
           onClick={handleBackdropClick}
         >
-          <div className="max-w-md w-full space-y-4 relative animate-scale-in">
+          <div className="max-w-[280px] w-full space-y-3 relative animate-scale-in">
             {/* Close button */}
             <button
               type="button"
               onClick={handleClose}
-              className="absolute -top-12 right-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="absolute -top-10 right-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
               </svg>
             </button>
 
             {/* Exercise name */}
-            <h3 className="text-xl font-bold text-white text-center">
+            <h3 className="text-lg font-bold text-white text-center">
               {exercise.nombre}
             </h3>
 
-            {/* Video */}
-            <div className="aspect-video rounded-xl overflow-hidden bg-muted">
+            {/* Video - Vertical format */}
+            <div className="aspect-[9/16] rounded-xl overflow-hidden bg-muted max-h-[50vh]">
               <video
                 ref={videoRef}
                 src={exercise.video_url || ""}
@@ -165,15 +165,20 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
               />
             </div>
 
-            {/* Tips */}
+            {/* Tips as list */}
             {exercise.tips && (
-              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-4 border border-border/30">
-                <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
+              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-3 border border-border/30">
+                <p className="text-[10px] font-semibold text-primary mb-2 uppercase tracking-wide">
                   Tips de Ejecución
                 </p>
-                <p className="text-sm text-foreground/90 leading-relaxed">
-                  {exercise.tips}
-                </p>
+                <ul className="text-xs text-foreground/90 leading-relaxed space-y-1.5 text-left">
+                  {exercise.tips.split(/\d+\.\s*/).filter(Boolean).map((tip, index) => (
+                    <li key={index} className="flex gap-2">
+                      <span className="text-primary font-medium shrink-0">{index + 1}.</span>
+                      <span>{tip.trim()}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
