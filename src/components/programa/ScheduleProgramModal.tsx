@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { format, addDays, isBefore, startOfDay, isAfter } from "date-fns";
+import { format, addDays, isBefore, startOfDay, isAfter, startOfWeek, endOfWeek, isSameWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Loader2, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +60,21 @@ export function ScheduleProgramModal({
     return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   }, [today, weekOffset]);
 
+  // Get the locked calendar week based on first assigned routine
+  const lockedCalendarWeek = useMemo(() => {
+    // Find the first assigned routine's date
+    for (const routine of sortedRoutines) {
+      const assignedDate = assignments[routine.routine_id];
+      if (assignedDate) {
+        return {
+          start: startOfWeek(assignedDate, { weekStartsOn: 1 }), // Monday
+          end: endOfWeek(assignedDate, { weekStartsOn: 1 }), // Sunday
+        };
+      }
+    }
+    return null;
+  }, [assignments, sortedRoutines]);
+
   // Get the minimum allowed date for a routine based on previous routines' assignments
   const getMinDateForRoutine = (routineId: string): Date | null => {
     const routineIndex = sortedRoutines.findIndex(r => r.routine_id === routineId);
@@ -94,9 +109,18 @@ export function ScheduleProgramModal({
     return earliestNextDate;
   };
 
+  // Check if a day is within the locked calendar week
+  const isDayInLockedWeek = (day: Date): boolean => {
+    if (!lockedCalendarWeek) return true; // No lock yet, all days allowed
+    return isSameWeek(day, lockedCalendarWeek.start, { weekStartsOn: 1 });
+  };
+
   const handleDayClick = (routineId: string, day: Date) => {
     // Don't allow past dates
     if (isBefore(day, today)) return;
+
+    // Check calendar week constraint
+    if (!isDayInLockedWeek(day)) return;
 
     // Check order constraints
     const minDate = getMinDateForRoutine(routineId);
@@ -129,6 +153,11 @@ export function ScheduleProgramModal({
   const assignedCount = Object.keys(assignments).length;
   const canSubmit = assignedCount > 0;
 
+  // Check if current view is showing the locked week
+  const isViewingLockedWeek = lockedCalendarWeek 
+    ? days.some(day => isSameWeek(day, lockedCalendarWeek.start, { weekStartsOn: 1 }))
+    : true;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -140,8 +169,18 @@ export function ScheduleProgramModal({
 
         <div className="space-y-4 pt-2">
           <p className="text-sm text-muted-foreground">
-            Asigna cada rutina a un día del calendario. Las rutinas agendadas aparecerán en tu Home y Calendario.
+            Asigna cada rutina a un día del calendario. Todas las rutinas de esta semana deben agendarse en la misma semana calendario.
           </p>
+
+          {/* Week lock indicator */}
+          {lockedCalendarWeek && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+              <Info className="h-4 w-4 text-primary flex-shrink-0" />
+              <p className="text-xs text-primary">
+                Semana bloqueada: {format(lockedCalendarWeek.start, "d MMM", { locale: es })} - {format(lockedCalendarWeek.end, "d MMM", { locale: es })}
+              </p>
+            </div>
+          )}
 
           {/* Week navigation */}
           <div className="flex items-center justify-between">
@@ -165,25 +204,49 @@ export function ScheduleProgramModal({
             </Button>
           </div>
 
+          {/* Warning if not viewing locked week */}
+          {lockedCalendarWeek && !isViewingLockedWeek && (
+            <div className="p-3 rounded-lg bg-muted/50 text-center">
+              <p className="text-sm text-muted-foreground">
+                Las rutinas de esta semana deben agendarse entre el{" "}
+                <span className="font-medium text-foreground">
+                  {format(lockedCalendarWeek.start, "d MMM", { locale: es })}
+                </span>
+                {" "}y el{" "}
+                <span className="font-medium text-foreground">
+                  {format(lockedCalendarWeek.end, "d MMM", { locale: es })}
+                </span>
+              </p>
+            </div>
+          )}
+
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1 text-center">
-            {days.map((day) => (
-              <div key={day.toISOString()} className="text-xs">
-                <span className="text-muted-foreground uppercase">
-                  {format(day, "EEE", { locale: es })}
-                </span>
-                <div
-                  className={cn(
-                    "mt-1 w-7 h-7 mx-auto rounded-full flex items-center justify-center text-sm font-medium",
-                    day.getTime() === today.getTime()
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground"
-                  )}
-                >
-                  {format(day, "d")}
+            {days.map((day) => {
+              const isInLockedWeek = isDayInLockedWeek(day);
+              return (
+                <div key={day.toISOString()} className="text-xs">
+                  <span className={cn(
+                    "uppercase",
+                    isInLockedWeek ? "text-muted-foreground" : "text-muted-foreground/40"
+                  )}>
+                    {format(day, "EEE", { locale: es })}
+                  </span>
+                  <div
+                    className={cn(
+                      "mt-1 w-7 h-7 mx-auto rounded-full flex items-center justify-center text-sm font-medium",
+                      day.getTime() === today.getTime()
+                        ? "bg-primary text-primary-foreground"
+                        : isInLockedWeek
+                        ? "text-foreground"
+                        : "text-muted-foreground/40"
+                    )}
+                  >
+                    {format(day, "d")}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Routines list */}
@@ -232,10 +295,13 @@ export function ScheduleProgramModal({
                         const isPast = isBefore(day, today);
                         const isSelected = assignedDate?.getTime() === day.getTime();
                         
+                        // Check if day is outside locked calendar week
+                        const isOutsideLockedWeek = !isDayInLockedWeek(day);
+                        
                         // Check if day is blocked by order constraints
                         const isBeforeMin = minDate && isBefore(day, minDate);
                         const isAfterMax = maxDate && isAfter(day, maxDate);
-                        const isBlocked = isBeforeMin || isAfterMax;
+                        const isBlocked = isBeforeMin || isAfterMax || isOutsideLockedWeek;
                         const isDisabled = isPast || isBlocked;
                         
                         return (
