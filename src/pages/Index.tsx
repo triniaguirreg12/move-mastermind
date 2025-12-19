@@ -39,6 +39,7 @@ import { FavoritesSection } from "@/components/home/FavoritesSection";
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
 import agilityImg from "@/assets/agility-routine.png";
+import professionalMeetingImg from "@/assets/professional-meeting.png";
 
 const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
 
@@ -141,6 +142,10 @@ const Index = () => {
   };
 
   const getEventImage = (event: UserEvent) => {
+    // Use professional meeting image for professional events
+    if (event.type === "profesional") {
+      return professionalMeetingImg;
+    }
     // Use routine cover image if available
     if (event.type === "entrenamiento" && event.metadata?.routine_cover_url) {
       return event.metadata.routine_cover_url as string;
