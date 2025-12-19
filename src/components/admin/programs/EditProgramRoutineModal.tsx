@@ -28,12 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Save, RotateCcw, AlertTriangle, ChevronDown, Clock, Repeat, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import ObjectiveRadarChart from "@/components/admin/routines/ObjectiveRadarChart";
 import {
-  RutinaObjetivo,
-  APTITUDES_KEYS,
-  APTITUDES_LABELS,
-  createEmptyObjetivo,
   DIFICULTADES_RUTINA,
 } from "@/components/admin/routines/types";
 import type { Json } from "@/integrations/supabase/types";
@@ -55,7 +50,6 @@ interface ProgramRoutineCustomData {
   nombre?: string;
   descripcion?: string;
   dificultad?: string;
-  objetivo?: RutinaObjetivo;
   descanso_entre_bloques?: number;
   blocks?: Record<string, BlockCustom>;
 }
@@ -241,14 +235,6 @@ export default function EditProgramRoutineModal({
     }));
   };
 
-  const handleObjetivoChange = (key: keyof RutinaObjetivo, value: number) => {
-    const currentObjetivo = getEffectiveValue(
-      "objetivo",
-      (originalRoutine?.objetivo as unknown as RutinaObjetivo) || createEmptyObjetivo()
-    );
-    const newObjetivo = { ...currentObjetivo, [key]: value };
-    handleFieldChange("objetivo", newObjetivo);
-  };
 
   const resetField = (field: keyof ProgramRoutineCustomData) => {
     setCustomData(prev => {
@@ -282,9 +268,6 @@ export default function EditProgramRoutineModal({
     }
     if (customData.dificultad && customData.dificultad !== originalRoutine?.dificultad) {
       cleanCustomData.dificultad = customData.dificultad;
-    }
-    if (customData.objetivo) {
-      cleanCustomData.objetivo = customData.objetivo;
     }
     if (customData.descanso_entre_bloques !== undefined && 
         customData.descanso_entre_bloques !== originalRoutine?.descanso_entre_bloques) {
@@ -320,10 +303,6 @@ export default function EditProgramRoutineModal({
   const effectiveNombre = getEffectiveValue("nombre", originalRoutine.nombre);
   const effectiveDescripcion = getEffectiveValue("descripcion", originalRoutine.descripcion || "");
   const effectiveDificultad = getEffectiveValue("dificultad", originalRoutine.dificultad);
-  const effectiveObjetivo = getEffectiveValue(
-    "objetivo",
-    (originalRoutine.objetivo as unknown as RutinaObjetivo) || createEmptyObjetivo()
-  );
   const effectiveDescanso = getEffectiveValue(
     "descanso_entre_bloques",
     originalRoutine.descanso_entre_bloques || 60
@@ -605,45 +584,6 @@ export default function EditProgramRoutineModal({
               </div>
             )}
 
-            {/* Objetivos */}
-            {originalRoutine.categoria !== "Activación" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Aptitudes físicas</Label>
-                  {customData.objetivo !== undefined && (
-                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => resetField("objetivo")}>
-                      <RotateCcw className="h-3 w-3 mr-1" />Restaurar
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="flex items-center justify-center">
-                    <div className="w-full max-w-[180px]">
-                      <ObjectiveRadarChart objetivo={effectiveObjetivo} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {APTITUDES_KEYS.map((key) => (
-                      <div key={key} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground text-xs">{APTITUDES_LABELS[key]}</span>
-                          <span className="font-medium text-xs">{effectiveObjetivo[key]}</span>
-                        </div>
-                        <Slider
-                          value={[effectiveObjetivo[key]]}
-                          onValueChange={([v]) => handleObjetivoChange(key, v)}
-                          min={0}
-                          max={10}
-                          step={1}
-                          className="h-1.5"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </ScrollArea>
 
