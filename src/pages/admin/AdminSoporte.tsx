@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -11,136 +13,201 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, MessageSquare, Clock, User, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Search, Clock, User, CheckCircle2, AlertCircle, Lightbulb, AlertTriangle, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
-const tickets = [
-  {
-    id: 1,
-    asunto: "No puedo acceder a mi cuenta",
-    usuario: "María Fernández",
-    email: "maria@email.com",
-    categoria: "Cuenta",
-    prioridad: "alta",
-    estado: "abierto",
-    fecha: "2024-12-15",
-    mensajes: 3,
-  },
-  {
-    id: 2,
-    asunto: "Error al cargar rutina",
-    usuario: "Carlos López",
-    email: "carlos@email.com",
-    categoria: "Técnico",
-    prioridad: "media",
-    estado: "en_progreso",
-    fecha: "2024-12-14",
-    mensajes: 5,
-  },
-  {
-    id: 3,
-    asunto: "Solicitud de reembolso",
-    usuario: "Ana Martínez",
-    email: "ana@email.com",
-    categoria: "Pagos",
-    prioridad: "alta",
-    estado: "abierto",
-    fecha: "2024-12-15",
-    mensajes: 2,
-  },
-  {
-    id: 4,
-    asunto: "Problema con video de ejercicio",
-    usuario: "Diego Soto",
-    email: "diego@email.com",
-    categoria: "Contenido",
-    prioridad: "baja",
-    estado: "resuelto",
-    fecha: "2024-12-13",
-    mensajes: 4,
-  },
-  {
-    id: 5,
-    asunto: "Cómo cambiar mi plan",
-    usuario: "Pepito Pérez",
-    email: "pepito@email.com",
-    categoria: "Cuenta",
-    prioridad: "baja",
-    estado: "resuelto",
-    fecha: "2024-12-12",
-    mensajes: 2,
-  },
-];
+interface SupportTicket {
+  id: string;
+  user_id: string;
+  type: "problem" | "suggestion";
+  message: string;
+  status: "open" | "in_progress" | "resolved";
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  user_profile?: {
+    name: string;
+    email: string;
+  };
+}
 
 const AdminSoporte = () => {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
 
-  const getPrioridadColor = (prioridad: string) => {
-    const colors: Record<string, string> = {
-      alta: "bg-destructive/20 text-destructive",
-      media: "bg-warning/20 text-warning",
-      baja: "bg-muted text-muted-foreground",
-    };
-    return colors[prioridad] || "bg-muted text-muted-foreground";
+  // Fetch tickets with user profile info
+  const { data: tickets = [], isLoading } = useQuery({
+    queryKey: ["support-tickets"],
+    queryFn: async () => {
+      const { data: ticketsData, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch user profiles for each ticket
+      const userIds = [...new Set(ticketsData.map(t => t.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, name, email")
+        .in("user_id", userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return ticketsData.map(ticket => ({
+        ...ticket,
+        user_profile: profileMap.get(ticket.user_id) || { name: "Usuario desconocido", email: "" }
+      })) as SupportTicket[];
+    },
+  });
+
+  // Update ticket status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
+      const updateData: Record<string, string> = { status };
+      if (notes !== undefined) {
+        updateData.admin_notes = notes;
+      }
+      
+      const { error } = await supabase
+        .from("support_tickets")
+        .update(updateData)
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
+      toast.success("Ticket actualizado");
+    },
+    onError: () => {
+      toast.error("Error al actualizar el ticket");
+    },
+  });
+
+  const getTypeIcon = (type: string) => {
+    return type === "problem" ? (
+      <AlertTriangle className="h-4 w-4 text-amber-500" />
+    ) : (
+      <Lightbulb className="h-4 w-4 text-primary" />
+    );
   };
 
-  const getEstadoColor = (estado: string) => {
-    const colors: Record<string, string> = {
-      abierto: "border-destructive text-destructive",
-      en_progreso: "border-warning text-warning",
-      resuelto: "border-success text-success",
-    };
-    return colors[estado] || "border-muted-foreground text-muted-foreground";
+  const getTypeLabel = (type: string) => {
+    return type === "problem" ? "Problema" : "Sugerencia";
   };
 
-  const getEstadoLabel = (estado: string) => {
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      open: "border-destructive text-destructive",
+      in_progress: "border-warning text-warning",
+      resolved: "border-success text-success",
+    };
+    return colors[status] || "border-muted-foreground text-muted-foreground";
+  };
+
+  const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      abierto: "Abierto",
-      en_progreso: "En progreso",
-      resuelto: "Resuelto",
+      open: "Abierto",
+      in_progress: "En progreso",
+      resolved: "Resuelto",
     };
-    return labels[estado] || estado;
+    return labels[status] || status;
   };
 
-  const openTickets = tickets.filter((t) => t.estado === "abierto");
-  const inProgressTickets = tickets.filter((t) => t.estado === "en_progreso");
-  const resolvedTickets = tickets.filter((t) => t.estado === "resuelto");
+  // Filter tickets
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = 
+      ticket.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.user_profile?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.user_profile?.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = typeFilter === "all" || ticket.type === typeFilter;
+    
+    return matchesSearch && matchesType;
+  });
 
-  const TicketCard = ({ ticket }: { ticket: (typeof tickets)[0] }) => (
-    <Card className="bg-card border-border p-4 hover:border-primary/30 transition-colors cursor-pointer">
+  const openTickets = filteredTickets.filter((t) => t.status === "open");
+  const inProgressTickets = filteredTickets.filter((t) => t.status === "in_progress");
+  const resolvedTickets = filteredTickets.filter((t) => t.status === "resolved");
+
+  const handleOpenTicket = (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setAdminNotes(ticket.admin_notes || "");
+  };
+
+  const handleUpdateStatus = (status: string) => {
+    if (!selectedTicket) return;
+    updateStatusMutation.mutate({ 
+      id: selectedTicket.id, 
+      status, 
+      notes: adminNotes 
+    });
+    setSelectedTicket({ ...selectedTicket, status: status as SupportTicket["status"] });
+  };
+
+  const handleSaveNotes = () => {
+    if (!selectedTicket) return;
+    updateStatusMutation.mutate({ 
+      id: selectedTicket.id, 
+      status: selectedTicket.status, 
+      notes: adminNotes 
+    });
+  };
+
+  const TicketCard = ({ ticket }: { ticket: SupportTicket }) => (
+    <Card 
+      className="bg-card border-border p-4 hover:border-primary/30 transition-colors cursor-pointer"
+      onClick={() => handleOpenTicket(ticket)}
+    >
       <div className="flex items-start justify-between mb-3">
-        <Badge className={getPrioridadColor(ticket.prioridad)}>
-          {ticket.prioridad.charAt(0).toUpperCase() + ticket.prioridad.slice(1)}
-        </Badge>
-        <Badge variant="outline" className={getEstadoColor(ticket.estado)}>
-          {getEstadoLabel(ticket.estado)}
+        <div className="flex items-center gap-2">
+          {getTypeIcon(ticket.type)}
+          <Badge variant="secondary" className="text-xs">
+            {getTypeLabel(ticket.type)}
+          </Badge>
+        </div>
+        <Badge variant="outline" className={getStatusColor(ticket.status)}>
+          {getStatusLabel(ticket.status)}
         </Badge>
       </div>
 
-      <h3 className="font-medium text-foreground mb-2">{ticket.asunto}</h3>
-
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-        <User className="h-3 w-3" />
-        {ticket.usuario}
-      </div>
+      <p className="text-sm text-foreground mb-3 line-clamp-2">{ticket.message}</p>
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-        <Badge variant="secondary" className="text-[10px]">
-          {ticket.categoria}
-        </Badge>
+        <User className="h-3 w-3" />
+        {ticket.user_profile?.name}
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {new Date(ticket.fecha).toLocaleDateString("es-CL")}
-        </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <MessageSquare className="h-3 w-3" />
-          {ticket.mensajes} mensajes
+          {format(new Date(ticket.created_at), "dd MMM yyyy, HH:mm", { locale: es })}
         </div>
       </div>
     </Card>
   );
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -148,7 +215,7 @@ const AdminSoporte = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-bold text-foreground">Soporte</h1>
-          <p className="text-muted-foreground">Gestión de tickets y consultas</p>
+          <p className="text-muted-foreground">Gestión de tickets y consultas de usuarios</p>
         </div>
       </div>
 
@@ -159,21 +226,21 @@ const AdminSoporte = () => {
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">Abiertos</span>
           </div>
-          <p className="text-2xl font-bold text-foreground">{openTickets.length}</p>
+          <p className="text-2xl font-bold text-foreground">{tickets.filter(t => t.status === "open").length}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 text-warning mb-1">
             <Clock className="h-4 w-4" />
             <span className="text-sm">En Progreso</span>
           </div>
-          <p className="text-2xl font-bold text-foreground">{inProgressTickets.length}</p>
+          <p className="text-2xl font-bold text-foreground">{tickets.filter(t => t.status === "in_progress").length}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 text-success mb-1">
             <CheckCircle2 className="h-4 w-4" />
-            <span className="text-sm">Resueltos (este mes)</span>
+            <span className="text-sm">Resueltos</span>
           </div>
-          <p className="text-2xl font-bold text-foreground">{resolvedTickets.length}</p>
+          <p className="text-2xl font-bold text-foreground">{tickets.filter(t => t.status === "resolved").length}</p>
         </div>
       </div>
 
@@ -182,31 +249,20 @@ const AdminSoporte = () => {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar ticket..."
+            placeholder="Buscar por mensaje o usuario..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-card border-border"
           />
         </div>
-        <Select>
-          <SelectTrigger className="w-[140px] bg-card border-border">
-            <SelectValue placeholder="Categoría" />
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[160px] bg-card border-border">
+            <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="cuenta">Cuenta</SelectItem>
-            <SelectItem value="tecnico">Técnico</SelectItem>
-            <SelectItem value="pagos">Pagos</SelectItem>
-            <SelectItem value="contenido">Contenido</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select>
-          <SelectTrigger className="w-[140px] bg-card border-border">
-            <SelectValue placeholder="Prioridad" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="alta">Alta</SelectItem>
-            <SelectItem value="media">Media</SelectItem>
-            <SelectItem value="baja">Baja</SelectItem>
+            <SelectItem value="all">Todos los tipos</SelectItem>
+            <SelectItem value="problem">Problemas</SelectItem>
+            <SelectItem value="suggestion">Sugerencias</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -229,29 +285,142 @@ const AdminSoporte = () => {
         </TabsList>
 
         <TabsContent value="abiertos" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {openTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))}
-          </div>
+          {openTickets.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No hay tickets abiertos</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {openTickets.map((ticket) => (
+                <TicketCard key={ticket.id} ticket={ticket} />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="en_progreso" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {inProgressTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))}
-          </div>
+          {inProgressTickets.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No hay tickets en progreso</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {inProgressTickets.map((ticket) => (
+                <TicketCard key={ticket.id} ticket={ticket} />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="resueltos" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {resolvedTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))}
-          </div>
+          {resolvedTickets.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No hay tickets resueltos</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {resolvedTickets.map((ticket) => (
+                <TicketCard key={ticket.id} ticket={ticket} />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* Ticket Detail Sheet */}
+      <Sheet open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedTicket && (
+            <>
+              <SheetHeader className="mb-6">
+                <div className="flex items-center gap-2">
+                  {getTypeIcon(selectedTicket.type)}
+                  <SheetTitle className="text-xl font-display">
+                    {getTypeLabel(selectedTicket.type)}
+                  </SheetTitle>
+                </div>
+              </SheetHeader>
+
+              <div className="space-y-6">
+                {/* Status */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Estado</label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={selectedTicket.status === "open" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleUpdateStatus("open")}
+                      className="flex-1"
+                    >
+                      Abierto
+                    </Button>
+                    <Button
+                      variant={selectedTicket.status === "in_progress" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleUpdateStatus("in_progress")}
+                      className="flex-1"
+                    >
+                      En Progreso
+                    </Button>
+                    <Button
+                      variant={selectedTicket.status === "resolved" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleUpdateStatus("resolved")}
+                      className="flex-1"
+                    >
+                      Resuelto
+                    </Button>
+                  </div>
+                </div>
+
+                {/* User Info */}
+                <div className="p-4 rounded-xl bg-secondary/50 border border-border">
+                  <div className="flex items-center gap-3 mb-2">
+                    <User className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium text-foreground">{selectedTicket.user_profile?.name}</p>
+                      <p className="text-sm text-muted-foreground">{selectedTicket.user_profile?.email}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Enviado el {format(new Date(selectedTicket.created_at), "dd 'de' MMMM yyyy 'a las' HH:mm", { locale: es })}
+                  </p>
+                </div>
+
+                {/* Message */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Mensaje del usuario</label>
+                  <div className="p-4 rounded-xl bg-card border border-border">
+                    <p className="text-foreground whitespace-pre-wrap">{selectedTicket.message}</p>
+                  </div>
+                </div>
+
+                {/* Admin Notes */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Notas internas</label>
+                  <Textarea
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Agrega notas sobre este ticket..."
+                    className="min-h-[100px] bg-secondary resize-none"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSaveNotes}
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    Guardar notas
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

@@ -181,19 +181,35 @@ const Configuracion = () => {
       return;
     }
     
+    if (!user) {
+      toast.error("Debes iniciar sesión para enviar un ticket");
+      return;
+    }
+    
     setSaving(true);
-    // For now, just show success - in the future this could save to a support_tickets table
-    // or send an email via edge function
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const { error } = await supabase
+      .from("support_tickets")
+      .insert({
+        user_id: user.id,
+        type: supportType,
+        message: supportMessage.trim(),
+      });
+    
     setSaving(false);
     
-    toast.success(
-      supportType === "problem" 
-        ? "Problema reportado correctamente" 
-        : "Sugerencia enviada correctamente"
-    );
-    setSupportMessage("");
-    setShowSupportSheet(false);
+    if (error) {
+      console.error("Error creating support ticket:", error);
+      toast.error("Error al enviar el mensaje");
+    } else {
+      toast.success(
+        supportType === "problem" 
+          ? "Problema reportado correctamente" 
+          : "Sugerencia enviada correctamente"
+      );
+      setSupportMessage("");
+      setShowSupportSheet(false);
+    }
   };
 
   const formatBirthDate = (dateStr: string) => {
