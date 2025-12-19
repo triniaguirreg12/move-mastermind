@@ -21,7 +21,7 @@ export function BottomNav() {
             <NavLink
               key={item.path}
               to={item.path}
-              className="flex flex-col items-center gap-1 px-6 py-1 min-w-[80px] relative"
+              className="flex flex-col items-center justify-center gap-1 py-1 flex-1 relative"
             >
               <item.icon
                 className={cn(
@@ -38,7 +38,7 @@ export function BottomNav() {
                 {item.label}
               </span>
               {isActive && (
-                <div className="absolute -bottom-3 w-12 h-1 bg-primary rounded-full" />
+                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
               )}
             </NavLink>
           );
