@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, 
@@ -21,8 +34,20 @@ import {
   Search,
   Edit,
   Loader2,
+  ChevronUp,
+  ChevronDown,
+  ImageIcon,
+  MoreVertical,
 } from "lucide-react";
 import { useAvailableRoutines, useCreateProgram, useUpdateProgram } from "@/hooks/usePrograms";
+import ObjectiveRadarChart from "@/components/admin/routines/ObjectiveRadarChart";
+import { 
+  RutinaObjetivo, 
+  APTITUDES_KEYS, 
+  createEmptyObjetivo,
+  DIFICULTADES_RUTINA,
+  type DificultadRutina,
+} from "@/components/admin/routines/types";
 import type { Json } from "@/integrations/supabase/types";
 
 interface ProgramRoutine {
@@ -34,6 +59,7 @@ interface ProgramRoutine {
   orden: number;
   custom_data: Json | null;
   isCustomized?: boolean;
+  objetivo?: RutinaObjetivo;
 }
 
 interface ProgramWeek {
@@ -48,6 +74,7 @@ interface ProgramFormData {
   descripcion: string;
   portada_url: string;
   duracion_semanas: number;
+  dificultad: DificultadRutina | "";
   estado: "borrador" | "publicada";
   weeks: ProgramWeek[];
 }
@@ -62,6 +89,7 @@ interface CreateProgramModalProps {
     descripcion: string | null;
     portada_url: string | null;
     duracion_semanas: number | null;
+    dificultad: string;
     estado: string;
     weeks?: Array<{
       id: string;
@@ -75,6 +103,7 @@ interface CreateProgramModalProps {
           nombre: string;
           categoria: string;
           dificultad: string;
+          objetivo?: Json;
         };
       }>;
     }>;
@@ -103,6 +132,7 @@ export default function CreateProgramModal({
     descripcion: "",
     portada_url: "",
     duracion_semanas: 4,
+    dificultad: "",
     estado: "borrador",
     weeks: [createEmptyWeek(1), createEmptyWeek(2), createEmptyWeek(3), createEmptyWeek(4)],
   });
@@ -114,7 +144,39 @@ export default function CreateProgramModal({
     nombre: string;
     categoria: string;
     dificultad: string;
+    objetivo?: RutinaObjetivo;
   } | null>(null);
+  const [draggedWeekIndex, setDraggedWeekIndex] = useState<number | null>(null);
+
+  // Calculate averaged objectives from all routines in the program
+  const calculatedObjetivo = useMemo((): RutinaObjetivo => {
+    const allRoutines = formData.weeks.flatMap(w => w.routines);
+    if (allRoutines.length === 0) return createEmptyObjetivo();
+
+    const totals = createEmptyObjetivo();
+    let count = 0;
+
+    allRoutines.forEach(routine => {
+      if (routine.objetivo) {
+        APTITUDES_KEYS.forEach(key => {
+          totals[key] += routine.objetivo![key] || 0;
+        });
+        count++;
+      }
+    });
+
+    if (count === 0) return createEmptyObjetivo();
+
+    const averaged = { ...totals };
+    APTITUDES_KEYS.forEach(key => {
+      averaged[key] = Math.round((totals[key] / count) * 10) / 10;
+    });
+
+    return averaged;
+  }, [formData.weeks]);
+
+  // Check if there are any scored aptitudes
+  const hasAptitudes = APTITUDES_KEYS.some(key => calculatedObjetivo[key] > 0);
 
   // Reset form when opening/closing or when program changes
   useEffect(() => {
@@ -133,6 +195,7 @@ export default function CreateProgramModal({
             orden: r.orden,
             custom_data: r.custom_data,
             isCustomized: !!r.custom_data,
+            objetivo: r.routine?.objetivo as unknown as RutinaObjetivo | undefined,
           })),
         }));
 
@@ -142,6 +205,7 @@ export default function CreateProgramModal({
           descripcion: program.descripcion || "",
           portada_url: program.portada_url || "",
           duracion_semanas: program.duracion_semanas || 4,
+          dificultad: (program.dificultad as DificultadRutina) || "",
           estado: program.estado as "borrador" | "publicada",
           weeks: weeks.length > 0 ? weeks : [createEmptyWeek(1)],
         });
@@ -152,6 +216,7 @@ export default function CreateProgramModal({
           descripcion: "",
           portada_url: "",
           duracion_semanas: 4,
+          dificultad: "",
           estado: "borrador",
           weeks: [createEmptyWeek(1), createEmptyWeek(2), createEmptyWeek(3), createEmptyWeek(4)],
         });
@@ -189,6 +254,10 @@ export default function CreateProgramModal({
     if (filterCategoria && r.categoria !== filterCategoria) {
       return false;
     }
+    // Only show Funcional and Kinesiología (not Activación)
+    if (r.categoria === "Activación") {
+      return false;
+    }
     return true;
   });
 
@@ -198,11 +267,13 @@ export default function CreateProgramModal({
       nombre: routine.nombre,
       categoria: routine.categoria,
       dificultad: routine.dificultad,
+      objetivo: (routine as any).objetivo as RutinaObjetivo | undefined,
     });
   };
 
   const handleDragEnd = () => {
     setDraggedRoutine(null);
+    setDraggedWeekIndex(null);
   };
 
   const handleDropOnWeek = (weekIndex: number) => {
@@ -219,6 +290,7 @@ export default function CreateProgramModal({
       dificultad: draggedRoutine.dificultad,
       orden: targetWeek.routines.length,
       custom_data: null,
+      objetivo: draggedRoutine.objetivo,
     });
 
     setFormData(prev => ({ ...prev, weeks: newWeeks }));
@@ -240,27 +312,68 @@ export default function CreateProgramModal({
     setFormData(prev => ({ ...prev, weeks: newWeeks }));
   };
 
-  const duplicateWeek = (weekIndex: number) => {
-    const sourcWeek = formData.weeks[weekIndex];
-    const newWeek: ProgramWeek = {
-      id: crypto.randomUUID(),
-      week_number: formData.duracion_semanas + 1,
-      routines: sourcWeek.routines.map(r => ({
+  const duplicateWeekToPosition = (sourceWeekIndex: number, targetWeekNumber: number) => {
+    const sourceWeek = formData.weeks[sourceWeekIndex];
+    const targetWeekIndex = targetWeekNumber - 1;
+    
+    if (targetWeekIndex < 0 || targetWeekIndex >= formData.weeks.length) {
+      toast({
+        title: "Error",
+        description: `La semana ${targetWeekNumber} no existe`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (targetWeekIndex === sourceWeekIndex) {
+      toast({
+        title: "Aviso",
+        description: "No puedes duplicar una semana a sí misma",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newWeeks = [...formData.weeks];
+    newWeeks[targetWeekIndex] = {
+      ...newWeeks[targetWeekIndex],
+      routines: sourceWeek.routines.map(r => ({
         ...r,
         id: crypto.randomUUID(),
       })),
     };
 
-    setFormData(prev => ({
-      ...prev,
-      duracion_semanas: prev.duracion_semanas + 1,
-      weeks: [...prev.weeks, newWeek],
-    }));
+    setFormData(prev => ({ ...prev, weeks: newWeeks }));
 
     toast({
       title: "Semana duplicada",
-      description: `Semana ${weekIndex + 1} copiada a Semana ${formData.duracion_semanas + 1}`,
+      description: `Contenido de Semana ${sourceWeekIndex + 1} copiado a Semana ${targetWeekNumber}`,
     });
+  };
+
+  const addNewWeek = () => {
+    const newWeekNumber = formData.duracion_semanas + 1;
+    setFormData(prev => ({
+      ...prev,
+      duracion_semanas: newWeekNumber,
+      weeks: [...prev.weeks, createEmptyWeek(newWeekNumber)],
+    }));
+  };
+
+  const moveWeek = (fromIndex: number, direction: "up" | "down") => {
+    const toIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= formData.weeks.length) return;
+
+    const newWeeks = [...formData.weeks];
+    const [movedWeek] = newWeeks.splice(fromIndex, 1);
+    newWeeks.splice(toIndex, 0, movedWeek);
+    
+    // Update week numbers
+    newWeeks.forEach((week, index) => {
+      week.week_number = index + 1;
+    });
+
+    setFormData(prev => ({ ...prev, weeks: newWeeks }));
   };
 
   const moveRoutineInWeek = (weekIndex: number, fromIndex: number, toIndex: number) => {
@@ -280,6 +393,7 @@ export default function CreateProgramModal({
     const errors: string[] = [];
     if (!formData.nombre.trim()) errors.push("El nombre es obligatorio");
     if (formData.duracion_semanas < 1) errors.push("La duración debe ser al menos 1 semana");
+    if (!formData.dificultad) errors.push("La dificultad es obligatoria");
     return errors;
   };
 
@@ -301,10 +415,11 @@ export default function CreateProgramModal({
         nombre: formData.nombre,
         descripcion: formData.descripcion || undefined,
         categoria: "Funcional", // Default for programs
-        dificultad: "Intermedio", // Default for programs
+        dificultad: formData.dificultad,
         estado,
         portada_url: formData.portada_url || undefined,
         duracion_semanas: formData.duracion_semanas,
+        objetivo: calculatedObjetivo as unknown as Json,
         weeks: formData.weeks.map(w => ({
           week_number: w.week_number,
           routines: w.routines.map(r => ({
@@ -344,7 +459,7 @@ export default function CreateProgramModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <DialogTitle className="text-xl font-heading">
             {program ? "Editar Programa" : "Crear Programa"}
@@ -355,9 +470,9 @@ export default function CreateProgramModal({
           {/* Left: Program structure */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="p-4 space-y-4 border-b border-border">
-              {/* Basic fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              {/* Basic fields - Row 1 */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2 col-span-2">
                   <Label htmlFor="nombre">Nombre del programa *</Label>
                   <Input
                     id="nombre"
@@ -365,6 +480,42 @@ export default function CreateProgramModal({
                     onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                     placeholder="Ej: Programa de 8 semanas"
                     className="bg-card border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dificultad">Dificultad *</Label>
+                  <Select
+                    value={formData.dificultad}
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      dificultad: value as DificultadRutina 
+                    }))}
+                  >
+                    <SelectTrigger className="bg-card border-border">
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIFICULTADES_RUTINA.map((dif) => (
+                        <SelectItem key={dif} value={dif}>
+                          {dif}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2: Description and Duration */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="descripcion">Descripción</Label>
+                  <Textarea
+                    id="descripcion"
+                    value={formData.descripcion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                    placeholder="Descripción del programa (opcional)"
+                    className="bg-card border-border resize-none"
+                    rows={2}
                   />
                 </div>
                 <div className="space-y-2">
@@ -407,26 +558,61 @@ export default function CreateProgramModal({
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea
-                  id="descripcion"
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-                  placeholder="Descripción del programa (opcional)"
-                  className="bg-card border-border resize-none"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="portada">URL de portada</Label>
-                <Input
-                  id="portada"
-                  value={formData.portada_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, portada_url: e.target.value }))}
-                  placeholder="https://ejemplo.com/imagen.jpg"
-                  className="bg-card border-border"
-                />
+
+              {/* Row 3: Cover and Radar */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="portada">Portada del programa</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="portada"
+                      value={formData.portada_url}
+                      onChange={(e) => setFormData(prev => ({ ...prev, portada_url: e.target.value }))}
+                      placeholder="URL de imagen..."
+                      className="bg-card border-border flex-1"
+                    />
+                    {formData.portada_url && (
+                      <div className="h-9 w-9 rounded border border-border overflow-hidden flex-shrink-0">
+                        <img 
+                          src={formData.portada_url} 
+                          alt="Portada"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "";
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Aptitudes físicas (promedio de rutinas)</Label>
+                  <div className="flex items-center gap-4">
+                    {hasAptitudes ? (
+                      <div className="h-32 w-44">
+                        <ObjectiveRadarChart objetivo={calculatedObjetivo} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-32 w-44 border-2 border-dashed border-border/50 rounded-lg text-muted-foreground text-xs text-center px-2">
+                        Agrega rutinas para ver el mapa de aptitudes
+                      </div>
+                    )}
+                    <div className="flex-1 text-xs text-muted-foreground space-y-1">
+                      <p>El mapa de aptitudes se calcula automáticamente promediando las aptitudes de todas las rutinas incluidas en el programa.</p>
+                      {hasAptitudes && (
+                        <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 mt-2">
+                          {APTITUDES_KEYS.map(key => (
+                            <div key={key} className="flex items-center justify-between">
+                              <span className="capitalize">{key.slice(0, 4)}.</span>
+                              <span className="font-medium text-foreground">{calculatedObjetivo[key]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -443,18 +629,56 @@ export default function CreateProgramModal({
                     onDrop={() => handleDropOnWeek(weekIndex)}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-foreground">
-                        Semana {week.week_number}
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => duplicateWeek(weekIndex)}
-                        className="gap-1 text-muted-foreground hover:text-foreground"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        Duplicar
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => moveWeek(weekIndex, "up")}
+                            className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-30"
+                            disabled={weekIndex === 0}
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveWeek(weekIndex, "down")}
+                            className="text-muted-foreground hover:text-foreground p-0.5 disabled:opacity-30"
+                            disabled={weekIndex === formData.weeks.length - 1}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <h3 className="font-semibold text-foreground">
+                          Semana {week.week_number}
+                        </h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {week.routines.length} rutina{week.routines.length !== 1 ? "s" : ""}
+                        </Badge>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground">
+                            <Copy className="h-3.5 w-3.5" />
+                            Duplicar
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {formData.weeks.map((_, targetIndex) => (
+                            targetIndex !== weekIndex && (
+                              <DropdownMenuItem
+                                key={targetIndex}
+                                onClick={() => duplicateWeekToPosition(weekIndex, targetIndex + 1)}
+                              >
+                                Copiar a Semana {targetIndex + 1}
+                              </DropdownMenuItem>
+                            )
+                          ))}
+                          <DropdownMenuItem onClick={addNewWeek}>
+                            <Plus className="h-3.5 w-3.5 mr-2" />
+                            Copiar a nueva semana
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     {week.routines.length === 0 ? (
@@ -475,7 +699,7 @@ export default function CreateProgramModal({
                                 className="text-muted-foreground hover:text-foreground p-0.5"
                                 disabled={routineIndex === 0}
                               >
-                                <GripVertical className="h-3 w-3 rotate-90" />
+                                <ChevronUp className="h-3 w-3" />
                               </button>
                               <button
                                 type="button"
@@ -483,7 +707,7 @@ export default function CreateProgramModal({
                                 className="text-muted-foreground hover:text-foreground p-0.5"
                                 disabled={routineIndex === week.routines.length - 1}
                               >
-                                <GripVertical className="h-3 w-3 -rotate-90" />
+                                <ChevronDown className="h-3 w-3" />
                               </button>
                             </div>
                             <div className="flex-1 min-w-0">
@@ -492,8 +716,8 @@ export default function CreateProgramModal({
                                   {routine.nombre}
                                 </span>
                                 {routine.isCustomized && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Editada
+                                  <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                    En programa
                                   </Badge>
                                 )}
                               </div>
@@ -530,6 +754,16 @@ export default function CreateProgramModal({
                     )}
                   </div>
                 ))}
+
+                {/* Add week button */}
+                <Button
+                  variant="outline"
+                  className="w-full border-dashed"
+                  onClick={addNewWeek}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar semana
+                </Button>
               </div>
             </ScrollArea>
           </div>
@@ -550,7 +784,7 @@ export default function CreateProgramModal({
                 />
               </div>
               <div className="flex gap-1">
-                {["", "Funcional", "Kinesiología", "Activación"].map((cat) => (
+                {["", "Funcional", "Kinesiología"].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setFilterCategoria(cat)}
@@ -564,6 +798,9 @@ export default function CreateProgramModal({
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Solo rutinas publicadas • Arrastra para agregar
+              </p>
             </div>
 
             <ScrollArea className="flex-1">
@@ -646,4 +883,3 @@ export default function CreateProgramModal({
     </Dialog>
   );
 }
-
