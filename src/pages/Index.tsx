@@ -271,25 +271,25 @@ const Index = () => {
             </div>
 
             {/* Legend with dynamic stats */}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 pr-2">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                <span className="text-xs font-medium text-foreground tabular-nums text-right min-w-[32px]">
+                <span className="text-xs font-medium text-foreground tabular-nums">
                   {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? (userProfile?.weekly_training_goal || 4) : (userProfile?.weekly_training_goal || 4) * 4}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Pádel</span>
-                <span className="text-xs font-medium text-foreground tabular-nums text-right min-w-[32px]">
+                <span className="text-xs font-medium text-foreground tabular-nums">
                   {periodStats.padelCompleted}/{periodStats.padelTotal}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Profesional</span>
-                <span className="text-xs font-medium text-foreground tabular-nums text-right min-w-[32px]">
+                <span className="text-xs font-medium text-foreground tabular-nums">
                   {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
                 </span>
               </div>
