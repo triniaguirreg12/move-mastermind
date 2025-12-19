@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, addDays, isBefore, startOfDay } from "date-fns";
+import { format, addDays, isBefore, startOfDay, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -48,15 +48,65 @@ export function ScheduleProgramModal({
   // Track assignments: routineId -> Date
   const [assignments, setAssignments] = useState<Record<string, Date>>({});
 
+  // Sort routines by orden
+  const sortedRoutines = useMemo(() => 
+    [...routines].sort((a, b) => a.orden - b.orden),
+    [routines]
+  );
+
   // Generate days for the current view (7 days starting from today + weekOffset)
   const days = useMemo(() => {
     const startDate = addDays(today, weekOffset * 7);
     return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   }, [today, weekOffset]);
 
+  // Get the minimum allowed date for a routine based on previous routines' assignments
+  const getMinDateForRoutine = (routineId: string): Date | null => {
+    const routineIndex = sortedRoutines.findIndex(r => r.routine_id === routineId);
+    if (routineIndex <= 0) return null; // First routine has no restriction
+    
+    // Find the latest assigned date among previous routines
+    let latestPrevDate: Date | null = null;
+    for (let i = 0; i < routineIndex; i++) {
+      const prevRoutineId = sortedRoutines[i].routine_id;
+      const prevDate = assignments[prevRoutineId];
+      if (prevDate && (!latestPrevDate || isAfter(prevDate, latestPrevDate))) {
+        latestPrevDate = prevDate;
+      }
+    }
+    return latestPrevDate;
+  };
+
+  // Get the maximum allowed date for a routine based on next routines' assignments
+  const getMaxDateForRoutine = (routineId: string): Date | null => {
+    const routineIndex = sortedRoutines.findIndex(r => r.routine_id === routineId);
+    if (routineIndex === sortedRoutines.length - 1) return null; // Last routine has no restriction
+    
+    // Find the earliest assigned date among next routines
+    let earliestNextDate: Date | null = null;
+    for (let i = routineIndex + 1; i < sortedRoutines.length; i++) {
+      const nextRoutineId = sortedRoutines[i].routine_id;
+      const nextDate = assignments[nextRoutineId];
+      if (nextDate && (!earliestNextDate || isBefore(nextDate, earliestNextDate))) {
+        earliestNextDate = nextDate;
+      }
+    }
+    return earliestNextDate;
+  };
+
   const handleDayClick = (routineId: string, day: Date) => {
     // Don't allow past dates
     if (isBefore(day, today)) return;
+
+    // Check order constraints
+    const minDate = getMinDateForRoutine(routineId);
+    const maxDate = getMaxDateForRoutine(routineId);
+    
+    // Can't schedule before a previous routine's date
+    if (minDate && isBefore(day, minDate)) return;
+    
+    // Can't schedule after a next routine's date
+    if (maxDate && isAfter(day, maxDate)) return;
 
     setAssignments((prev) => {
       // If already assigned to this day, remove it
@@ -138,10 +188,10 @@ export function ScheduleProgramModal({
 
           {/* Routines list */}
           <div className="space-y-3">
-            {routines
-              .sort((a, b) => a.orden - b.orden)
-              .map((routine) => {
+            {sortedRoutines.map((routine, routineIndex) => {
                 const assignedDate = assignments[routine.routine_id];
+                const minDate = getMinDateForRoutine(routine.routine_id);
+                const maxDate = getMaxDateForRoutine(routine.routine_id);
                 
                 return (
                   <div
@@ -150,6 +200,11 @@ export function ScheduleProgramModal({
                   >
                     {/* Routine info */}
                     <div className="flex items-center gap-3 mb-3">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-primary">
+                          {routineIndex + 1}
+                        </span>
+                      </div>
                       {routine.routine?.portada_url && (
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                           <img
@@ -177,15 +232,21 @@ export function ScheduleProgramModal({
                         const isPast = isBefore(day, today);
                         const isSelected = assignedDate?.getTime() === day.getTime();
                         
+                        // Check if day is blocked by order constraints
+                        const isBeforeMin = minDate && isBefore(day, minDate);
+                        const isAfterMax = maxDate && isAfter(day, maxDate);
+                        const isBlocked = isBeforeMin || isAfterMax;
+                        const isDisabled = isPast || isBlocked;
+                        
                         return (
                           <button
                             key={day.toISOString()}
                             type="button"
-                            disabled={isPast}
+                            disabled={isDisabled}
                             onClick={() => handleDayClick(routine.routine_id, day)}
                             className={cn(
                               "h-8 rounded-lg text-xs font-medium transition-all",
-                              isPast
+                              isDisabled
                                 ? "bg-muted/30 text-muted-foreground/50 cursor-not-allowed"
                                 : isSelected
                                 ? "bg-activity-training text-white"
