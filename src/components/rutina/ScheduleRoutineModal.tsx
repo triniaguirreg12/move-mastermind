@@ -141,8 +141,8 @@ export function ScheduleRoutineModal({
                   </div>
                 ))}
 
-                {/* Past schedules */}
-                {schedules?.past.map((event) => (
+                {/* Past schedules - max 2 */}
+                {schedules?.past.slice(0, 2).map((event) => (
                   <div
                     key={event.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/30"
