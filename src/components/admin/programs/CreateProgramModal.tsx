@@ -351,6 +351,31 @@ export default function CreateProgramModal({
     });
   };
 
+  const duplicateWeekToNewWeek = (sourceWeekIndex: number) => {
+    const sourceWeek = formData.weeks[sourceWeekIndex];
+    const newWeekNumber = formData.duracion_semanas + 1;
+    
+    const newWeek: ProgramWeek = {
+      id: crypto.randomUUID(),
+      week_number: newWeekNumber,
+      routines: sourceWeek.routines.map(r => ({
+        ...r,
+        id: crypto.randomUUID(),
+      })),
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      duracion_semanas: newWeekNumber,
+      weeks: [...prev.weeks, newWeek],
+    }));
+
+    toast({
+      title: "Semana duplicada",
+      description: `Semana ${sourceWeekIndex + 1} copiada a nueva Semana ${newWeekNumber}`,
+    });
+  };
+
   const addNewWeek = () => {
     const newWeekNumber = formData.duracion_semanas + 1;
     setFormData(prev => ({
@@ -673,7 +698,7 @@ export default function CreateProgramModal({
                               </DropdownMenuItem>
                             )
                           ))}
-                          <DropdownMenuItem onClick={addNewWeek}>
+                          <DropdownMenuItem onClick={() => duplicateWeekToNewWeek(weekIndex)}>
                             <Plus className="h-3.5 w-3.5 mr-2" />
                             Copiar a nueva semana
                           </DropdownMenuItem>
