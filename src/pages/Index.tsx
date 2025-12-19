@@ -280,7 +280,9 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Profesional</span>
-                <span className="text-xs font-medium text-foreground">{periodStats.profesional}</span>
+                <span className="text-xs font-medium text-foreground">
+                  {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
+                </span>
               </div>
             </div>
           </div>
