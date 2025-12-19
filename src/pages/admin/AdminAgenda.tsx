@@ -55,6 +55,8 @@ const AdminAgenda = () => {
         return 'bg-primary/20 text-primary';
       case 'missed':
         return 'bg-destructive/20 text-destructive';
+      case 'reschedule_requested':
+        return 'bg-orange-500/20 text-orange-500';
       default:
         return 'bg-muted text-muted-foreground';
     }
@@ -72,6 +74,8 @@ const AdminAgenda = () => {
         return 'No realizada';
       case 'cancelled':
         return 'Cancelada';
+      case 'reschedule_requested':
+        return 'Reagendar';
       default:
         return status;
     }
@@ -99,7 +103,7 @@ const AdminAgenda = () => {
     setIsModalOpen(true);
   };
 
-  const handleUpdateStatus = async (appointmentId: string, status: 'completed' | 'missed', meetLink?: string) => {
+  const handleUpdateStatus = async (appointmentId: string, status: 'completed' | 'missed' | 'reschedule_requested', meetLink?: string) => {
     await updateStatus.mutateAsync({ appointmentId, status, meetLink });
   };
 

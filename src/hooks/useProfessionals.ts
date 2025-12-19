@@ -372,7 +372,7 @@ export function useUpdateAppointmentStatus() {
   return useMutation({
     mutationFn: async (data: { 
       appointmentId: string; 
-      status: 'completed' | 'missed';
+      status: 'completed' | 'missed' | 'reschedule_requested';
       meetLink?: string;
     }) => {
       // Update appointment status
@@ -393,7 +393,15 @@ export function useUpdateAppointmentStatus() {
       if (error) throw error;
       
       // Update corresponding user_event
-      const newEventStatus = data.status === 'completed' ? 'completed' : 'missed';
+      let newEventStatus: string;
+      if (data.status === 'completed') {
+        newEventStatus = 'completed';
+      } else if (data.status === 'missed') {
+        newEventStatus = 'missed';
+      } else {
+        newEventStatus = 'reschedule_requested';
+      }
+      
       const { error: eventError } = await supabase
         .from('user_events')
         .update({ status: newEventStatus })
