@@ -191,11 +191,13 @@ const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina, defaultTipo = 
     toast({ title: "Ejercicio agregado", description: `"${draggedEjercicio.nombre}" agregado al bloque ${bloqueIndex + 1}` });
   };
 
+  const isActivacion = formData.categoria === "Activación";
+
   const validateForDraft = (): string[] => {
     const errors: string[] = [];
     if (!formData.nombre.trim()) errors.push("El nombre es obligatorio");
     if (!formData.categoria) errors.push("La categoría es obligatoria");
-    if (!formData.dificultad) errors.push("La dificultad es obligatoria");
+    if (!isActivacion && !formData.dificultad) errors.push("La dificultad es obligatoria");
     return errors;
   };
 
@@ -279,30 +281,34 @@ const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina, defaultTipo = 
                     <Textarea id="descripcion" value={formData.descripcion} onChange={(e) => updateFormData("descripcion", e.target.value)} placeholder="Descripción de la rutina (opcional)" className="bg-card border-border resize-none" rows={2} />
                   </div>
 
-                  {/* Difficulty */}
-                  <DifficultySection
-                    mode={formData.dificultadMode}
-                    dificultad={formData.dificultad}
-                    calculatedDificultad={calculatedDificultad}
-                    onModeChange={(mode) => { updateFormData("dificultadMode", mode); if (mode === "auto" && calculatedDificultad) updateFormData("dificultad", calculatedDificultad); }}
-                    onDificultadChange={(d) => updateFormData("dificultad", d)}
-                  />
-
-                  {/* Objective + Radar Chart */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <ObjectiveScoring
-                      mode={formData.objetivoMode}
-                      objetivo={formData.objetivo}
-                      onModeChange={(mode) => { updateFormData("objetivoMode", mode); if (mode === "auto") updateFormData("objetivo", calculateAutoObjetivo); }}
-                      onObjetivoChange={(obj) => updateFormData("objetivo", obj)}
+                  {/* Difficulty - hidden for Activación */}
+                  {!isActivacion && (
+                    <DifficultySection
+                      mode={formData.dificultadMode}
+                      dificultad={formData.dificultad}
+                      calculatedDificultad={calculatedDificultad}
+                      onModeChange={(mode) => { updateFormData("dificultadMode", mode); if (mode === "auto" && calculatedDificultad) updateFormData("dificultad", calculatedDificultad); }}
+                      onDificultadChange={(d) => updateFormData("dificultad", d)}
                     />
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-foreground">Vista previa del perfil</Label>
-                      <div className="border border-border rounded-lg p-2 bg-card/50">
-                        <ObjectiveRadarChart objetivo={formData.objetivo} />
+                  )}
+
+                  {/* Objective + Radar Chart - hidden for Activación */}
+                  {!isActivacion && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <ObjectiveScoring
+                        mode={formData.objetivoMode}
+                        objetivo={formData.objetivo}
+                        onModeChange={(mode) => { updateFormData("objetivoMode", mode); if (mode === "auto") updateFormData("objetivo", calculateAutoObjetivo); }}
+                        onObjetivoChange={(obj) => updateFormData("objetivo", obj)}
+                      />
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-foreground">Vista previa del perfil</Label>
+                        <div className="border border-border rounded-lg p-2 bg-card/50">
+                          <ObjectiveRadarChart objetivo={formData.objetivo} />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Cover Photo */}
                   <CoverPhotoSection
