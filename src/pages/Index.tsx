@@ -516,8 +516,8 @@ const Index = () => {
             {eventToDelete?.type === "profesional" && (
               <AlertDialogAction
                 onClick={() => {
-                  if (eventToDelete?.metadata?.professional_id) {
-                    navigate(`/profesionales?reschedule=${eventToDelete.metadata.professional_id}`);
+                  if (eventToDelete?.metadata?.professional_id && eventToDelete?.metadata?.appointment_id) {
+                    navigate(`/profesionales?reschedule=${eventToDelete.metadata.professional_id}&appointment=${eventToDelete.metadata.appointment_id}`);
                     setEventToDelete(null);
                   }
                 }}

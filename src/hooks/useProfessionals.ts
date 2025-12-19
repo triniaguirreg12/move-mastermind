@@ -204,6 +204,7 @@ export function useConfirmAppointmentPayment() {
     mutationFn: async (data: { 
       appointmentId: string; 
       paymentId?: string;
+      professionalId: string;
       professionalName: string;
       appointmentDate: string;
       startTime: string;
@@ -234,6 +235,7 @@ export function useConfirmAppointmentPayment() {
             time_end: data.endTime,
             title: `Cita con ${data.professionalName}`,
             metadata: {
+              professional_id: data.professionalId,
               professional_name: data.professionalName,
               appointment_id: data.appointmentId
             }
@@ -241,6 +243,64 @@ export function useConfirmAppointmentPayment() {
         
         if (eventError) console.error('Error creating calendar event:', eventError);
       }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['booked-slots'] });
+      queryClient.invalidateQueries({ queryKey: ['user-events'] });
+    }
+  });
+}
+
+// Reschedule appointment (update date/time only)
+export function useRescheduleAppointment() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      appointmentId: string;
+      appointment_date: string;
+      start_time: string;
+      end_time: string;
+      professionalName: string;
+    }) => {
+      // First get the current appointment to find the user_id
+      const { data: currentAppointment, error: fetchError } = await supabase
+        .from('appointments')
+        .select('user_id, appointment_date')
+        .eq('id', data.appointmentId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update appointment date/time
+      const { error: updateError } = await supabase
+        .from('appointments')
+        .update({
+          appointment_date: data.appointment_date,
+          start_time: data.start_time,
+          end_time: data.end_time
+        })
+        .eq('id', data.appointmentId);
+      
+      if (updateError) throw updateError;
+      
+      // Update corresponding user_event
+      const { error: eventError } = await supabase
+        .from('user_events')
+        .update({
+          event_date: data.appointment_date,
+          time_start: data.start_time,
+          time_end: data.end_time,
+          title: `Cita con ${data.professionalName}`
+        })
+        .eq('user_id', currentAppointment.user_id)
+        .eq('type', 'profesional')
+        .contains('metadata', { appointment_id: data.appointmentId });
+      
+      if (eventError) console.error('Error updating calendar event:', eventError);
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-appointments'] });

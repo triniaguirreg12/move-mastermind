@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProfessionalCard } from "@/components/professionals/ProfessionalCard";
 import { BookingFlow } from "@/components/professionals/BookingFlow";
+import { RescheduleFlow } from "@/components/professionals/RescheduleFlow";
 import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
 import { useProfessionals, Professional } from "@/hooks/useProfessionals";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,8 +12,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 const Profesionales = () => {
   const { data: professionals, isLoading } = useProfessionals();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState<{
+    professional: Professional;
+    appointmentId: string;
+  } | null>(null);
+
+  // Handle reschedule query parameter
+  useEffect(() => {
+    const professionalId = searchParams.get('reschedule');
+    const appointmentId = searchParams.get('appointment');
+    
+    if (professionalId && appointmentId && professionals && professionals.length > 0) {
+      const professional = professionals.find(p => p.id === professionalId);
+      if (professional) {
+        setRescheduleData({ professional, appointmentId });
+        // Clear query params
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, professionals, setSearchParams]);
 
   const handleSchedule = (professional: Professional) => {
     if (!user) {
@@ -75,6 +97,16 @@ const Profesionales = () => {
           professional={selectedProfessional}
           isOpen={!!selectedProfessional}
           onClose={() => setSelectedProfessional(null)}
+        />
+      )}
+
+      {/* Reschedule Flow */}
+      {rescheduleData && (
+        <RescheduleFlow
+          professional={rescheduleData.professional}
+          appointmentId={rescheduleData.appointmentId}
+          isOpen={!!rescheduleData}
+          onClose={() => setRescheduleData(null)}
         />
       )}
 
