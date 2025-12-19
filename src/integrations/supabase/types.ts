@@ -422,6 +422,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_programs: {
+        Row: {
+          current_week: number
+          enrolled_at: string
+          id: string
+          program_id: string
+          start_week: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_week?: number
+          enrolled_at?: string
+          id?: string
+          program_id: string
+          start_week?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_week?: number
+          enrolled_at?: string
+          id?: string
+          program_id?: string
+          start_week?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_programs_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
