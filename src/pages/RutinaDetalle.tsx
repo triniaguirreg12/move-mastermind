@@ -301,13 +301,23 @@ export default function RutinaDetalle() {
   // Calculate ALL implements (no +N summary in detail view)
   const allImplements = calcularImplementosRutina(routine.blocks || []);
 
+  const handleGoBack = () => {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Fallback to home if no history
+      navigate("/");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-28 relative">
       {/* Fixed Back Button - outside overflow context */}
       <div className="absolute top-4 left-4 z-50">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={handleGoBack}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
