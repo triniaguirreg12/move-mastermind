@@ -22,6 +22,7 @@ export type Database = {
           consultation_goal: string
           created_at: string
           end_time: string
+          google_meet_link: string | null
           id: string
           injury_condition: string
           payment_id: string | null
@@ -40,6 +41,7 @@ export type Database = {
           consultation_goal: string
           created_at?: string
           end_time: string
+          google_meet_link?: string | null
           id?: string
           injury_condition: string
           payment_id?: string | null
@@ -58,6 +60,7 @@ export type Database = {
           consultation_goal?: string
           created_at?: string
           end_time?: string
+          google_meet_link?: string | null
           id?: string
           injury_condition?: string
           payment_id?: string | null

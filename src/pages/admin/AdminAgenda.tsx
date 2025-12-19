@@ -1,18 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Video, MapPin, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
-import { format, addDays, startOfWeek, parseISO } from "date-fns";
+import { Clock, User, Video, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { format, addDays, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import { useAllProfessionals, useAllAppointments } from "@/hooks/useProfessionals";
+import { 
+  useAllProfessionals, 
+  useAllAppointments,
+  useUpdateAppointmentStatus,
+  useUpdateAppointmentMeetLink,
+  type Appointment,
+  type Professional
+} from "@/hooks/useProfessionals";
+import { AppointmentDetailModal } from "@/components/admin/appointments/AppointmentDetailModal";
+import { supabase } from "@/integrations/supabase/client";
+
+interface UserProfile {
+  name: string;
+  email: string;
+}
 
 const AdminAgenda = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<UserProfile | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const weekStart = startOfWeek(currentDate, { locale: es });
 
   const { data: professionals = [], isLoading: loadingProfessionals } = useAllProfessionals();
   const { data: appointments = [], isLoading: loadingAppointments } = useAllAppointments();
+  const updateStatus = useUpdateAppointmentStatus();
+  const updateMeetLink = useUpdateAppointmentMeetLink();
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -31,7 +52,9 @@ const AdminAgenda = () => {
       case 'pending_payment':
         return 'bg-warning/20 text-warning';
       case 'completed':
-        return 'bg-muted text-muted-foreground';
+        return 'bg-primary/20 text-primary';
+      case 'missed':
+        return 'bg-destructive/20 text-destructive';
       default:
         return 'bg-muted text-muted-foreground';
     }
@@ -42,9 +65,11 @@ const AdminAgenda = () => {
       case 'confirmed':
         return 'Confirmada';
       case 'pending_payment':
-        return 'Pago pendiente';
+        return 'Pendiente';
       case 'completed':
         return 'Completada';
+      case 'missed':
+        return 'No realizada';
       case 'cancelled':
         return 'Cancelada';
       default:
@@ -54,10 +79,39 @@ const AdminAgenda = () => {
 
   const isLoading = loadingProfessionals || loadingAppointments;
 
-  // Generate color for professional based on index
   const getProfessionalColor = (index: number) => {
     const colors = ['bg-primary', 'bg-accent', 'bg-success', 'bg-warning', 'bg-destructive'];
     return colors[index % colors.length];
+  };
+
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setSelectedProfessional(getProfessional(appointment.professional_id) || null);
+    
+    // Fetch user profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('user_id', appointment.user_id)
+      .single();
+    
+    setSelectedUserProfile(profile);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateStatus = async (appointmentId: string, status: 'completed' | 'missed', meetLink?: string) => {
+    await updateStatus.mutateAsync({ appointmentId, status, meetLink });
+  };
+
+  const handleUpdateMeetLink = async (appointmentId: string, meetLink: string) => {
+    await updateMeetLink.mutateAsync({ appointmentId, meetLink });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedAppointment(null);
+    setSelectedProfessional(null);
+    setSelectedUserProfile(null);
   };
 
   return (
@@ -162,6 +216,7 @@ const AdminAgenda = () => {
                       <Card
                         key={appointment.id}
                         className="bg-card border-border p-3 hover:border-primary/30 transition-colors cursor-pointer"
+                        onClick={() => handleAppointmentClick(appointment as Appointment)}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <div
@@ -183,13 +238,19 @@ const AdminAgenda = () => {
 
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                           <User className="h-3 w-3" />
-                          {appointment.consultation_goal.substring(0, 20)}...
+                          <span className="truncate">
+                            {appointment.consultation_goal.length > 20 
+                              ? `${appointment.consultation_goal.substring(0, 20)}...`
+                              : appointment.consultation_goal}
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          <Badge variant="outline" className="text-[10px] gap-1 border-border">
-                            <MapPin className="h-2 w-2" /> Presencial
-                          </Badge>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {appointment.google_meet_link && (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-primary/30 text-primary">
+                              <Video className="h-2 w-2" /> Meet
+                            </Badge>
+                          )}
                           <Badge
                             className={`text-[10px] ${getStatusColor(appointment.status)}`}
                           >
@@ -205,6 +266,17 @@ const AdminAgenda = () => {
           );
         })}
       </div>
+
+      {/* Appointment Detail Modal */}
+      <AppointmentDetailModal
+        appointment={selectedAppointment}
+        professional={selectedProfessional}
+        userProfile={selectedUserProfile}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onUpdateStatus={handleUpdateStatus}
+        onUpdateMeetLink={handleUpdateMeetLink}
+      />
     </div>
   );
 };
