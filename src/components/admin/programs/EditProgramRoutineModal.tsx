@@ -83,6 +83,7 @@ interface EditProgramRoutineModalProps {
   routineId: string;
   currentCustomData: Json | null;
   onSave: (customData: ProgramRoutineCustomData) => void;
+  isAssigned?: boolean; // If true, show comment fields
 }
 
 export default function EditProgramRoutineModal({
@@ -91,6 +92,7 @@ export default function EditProgramRoutineModal({
   routineId,
   currentCustomData,
   onSave,
+  isAssigned = false,
 }: EditProgramRoutineModalProps) {
   const { toast } = useToast();
   
@@ -598,18 +600,20 @@ export default function EditProgramRoutineModal({
                                       </div>
                                     </div>
                                     
-                                    {/* Comment field for personalized instructions */}
-                                    <div className="flex items-start gap-2">
-                                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-2 flex-shrink-0" />
-                                      <Input
-                                        placeholder="Agregar comentario personalizado..."
-                                        value={getExerciseComment(block.id, exercise.id)}
-                                        onChange={(e) => handleExerciseCommentChange(block.id, exercise.id, e.target.value)}
-                                        className={`flex-1 h-8 text-sm bg-card border-border ${
-                                          getExerciseComment(block.id, exercise.id) ? "ring-1 ring-primary/30" : ""
-                                        }`}
-                                      />
-                                    </div>
+                                    {/* Comment field for personalized instructions - only when assigned to user */}
+                                    {isAssigned && (
+                                      <div className="flex items-start gap-2">
+                                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-2 flex-shrink-0" />
+                                        <Input
+                                          placeholder="Agregar comentario personalizado..."
+                                          value={getExerciseComment(block.id, exercise.id)}
+                                          onChange={(e) => handleExerciseCommentChange(block.id, exercise.id, e.target.value)}
+                                          className={`flex-1 h-8 text-sm bg-card border-border ${
+                                            getExerciseComment(block.id, exercise.id) ? "ring-1 ring-primary/30" : ""
+                                          }`}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}

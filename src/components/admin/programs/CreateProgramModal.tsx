@@ -1076,6 +1076,7 @@ export default function CreateProgramModal({
           routineId={editingRoutine.routineId}
           currentCustomData={editingRoutine.customData}
           onSave={handleRoutineCustomDataSave}
+          isAssigned={!!formData.assigned_user_id}
         />
       )}
     </Dialog>
