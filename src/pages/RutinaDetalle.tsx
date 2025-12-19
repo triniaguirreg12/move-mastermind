@@ -338,8 +338,8 @@ export default function RutinaDetalle() {
 
   return (
     <div className="min-h-screen bg-background pb-28 relative">
-      {/* Fixed Back Button - outside overflow context */}
-      <div className="absolute top-4 left-4 z-50">
+      {/* Fixed Back Button */}
+      <div className="fixed top-4 left-4 z-40">
         <button
           type="button"
           onClick={handleGoBack}
@@ -349,9 +349,9 @@ export default function RutinaDetalle() {
         </button>
       </div>
 
-      {/* Fixed Rating - outside overflow context */}
+      {/* Fixed Rating */}
       {routine.calificacion && routine.calificacion > 0 && (
-        <div className="absolute top-4 right-4 z-50">
+        <div className="fixed top-4 right-4 z-40">
           <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
             <span className="text-sm font-semibold text-white">{routine.calificacion.toFixed(1)}</span>
             <Star className="w-4 h-4 text-warning fill-warning" />
