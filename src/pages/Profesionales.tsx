@@ -64,7 +64,7 @@ const Profesionales = () => {
         </div>
 
         {/* Coming Soon Notice */}
-        <div className="text-center py-6 text-muted-foreground/70 text-xs italic font-light">
+        <div className="text-center py-6 text-muted-foreground/70 text-xs italic" style={{ fontWeight: 300 }}>
           <p>🔒 Próximamente podrás acceder a más profesionales certificados Just Muv.</p>
         </div>
       </div>
