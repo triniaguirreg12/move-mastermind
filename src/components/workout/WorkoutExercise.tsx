@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Pause, Play, Info, X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkoutProgressDots } from "./WorkoutProgressDots";
+import { ExerciseCommentPopup } from "./ExerciseCommentPopup";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ interface WorkoutExerciseProps {
   videoUrl?: string | null;
   thumbnailUrl?: string | null;
   tips?: string | null;
+  comment?: string | null;
   isPaused: boolean;
   dotsByBlock: number[];
   currentDotIndex: number;
@@ -64,6 +66,7 @@ export function WorkoutExercise({
   videoUrl,
   thumbnailUrl,
   tips,
+  comment,
   isPaused,
   dotsByBlock,
   currentDotIndex,
@@ -373,6 +376,9 @@ export function WorkoutExercise({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Comment popup */}
+      <ExerciseCommentPopup comment={comment} />
     </div>
   );
 }

@@ -37,8 +37,10 @@ import {
   ChevronDown,
   ImageIcon,
   Upload,
+  User,
 } from "lucide-react";
 import { useAvailableRoutines, useCreateProgram, useUpdateProgram } from "@/hooks/usePrograms";
+import { useAllProfiles } from "@/hooks/useProfiles";
 import ObjectiveRadarChart from "@/components/admin/routines/ObjectiveRadarChart";
 import EditProgramRoutineModal from "./EditProgramRoutineModal";
 import { 
@@ -78,6 +80,7 @@ interface ProgramFormData {
   duracion_semanas: number;
   dificultad: DificultadRutina | "";
   estado: "borrador" | "publicada";
+  assigned_user_id?: string;
   weeks: ProgramWeek[];
 }
 
@@ -93,6 +96,7 @@ interface CreateProgramModalProps {
     duracion_semanas: number | null;
     dificultad: string;
     estado: string;
+    assigned_user_id?: string | null;
     weeks?: Array<{
       id: string;
       week_number: number;
@@ -126,6 +130,7 @@ export default function CreateProgramModal({
 }: CreateProgramModalProps) {
   const { toast } = useToast();
   const { data: availableRoutines, isLoading: loadingRoutines } = useAvailableRoutines();
+  const { data: allProfiles, isLoading: loadingProfiles } = useAllProfiles();
   const createProgram = useCreateProgram();
   const updateProgram = useUpdateProgram();
 
@@ -218,6 +223,7 @@ export default function CreateProgramModal({
           duracion_semanas: program.duracion_semanas || 4,
           dificultad: (program.dificultad as DificultadRutina) || "",
           estado: program.estado as "borrador" | "publicada",
+          assigned_user_id: program.assigned_user_id || undefined,
           weeks: weeks.length > 0 ? weeks : [createEmptyWeek(1)],
         });
       } else {
@@ -484,6 +490,7 @@ export default function CreateProgramModal({
         portada_url: formData.portada_url || undefined,
         duracion_semanas: formData.duracion_semanas,
         objetivo: calculatedObjetivo as unknown as Json,
+        assigned_user_id: formData.assigned_user_id || undefined,
         weeks: formData.weeks.map(w => ({
           week_number: w.week_number,
           routines: w.routines.map(r => ({
@@ -621,6 +628,38 @@ export default function CreateProgramModal({
                     </Button>
                   </div>
                 </div>
+              </div>
+
+              {/* Row 3: Assign to user */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="assigned_user">Asignar a usuario (opcional)</Label>
+                </div>
+                <Select
+                  value={formData.assigned_user_id || "none"}
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    assigned_user_id: value === "none" ? undefined : value 
+                  }))}
+                >
+                  <SelectTrigger className="bg-card border-border">
+                    <SelectValue placeholder="Programa público (sin asignar)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Programa público (sin asignar)</SelectItem>
+                    {(allProfiles || []).map((profile) => (
+                      <SelectItem key={profile.user_id} value={profile.user_id}>
+                        {profile.name} ({profile.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.assigned_user_id && (
+                  <p className="text-xs text-muted-foreground">
+                    Este programa será exclusivo para el usuario seleccionado. Podrás agregar comentarios personalizados en los ejercicios.
+                  </p>
+                )}
               </div>
 
               {/* Row 3: Cover and Radar */}

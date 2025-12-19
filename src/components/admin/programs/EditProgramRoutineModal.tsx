@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RotateCcw, AlertTriangle, ChevronDown, Clock, Repeat, Dumbbell } from "lucide-react";
+import { Save, RotateCcw, AlertTriangle, ChevronDown, Clock, Repeat, Dumbbell, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -37,6 +37,7 @@ interface BlockExerciseCustom {
   tiempo?: number;
   repeticiones?: number;
   descanso_override?: number;
+  comentario?: string;
 }
 
 interface BlockCustom {
@@ -233,6 +234,29 @@ export default function EditProgramRoutineModal({
         },
       },
     }));
+  };
+
+  const handleExerciseCommentChange = (blockId: string, exerciseId: string, comentario: string) => {
+    setCustomData(prev => ({
+      ...prev,
+      blocks: {
+        ...prev.blocks,
+        [blockId]: {
+          ...prev.blocks?.[blockId],
+          exercises: {
+            ...prev.blocks?.[blockId]?.exercises,
+            [exerciseId]: {
+              ...prev.blocks?.[blockId]?.exercises?.[exerciseId],
+              comentario: comentario || undefined,
+            },
+          },
+        },
+      },
+    }));
+  };
+
+  const getExerciseComment = (blockId: string, exerciseId: string): string => {
+    return customData.blocks?.[blockId]?.exercises?.[exerciseId]?.comentario || "";
   };
 
 
@@ -518,58 +542,73 @@ export default function EditProgramRoutineModal({
                                 return (
                                   <div 
                                     key={exercise.id} 
-                                    className={`flex items-center gap-3 p-2 rounded-lg ${hasExerciseCustom ? "bg-amber-500/10 border border-amber-500/30" : "bg-muted/30"}`}
+                                    className={`p-2 rounded-lg space-y-2 ${hasExerciseCustom ? "bg-amber-500/10 border border-amber-500/30" : "bg-muted/30"}`}
                                   >
-                                    {exercise.exercise?.thumbnail_url ? (
-                                      <img 
-                                        src={exercise.exercise.thumbnail_url} 
-                                        alt="" 
-                                        className="h-10 w-10 rounded object-cover flex-shrink-0"
-                                      />
-                                    ) : (
-                                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                                        <Dumbbell className="h-4 w-4 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium truncate">
-                                        {exercise.exercise?.nombre || "Ejercicio"}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {exercise.tipo_ejecucion === "tiempo" ? "Por tiempo" : "Por repeticiones"}
-                                      </p>
-                                    </div>
-
                                     <div className="flex items-center gap-3">
-                                      {exercise.tipo_ejecucion === "tiempo" ? (
-                                        <div className="flex items-center gap-1">
-                                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                          <Input
-                                            type="number"
-                                            min={5}
-                                            max={300}
-                                            step={5}
-                                            value={effectiveTiempo}
-                                            onChange={(e) => handleExerciseChange(block.id, exercise.id, "tiempo", parseInt(e.target.value) || 30)}
-                                            className="w-16 h-7 text-sm bg-card border-border"
-                                          />
-                                          <span className="text-xs text-muted-foreground">seg</span>
-                                        </div>
+                                      {exercise.exercise?.thumbnail_url ? (
+                                        <img 
+                                          src={exercise.exercise.thumbnail_url} 
+                                          alt="" 
+                                          className="h-10 w-10 rounded object-cover flex-shrink-0"
+                                        />
                                       ) : (
-                                        <div className="flex items-center gap-1">
-                                          <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
-                                          <Input
-                                            type="number"
-                                            min={1}
-                                            max={100}
-                                            value={effectiveReps}
-                                            onChange={(e) => handleExerciseChange(block.id, exercise.id, "repeticiones", parseInt(e.target.value) || 10)}
-                                            className="w-16 h-7 text-sm bg-card border-border"
-                                          />
-                                          <span className="text-xs text-muted-foreground">reps</span>
+                                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                          <Dumbbell className="h-4 w-4 text-muted-foreground" />
                                         </div>
                                       )}
+                                      
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">
+                                          {exercise.exercise?.nombre || "Ejercicio"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {exercise.tipo_ejecucion === "tiempo" ? "Por tiempo" : "Por repeticiones"}
+                                        </p>
+                                      </div>
+
+                                      <div className="flex items-center gap-3">
+                                        {exercise.tipo_ejecucion === "tiempo" ? (
+                                          <div className="flex items-center gap-1">
+                                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <Input
+                                              type="number"
+                                              min={5}
+                                              max={300}
+                                              step={5}
+                                              value={effectiveTiempo}
+                                              onChange={(e) => handleExerciseChange(block.id, exercise.id, "tiempo", parseInt(e.target.value) || 30)}
+                                              className="w-16 h-7 text-sm bg-card border-border"
+                                            />
+                                            <span className="text-xs text-muted-foreground">seg</span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-1">
+                                            <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <Input
+                                              type="number"
+                                              min={1}
+                                              max={100}
+                                              value={effectiveReps}
+                                              onChange={(e) => handleExerciseChange(block.id, exercise.id, "repeticiones", parseInt(e.target.value) || 10)}
+                                              className="w-16 h-7 text-sm bg-card border-border"
+                                            />
+                                            <span className="text-xs text-muted-foreground">reps</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Comment field for personalized instructions */}
+                                    <div className="flex items-start gap-2">
+                                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-2 flex-shrink-0" />
+                                      <Input
+                                        placeholder="Agregar comentario personalizado..."
+                                        value={getExerciseComment(block.id, exercise.id)}
+                                        onChange={(e) => handleExerciseCommentChange(block.id, exercise.id, e.target.value)}
+                                        className={`flex-1 h-8 text-sm bg-card border-border ${
+                                          getExerciseComment(block.id, exercise.id) ? "ring-1 ring-primary/30" : ""
+                                        }`}
+                                      />
                                     </div>
                                   </div>
                                 );
