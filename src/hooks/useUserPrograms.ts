@@ -194,13 +194,34 @@ export function useCompleteProgram() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { error } = await supabase
+      // Check if user has an enrollment record
+      const { data: existing } = await supabase
         .from("user_programs")
-        .update({ status: "completed" })
+        .select("id")
         .eq("user_id", user.id)
-        .eq("program_id", programId);
+        .eq("program_id", programId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existing) {
+        // Update existing enrollment
+        const { error } = await supabase
+          .from("user_programs")
+          .update({ status: "completed" })
+          .eq("id", existing.id);
+
+        if (error) throw error;
+      } else {
+        // Create new enrollment with completed status (for admin-assigned programs)
+        const { error } = await supabase
+          .from("user_programs")
+          .insert({
+            user_id: user.id,
+            program_id: programId,
+            status: "completed",
+          });
+
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-program"] });
