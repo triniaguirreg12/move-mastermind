@@ -275,21 +275,21 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-xs font-medium text-foreground tabular-nums text-right min-w-[32px]">
                   {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? (userProfile?.weekly_training_goal || 4) : (userProfile?.weekly_training_goal || 4) * 4}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Pádel</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-xs font-medium text-foreground tabular-nums text-right min-w-[32px]">
                   {periodStats.padelCompleted}/{periodStats.padelTotal}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1">Profesional</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-xs font-medium text-foreground tabular-nums text-right min-w-[32px]">
                   {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
                 </span>
               </div>
