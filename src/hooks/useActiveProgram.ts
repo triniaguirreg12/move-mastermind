@@ -52,22 +52,29 @@ export function useActiveProgram() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // First check for user-enrolled program
+      // First check for user-enrolled program (active status only)
       const { data: enrollment } = await supabase
         .from("user_programs")
-        .select("program_id, start_week, current_week")
+        .select("program_id, start_week, current_week, status")
         .eq("user_id", user.id)
-        .eq("status", "active")
         .maybeSingle();
 
       let programId: string | null = null;
       let enrollmentStartWeek = 1;
 
       if (enrollment) {
-        programId = enrollment.program_id;
-        enrollmentStartWeek = enrollment.start_week || 1;
-      } else {
-        // Fallback to admin-assigned program
+        // If enrolled but status is "completed", don't show as active
+        if (enrollment.status === "completed") {
+          return null;
+        }
+        if (enrollment.status === "active") {
+          programId = enrollment.program_id;
+          enrollmentStartWeek = enrollment.start_week || 1;
+        }
+      }
+      
+      if (!programId) {
+        // Fallback to admin-assigned program - but check if already completed in user_programs
         const { data: assignedProgram } = await supabase
           .from("routines")
           .select("id")
@@ -77,7 +84,18 @@ export function useActiveProgram() {
           .maybeSingle();
 
         if (assignedProgram) {
-          programId = assignedProgram.id;
+          // Check if this program was already completed
+          const { data: existingEnrollment } = await supabase
+            .from("user_programs")
+            .select("status")
+            .eq("user_id", user.id)
+            .eq("program_id", assignedProgram.id)
+            .maybeSingle();
+          
+          // Only show if not explicitly completed
+          if (!existingEnrollment || existingEnrollment.status !== "completed") {
+            programId = assignedProgram.id;
+          }
         }
       }
 
