@@ -78,47 +78,35 @@ interface ExerciseItemProps {
 
 function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired }: ExerciseItemProps) {
   const [showPreview, setShowPreview] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Guest users can only preview first 2 exercises (index 0 and 1)
   const canPreview = isAuthenticated || exerciseIndex < 2;
 
-  const handleTouchStart = () => {
+  const handleClick = () => {
     if (!canPreview) {
-      // Show auth prompt immediately for restricted exercises
       onAuthRequired();
       return;
     }
-    timerRef.current = setTimeout(() => {
-      setShowPreview(true);
-    }, 500);
+    setShowPreview(true);
   };
 
-  const handleTouchEnd = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
+  const handleClose = () => {
     setShowPreview(false);
   };
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
 
   return (
     <>
-      <div
-        className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 hover:border-primary/30 transition-all cursor-pointer"
-        onMouseDown={handleTouchStart}
-        onMouseUp={handleTouchEnd}
-        onMouseLeave={handleTouchEnd}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+      <button
+        type="button"
+        className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 hover:border-primary/30 transition-all cursor-pointer w-full text-left"
+        onClick={handleClick}
       >
         {/* Thumbnail */}
         <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted shrink-0">
@@ -134,20 +122,30 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
           {exercise.nombre}
         </span>
 
-        {/* Long press hint */}
+        {/* Tap hint */}
         <span className="text-[10px] text-muted-foreground">
-          Mantener para ver
+          Toca para ver
         </span>
-      </div>
+      </button>
 
-      {/* Preview Modal on Long Press */}
+      {/* Preview Modal */}
       {showPreview && (
         <div 
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in"
-          onMouseUp={handleTouchEnd}
-          onTouchEnd={handleTouchEnd}
+          onClick={handleBackdropClick}
         >
-          <div className="max-w-md w-full space-y-4">
+          <div className="max-w-md w-full space-y-4 relative animate-scale-in">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="absolute -top-12 right-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </button>
+
             {/* Exercise name */}
             <h3 className="text-xl font-bold text-white text-center">
               {exercise.nombre}
@@ -178,11 +176,6 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
                 </p>
               </div>
             )}
-
-            {/* Release instruction */}
-            <p className="text-xs text-white/60 text-center">
-              Suelta para cerrar
-            </p>
           </div>
         </div>
       )}
