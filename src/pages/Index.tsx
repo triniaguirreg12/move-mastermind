@@ -32,6 +32,8 @@ import {
 } from "@/hooks/useUserEvents";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAptitudesRadar } from "@/hooks/useAptitudesRadar";
+import { useActiveProgram } from "@/hooks/useActiveProgram";
+import { ActiveProgramSection, NoProgramCTA } from "@/components/home/ActiveProgramSection";
 
 // Import activity images
 import padelBallImg from "@/assets/padel-ball.png";
@@ -68,8 +70,7 @@ const Index = () => {
   const weeklyGoal = userProfile?.weekly_training_goal || 4;
   const { weeklyAptitudes, monthlyAptitudes } = useAptitudesRadar(weeklyGoal);
   const cleanupMissedEvents = useCleanupMissedEvents();
-
-  // Cleanup missed scheduled entrenamientos on mount
+  const { data: activeProgram } = useActiveProgram();
   useEffect(() => {
     cleanupMissedEvents.mutate();
   }, []);
@@ -284,6 +285,13 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Active Program Section */}
+      {activeProgram ? (
+        <ActiveProgramSection program={activeProgram} />
+      ) : (
+        <NoProgramCTA />
+      )}
 
       {/* Activities */}
       <div className="flex-1 px-4 py-3 pb-24 overflow-y-auto">
