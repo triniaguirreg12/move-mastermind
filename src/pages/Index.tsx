@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle } from "lucide-react";
+import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -25,6 +25,7 @@ import {
   useUserEvents,
   useCleanupMissedEvents,
   useUpdateEventStatus,
+  useDeleteEvent,
   getActivityDotsForDate,
   getDotColorClass,
   calculateWeeklyStats,
@@ -74,6 +75,7 @@ const Index = () => {
   const { weeklyAptitudes, monthlyAptitudes } = useAptitudesRadar(weeklyGoal);
   const cleanupMissedEvents = useCleanupMissedEvents();
   const updateEventStatus = useUpdateEventStatus();
+  const deleteEvent = useDeleteEvent();
   const { data: activeProgram } = useActiveProgram();
   useEffect(() => {
     cleanupMissedEvents.mutate();
@@ -385,6 +387,16 @@ const Index = () => {
                     <CheckCircle className="h-4 w-4" />
                   </button>
                 )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteEvent.mutate(event.id);
+                  }}
+                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                  title="Eliminar evento"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <div
                   className={cn(
                     "w-2.5 h-2.5 rounded-full flex-shrink-0",
