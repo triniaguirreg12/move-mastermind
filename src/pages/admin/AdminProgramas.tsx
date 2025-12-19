@@ -16,15 +16,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Search, Edit, Trash2, Star, Calendar, Copy, Dumbbell, Loader2 } from "lucide-react";
-import CreateRoutineModal from "@/components/admin/routines/CreateRoutineModal";
-import { Rutina, createEmptyRutina } from "@/components/admin/routines/types";
+import { Plus, Search, Edit, Trash2, Star, Calendar, Copy, Loader2 } from "lucide-react";
+import CreateProgramModal from "@/components/admin/programs/CreateProgramModal";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  useAllRoutinesWithDetails, 
-  dbRoutineToAdminRutina,
-  useDeleteRoutine,
-} from "@/hooks/useRoutines";
+import { usePrograms, useDeleteProgram, type Program } from "@/hooks/usePrograms";
 
 type SortOption = "none" | "rating-desc" | "rating-asc" | "completed-desc" | "completed-asc";
 
@@ -34,60 +29,40 @@ const AdminProgramas = () => {
   const [filterEstado, setFilterEstado] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("none");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingPrograma, setEditingPrograma] = useState<Rutina | null>(null);
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
 
-  // Fetch only PROGRAMAS from DB (tipo = "programa")
-  const { data: programasData, isLoading, error } = useAllRoutinesWithDetails("programa");
-  const deleteRoutineMutation = useDeleteRoutine();
+  const { data: programasData, isLoading, error } = usePrograms();
+  const deleteProgramMutation = useDeleteProgram();
 
-  // Transform DB programs to Admin Rutina format
-  const programas = useMemo(() => {
-    if (!programasData) return [];
-    return programasData.map(programa => {
-      const adminRutina = dbRoutineToAdminRutina(programa, programa.blocks || []);
-      return {
-        ...adminRutina,
-        _dbId: programa.id,
-        _calculatedDuration: programa.calculatedDuration,
-        _calculatedImplements: programa.calculatedImplements,
-      };
-    });
-  }, [programasData]);
+  const programas = programasData || [];
 
-  const handleSavePrograma = (programa: Rutina, publish: boolean) => {
-    setEditingPrograma(null);
-    setIsCreateModalOpen(false);
+  const handleEditPrograma = (program: Program) => {
+    setEditingProgram(program);
   };
 
-  const handleEditPrograma = (programa: Rutina & { _dbId?: string }) => {
-    setEditingPrograma(programa);
-  };
-
-  const handleDuplicatePrograma = (programa: Rutina & { _dbId?: string }) => {
-    const duplicado: Rutina = {
-      ...programa,
-      id: 0,
-      nombre: `${programa.nombre} (copia)`,
+  const handleDuplicatePrograma = (program: Program) => {
+    // Open modal with a copy (without id to create new)
+    const duplicated = {
+      ...program,
+      id: "", // Clear ID to indicate new program
+      nombre: `${program.nombre} (copia)`,
       estado: "borrador",
-      calificacion: undefined,
-      vecesRealizada: 0,
     };
-    delete (duplicado as any)._dbId;
-    setEditingPrograma(duplicado);
+    setEditingProgram(duplicated as Program);
     toast({
       title: "Duplicando programa",
-      description: `Guardando como "${duplicado.nombre}"`,
+      description: `Guardando como "${duplicated.nombre}"`,
     });
   };
 
-  const handleDeletePrograma = (programa: Rutina & { _dbId?: string }) => {
-    if (!programa._dbId) return;
+  const handleDeletePrograma = (program: Program) => {
+    if (!program.id) return;
     
-    deleteRoutineMutation.mutate(programa._dbId, {
+    deleteProgramMutation.mutate(program.id, {
       onSuccess: () => {
         toast({
           title: "Programa eliminado",
-          description: `"${programa.nombre}" ha sido eliminado.`,
+          description: `"${program.nombre}" ha sido eliminado.`,
         });
       },
       onError: () => {
@@ -115,13 +90,13 @@ const AdminProgramas = () => {
       result = [...result].sort((a, b) => {
         switch (sortBy) {
           case "rating-desc":
-            return (b.calificacion ?? -1) - (a.calificacion ?? -1);
+            return ((b as any).calificacion ?? -1) - ((a as any).calificacion ?? -1);
           case "rating-asc":
-            return (a.calificacion ?? 999) - (b.calificacion ?? 999);
+            return ((a as any).calificacion ?? 999) - ((b as any).calificacion ?? 999);
           case "completed-desc":
-            return (b.vecesRealizada ?? 0) - (a.vecesRealizada ?? 0);
+            return ((b as any).veces_realizada ?? 0) - ((a as any).veces_realizada ?? 0);
           case "completed-asc":
-            return (a.vecesRealizada ?? 0) - (b.vecesRealizada ?? 0);
+            return ((a as any).veces_realizada ?? 0) - ((b as any).veces_realizada ?? 0);
           default:
             return 0;
         }
@@ -200,18 +175,21 @@ const AdminProgramas = () => {
         {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredAndSortedProgramas.map((programa) => {
-            const duracionSemanas = (programa as any).duracionSemanas || 4;
-            const implementos = (programa as any)._calculatedImplements || [];
+            const duracionSemanas = programa.duracion_semanas || 4;
+            const totalRoutines = (programa.weeks || []).reduce(
+              (sum, week) => sum + (week.routines?.length || 0),
+              0
+            );
 
             return (
               <Card
-                key={(programa as any)._dbId || programa.id}
+                key={programa.id}
                 className="bg-card border-border p-5 hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className="bg-[hsl(var(--category-funcional))]/20 text-[hsl(var(--category-funcional))]">
-                      Funcional
+                      Programa
                     </Badge>
                     <Badge
                       variant={programa.estado === "publicada" ? "default" : "outline"}
@@ -221,9 +199,9 @@ const AdminProgramas = () => {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1 text-sm">
-                    {programa.calificacion !== undefined ? (
+                    {(programa as any).calificacion !== undefined && (programa as any).calificacion !== null ? (
                       <>
-                        <span className="font-medium text-foreground">{programa.calificacion.toFixed(1)}</span>
+                        <span className="font-medium text-foreground">{(programa as any).calificacion.toFixed(1)}</span>
                         <Star className="h-4 w-4 fill-warning text-warning" />
                       </>
                     ) : (
@@ -242,79 +220,73 @@ const AdminProgramas = () => {
                   </p>
                 )}
 
-                {/* Duration in weeks */}
+                {/* Duration and routines count */}
                 <div className="flex flex-wrap gap-3 mb-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
                     {duracionSemanas} semanas
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="font-medium">{programa.vecesRealizada ?? 0}</span> realizados
+                    <span className="font-medium">{totalRoutines}</span> rutinas
                   </div>
                 </div>
 
-                {/* Implements */}
-                <div className="flex items-center gap-2 mb-3">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Dumbbell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent>Implementos requeridos</TooltipContent>
-                  </Tooltip>
-                  <div className="flex flex-wrap gap-1">
-                    {implementos.length > 0 ? (
-                      implementos.slice(0, 4).map((impl: string) => (
-                        <Badge key={impl} variant="outline" className="text-xs border-border">
-                          {impl}
-                        </Badge>
-                      ))
-                    ) : (
-                      <Badge variant="outline" className="text-xs border-border">
-                        Sin implemento
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Objective preview */}
+                {/* Week summary */}
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {Object.entries(programa.objetivo)
-                    .filter(([_, value]) => value >= 6)
-                    .slice(0, 3)
-                    .map(([key, value]) => (
-                      <Badge key={key} variant="secondary" className="text-xs capitalize">
-                        {key}: {value}
-                      </Badge>
-                    ))}
+                  {(programa.weeks || []).slice(0, 4).map((week, i) => (
+                    <Badge key={week.id || i} variant="secondary" className="text-xs">
+                      S{week.week_number}: {week.routines?.length || 0}
+                    </Badge>
+                  ))}
+                  {(programa.weeks || []).length > 4 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{(programa.weeks || []).length - 4} más
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-end pt-3 border-t border-border">
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDuplicatePrograma(programa)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleEditPrograma(programa)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => handleDeletePrograma(programa)}
-                      disabled={deleteRoutineMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDuplicatePrograma(programa)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Duplicar</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditPrograma(programa)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Editar</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDeletePrograma(programa)}
+                          disabled={deleteProgramMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Eliminar</TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
               </Card>
@@ -332,17 +304,19 @@ const AdminProgramas = () => {
         )}
 
         {/* Create/Edit Modal */}
-        <CreateRoutineModal
-          open={isCreateModalOpen || editingPrograma !== null}
+        <CreateProgramModal
+          open={isCreateModalOpen || editingProgram !== null}
           onOpenChange={(open) => {
             if (!open) {
               setIsCreateModalOpen(false);
-              setEditingPrograma(null);
+              setEditingProgram(null);
             }
           }}
-          onSave={handleSavePrograma}
-          rutina={editingPrograma}
-          defaultTipo="programa"
+          onSave={() => {
+            setEditingProgram(null);
+            setIsCreateModalOpen(false);
+          }}
+          program={editingProgram}
         />
       </div>
     </TooltipProvider>
