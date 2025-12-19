@@ -142,25 +142,23 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
 
 export function NoProgramCTA() {
   return (
-    <div className="px-4 py-2">
-      <div className="bg-card/50 rounded-xl p-4 border border-dashed border-border/50">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-medium text-foreground mb-1">
-              ¿Quieres un plan estructurado?
-            </h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              Solicita un programa personalizado diseñado para tus objetivos
-            </p>
-            <Link to="/profesionales">
-              <Button variant="outline" size="sm">
-                Solicitar programa
-              </Button>
-            </Link>
-          </div>
+    <div className="mt-3 bg-card/50 rounded-xl p-4 border border-dashed border-border/50">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-medium text-foreground mb-1">
+            ¿Quieres un plan estructurado?
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Solicita un programa personalizado diseñado para tus objetivos
+          </p>
+          <Link to="/profesionales">
+            <Button variant="outline" size="sm">
+              Solicitar programa
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
