@@ -31,7 +31,7 @@ export interface Appointment {
   appointment_date: string;
   start_time: string;
   end_time: string;
-  status: 'pending_payment' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending_payment' | 'confirmed' | 'cancelled' | 'completed' | 'missed';
   consultation_goal: string;
   injury_condition: string;
   available_equipment: string[];
@@ -39,6 +39,7 @@ export interface Appointment {
   price_amount: number;
   payment_status: 'pending' | 'paid' | 'refunded';
   payment_id: string | null;
+  google_meet_link: string | null;
   created_at: string;
   updated_at: string;
   professional?: Professional;
@@ -300,6 +301,106 @@ export function useAllProfessionals() {
       
       if (error) throw error;
       return data as Professional[];
+    }
+  });
+}
+
+// Admin: Update appointment status
+export function useUpdateAppointmentStatus() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { 
+      appointmentId: string; 
+      status: 'completed' | 'missed';
+      meetLink?: string;
+    }) => {
+      // Update appointment status
+      const updateData: { status: string; google_meet_link?: string } = { 
+        status: data.status 
+      };
+      if (data.meetLink) {
+        updateData.google_meet_link = data.meetLink;
+      }
+      
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', data.appointmentId)
+        .select('user_id, appointment_date')
+        .single();
+      
+      if (error) throw error;
+      
+      // Update corresponding user_event
+      const newEventStatus = data.status === 'completed' ? 'completed' : 'missed';
+      const { error: eventError } = await supabase
+        .from('user_events')
+        .update({ status: newEventStatus })
+        .eq('user_id', appointment.user_id)
+        .eq('event_date', appointment.appointment_date)
+        .eq('type', 'profesional');
+      
+      if (eventError) console.error('Error updating calendar event:', eventError);
+      
+      return appointment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-events'] });
+    }
+  });
+}
+
+// Admin: Update appointment meet link
+export function useUpdateAppointmentMeetLink() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { appointmentId: string; meetLink: string }) => {
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .update({ google_meet_link: data.meetLink })
+        .eq('id', data.appointmentId)
+        .select('user_id, appointment_date')
+        .single();
+      
+      if (error) throw error;
+      
+      // Update user_event metadata with meet link
+      const { error: eventError } = await supabase
+        .from('user_events')
+        .update({ 
+          metadata: supabase.rpc ? undefined : { google_meet_link: data.meetLink }
+        })
+        .eq('user_id', appointment.user_id)
+        .eq('event_date', appointment.appointment_date)
+        .eq('type', 'profesional');
+      
+      // Alternative: fetch current metadata and merge
+      const { data: eventData } = await supabase
+        .from('user_events')
+        .select('id, metadata')
+        .eq('user_id', appointment.user_id)
+        .eq('event_date', appointment.appointment_date)
+        .eq('type', 'profesional')
+        .single();
+      
+      if (eventData) {
+        const currentMetadata = (eventData.metadata as Record<string, unknown>) || {};
+        await supabase
+          .from('user_events')
+          .update({ 
+            metadata: { ...currentMetadata, google_meet_link: data.meetLink }
+          })
+          .eq('id', eventData.id);
+      }
+      
+      return appointment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-events'] });
     }
   });
 }

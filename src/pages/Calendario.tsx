@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/layout/BottomNav";
 import {
   AlertDialog,
@@ -115,10 +116,24 @@ const Calendario = () => {
   const getStatusBadge = (event: UserEvent) => {
     if (event.status === "completed") {
       return (
-        <span className="text-xs bg-activity-training/20 text-activity-training px-2 py-0.5 rounded-full">
+        <Badge className="text-xs bg-activity-training/20 text-activity-training border-activity-training/30">
           Completado
-        </span>
+        </Badge>
       );
+    }
+    if (event.status === "missed") {
+      return (
+        <Badge className="text-xs bg-destructive/20 text-destructive border-destructive/30">
+          No realizada
+        </Badge>
+      );
+    }
+    return null;
+  };
+
+  const getMeetLink = (event: UserEvent): string | null => {
+    if (event.type === "profesional" && event.metadata?.google_meet_link) {
+      return event.metadata.google_meet_link as string;
     }
     return null;
   };
@@ -234,48 +249,64 @@ const Calendario = () => {
           </div>
         ) : selectedActivities.length > 0 ? (
           <div className="space-y-3">
-            {selectedActivities.map((event) => (
-              <div
-                key={event.id}
-                onClick={() => handleActivityClick(event)}
-                className={cn(
-                  "bg-card rounded-xl p-4 border border-border flex items-center gap-3 transition-colors",
-                  event.type === "entrenamiento" && event.metadata?.routine_id
-                    ? "hover:border-primary/30 cursor-pointer"
-                    : ""
-                )}
-              >
+            {selectedActivities.map((event) => {
+              const meetLink = getMeetLink(event);
+              return (
                 <div
+                  key={event.id}
+                  onClick={() => handleActivityClick(event)}
                   className={cn(
-                    "w-2.5 h-2.5 rounded-full flex-shrink-0",
-                    getDotColorClass(event.type)
+                    "bg-card rounded-xl p-4 border border-border flex items-center gap-3 transition-colors",
+                    event.type === "entrenamiento" && event.metadata?.routine_id
+                      ? "hover:border-primary/30 cursor-pointer"
+                      : ""
                   )}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground truncate">
-                      {event.title}
-                    </span>
-                    {getStatusBadge(event)}
+                >
+                  <div
+                    className={cn(
+                      "w-2.5 h-2.5 rounded-full flex-shrink-0",
+                      getDotColorClass(event.type)
+                    )}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {event.title}
+                      </span>
+                      {getStatusBadge(event)}
+                    </div>
+                    {formatEventTime(event) && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatEventTime(event)}
+                      </span>
+                    )}
+                    {meetLink && (
+                      <a
+                        href={meetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                      >
+                        <Video className="h-3 w-3" />
+                        Unirse a Google Meet
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
                   </div>
-                  {formatEventTime(event) && (
-                    <span className="text-xs text-muted-foreground">
-                      {formatEventTime(event)}
-                    </span>
+                  <button
+                    onClick={(e) => handleDeleteClick(e, event)}
+                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                    title="Eliminar evento"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  {event.type === "entrenamiento" && event.metadata?.routine_id && (
+                    <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   )}
                 </div>
-                <button
-                  onClick={(e) => handleDeleteClick(e, event)}
-                  className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
-                  title="Eliminar evento"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                {event.type === "entrenamiento" && event.metadata?.routine_id && (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">

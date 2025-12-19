@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Settings, ChevronRight, Info, Trophy, Cone } from "lucide-react";
+import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -343,10 +343,28 @@ const Index = () => {
                         ✓
                       </span>
                     )}
+                    {event.status === "missed" && (
+                      <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full">
+                        ✗
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    {formatEventTime(event) || (event.status === "scheduled" ? "Programado" : "Completado")}
+                    {formatEventTime(event) || (event.status === "scheduled" ? "Programado" : event.status === "missed" ? "No realizada" : "Completado")}
                   </p>
+                  {event.type === "profesional" && event.metadata?.google_meet_link && (
+                    <a
+                      href={event.metadata.google_meet_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1 text-[10px] text-primary hover:underline mt-0.5"
+                    >
+                      <Video className="h-3 w-3" />
+                      Unirse a Meet
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  )}
                 </div>
                 <div
                   className={cn(

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 export type EventType = "entrenamiento" | "padel" | "profesional";
-export type EventStatus = "scheduled" | "completed";
+export type EventStatus = "scheduled" | "completed" | "missed";
 export type PadelSubtype = "partido" | "clase" | "torneo";
 
 export interface UserEvent {
@@ -23,6 +23,8 @@ export interface UserEvent {
     padel_subtype?: PadelSubtype;
     professional_id?: string;
     professional_name?: string;
+    appointment_id?: string;
+    google_meet_link?: string;
   };
   created_at: string;
   updated_at: string;
