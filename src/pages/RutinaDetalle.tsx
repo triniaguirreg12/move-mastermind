@@ -330,9 +330,7 @@ export default function RutinaDetalle() {
   // Calculate ALL implements (no +N summary in detail view)
   const allImplements = calcularImplementosRutina(routine.blocks || []);
 
-  const handleGoBack = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleGoBack = () => {
     // If we have a stored "from" path, use it
     if (fromPath) {
       navigate(fromPath);
@@ -346,13 +344,15 @@ export default function RutinaDetalle() {
     <div className="min-h-screen bg-background pb-28 relative">
       {/* Fixed Back Button - highest z-index below modals */}
       <div className="fixed top-4 left-4 z-[45]">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={handleGoBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
+          className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 hover:text-white"
         >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {/* Fixed Rating */}
