@@ -26,6 +26,14 @@ export interface ProgramWeekRoutine {
     estado: string;
     portada_url: string | null;
     objetivo?: Json;
+    blocks?: Array<{
+      id: string;
+      exercises: Array<{
+        exercise: {
+          implementos: string[] | null;
+        } | null;
+      }>;
+    }>;
   };
 }
 
@@ -39,8 +47,12 @@ export interface Program {
   portada_url: string | null;
   duracion_semanas: number | null;
   assigned_user_id: string | null;
+  calificacion: number | null;
+  veces_realizada: number | null;
   created_at: string;
   weeks?: ProgramWeek[];
+  // Computed fields
+  implementos?: string[];
 }
 
 // Fetch all programs with their weeks and routines
@@ -71,6 +83,7 @@ export function usePrograms() {
       // Fetch week routines with routine details
       const weekIds = (weeks || []).map(w => w.id);
       let weekRoutines: ProgramWeekRoutine[] = [];
+      let routineImplementos: Map<string, string[]> = new Map();
 
       if (weekIds.length > 0) {
         const { data: wrData, error: wrError } = await supabase
@@ -87,6 +100,40 @@ export function usePrograms() {
           ...wr,
           routine: wr.routine as ProgramWeekRoutine["routine"],
         }));
+
+        // Get unique routine IDs to fetch their exercises for implementos
+        const routineIds = [...new Set(weekRoutines.map(wr => wr.routine_id))];
+        
+        if (routineIds.length > 0) {
+          // Fetch blocks and exercises for these routines to get implementos
+          const { data: blocksData } = await supabase
+            .from("routine_blocks")
+            .select(`
+              id,
+              routine_id,
+              exercises:block_exercises(
+                exercise:exercises(implementos)
+              )
+            `)
+            .in("routine_id", routineIds);
+
+          // Build a map of routine_id -> implementos[]
+          if (blocksData) {
+            for (const block of blocksData) {
+              const routineId = block.routine_id;
+              const existing = routineImplementos.get(routineId) || [];
+              for (const ex of block.exercises || []) {
+                const impl = (ex.exercise as any)?.implementos || [];
+                for (const i of impl) {
+                  if (i && !existing.includes(i)) {
+                    existing.push(i);
+                  }
+                }
+              }
+              routineImplementos.set(routineId, existing);
+            }
+          }
+        }
       }
 
       // Build programs with weeks and routines
@@ -98,9 +145,19 @@ export function usePrograms() {
             routines: weekRoutines.filter(wr => wr.week_id === week.id),
           }));
 
+        // Collect all unique implementos from all routines in this program
+        const allImplementos = new Set<string>();
+        for (const week of programWeeks) {
+          for (const wr of week.routines || []) {
+            const impl = routineImplementos.get(wr.routine_id) || [];
+            impl.forEach(i => allImplementos.add(i));
+          }
+        }
+
         return {
           ...program,
           weeks: programWeeks,
+          implementos: Array.from(allImplementos),
         } as Program;
       });
     },

@@ -16,20 +16,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Search, Edit, Trash2, Star, Calendar, Copy, Loader2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Star, Calendar, Copy, Loader2, User, Users, Dumbbell, Repeat } from "lucide-react";
 import CreateProgramModal from "@/components/admin/programs/CreateProgramModal";
 import { useToast } from "@/hooks/use-toast";
 import { usePrograms, useDeleteProgram, type Program } from "@/hooks/usePrograms";
+import { useAllProfiles } from "@/hooks/useProfiles";
 
 type SortOption = "none" | "rating-desc" | "rating-asc" | "completed-desc" | "completed-asc";
+type AssignmentFilter = "all" | "public" | "assigned";
 
 const AdminProgramas = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState<string>("");
+  const [filterAssignment, setFilterAssignment] = useState<AssignmentFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("none");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+
+  const { data: allProfiles } = useAllProfiles();
 
   const { data: programasData, isLoading, error } = usePrograms();
   const deleteProgramMutation = useDeleteProgram();
@@ -83,6 +88,12 @@ const AdminProgramas = () => {
       if (filterEstado && programa.estado !== filterEstado) {
         return false;
       }
+      if (filterAssignment === "public" && programa.assigned_user_id) {
+        return false;
+      }
+      if (filterAssignment === "assigned" && !programa.assigned_user_id) {
+        return false;
+      }
       return true;
     });
 
@@ -104,7 +115,14 @@ const AdminProgramas = () => {
     }
 
     return result;
-  }, [programas, searchTerm, filterEstado, sortBy]);
+  }, [programas, searchTerm, filterEstado, filterAssignment, sortBy]);
+
+  // Helper to get user name by ID
+  const getUserName = (userId: string | null) => {
+    if (!userId) return null;
+    const profile = allProfiles?.find(p => p.user_id === userId);
+    return profile?.name || "Usuario";
+  };
 
   if (isLoading) {
     return (
@@ -158,6 +176,16 @@ const AdminProgramas = () => {
               <SelectItem value="borrador">Borrador</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filterAssignment} onValueChange={(v) => setFilterAssignment(v as AssignmentFilter)}>
+            <SelectTrigger className="w-[160px] bg-card border-border">
+              <SelectValue placeholder="Asignación" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="public">Públicos</SelectItem>
+              <SelectItem value="assigned">Asignados</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
             <SelectTrigger className="w-[200px] bg-card border-border">
               <SelectValue placeholder="Ordenar por..." />
@@ -180,17 +208,30 @@ const AdminProgramas = () => {
               (sum, week) => sum + (week.routines?.length || 0),
               0
             );
+            const isAssigned = !!programa.assigned_user_id;
+            const assignedUserName = getUserName(programa.assigned_user_id);
+            const implementos = programa.implementos || [];
 
             return (
               <Card
                 key={programa.id}
-                className="bg-card border-border p-5 hover:border-primary/30 transition-colors"
+                className={`bg-card border-border p-5 hover:border-primary/30 transition-colors ${
+                  isAssigned ? "ring-1 ring-primary/20" : ""
+                }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className="bg-[hsl(var(--category-funcional))]/20 text-[hsl(var(--category-funcional))]">
-                      Programa
-                    </Badge>
+                    {isAssigned ? (
+                      <Badge className="bg-primary/20 text-primary">
+                        <User className="h-3 w-3 mr-1" />
+                        Asignado
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-muted text-muted-foreground">
+                        <Users className="h-3 w-3 mr-1" />
+                        Público
+                      </Badge>
+                    )}
                     <Badge
                       variant={programa.estado === "publicada" ? "default" : "outline"}
                       className={programa.estado === "borrador" ? "border-warning text-warning" : ""}
@@ -199,20 +240,27 @@ const AdminProgramas = () => {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1 text-sm">
-                    {(programa as any).calificacion !== undefined && (programa as any).calificacion !== null ? (
+                    {programa.calificacion !== undefined && programa.calificacion !== null ? (
                       <>
-                        <span className="font-medium text-foreground">{(programa as any).calificacion.toFixed(1)}</span>
+                        <span className="font-medium text-foreground">{programa.calificacion.toFixed(1)}</span>
                         <Star className="h-4 w-4 fill-warning text-warning" />
                       </>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground text-xs">Sin valorar</span>
                     )}
                   </div>
                 </div>
 
-                <h3 className="font-heading font-semibold text-lg text-foreground mb-2">
+                <h3 className="font-heading font-semibold text-lg text-foreground mb-1">
                   {programa.nombre}
                 </h3>
+
+                {isAssigned && assignedUserName && (
+                  <p className="text-xs text-primary mb-2 flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {assignedUserName}
+                  </p>
+                )}
 
                 {programa.descripcion && (
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
@@ -220,16 +268,37 @@ const AdminProgramas = () => {
                   </p>
                 )}
 
-                {/* Duration and routines count */}
+                {/* Stats row */}
                 <div className="flex flex-wrap gap-3 mb-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
-                    {duracionSemanas} semanas
+                    {duracionSemanas} sem
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="font-medium">{totalRoutines}</span> rutinas
                   </div>
+                  <div className="flex items-center gap-1">
+                    <Repeat className="h-3.5 w-3.5" />
+                    {programa.veces_realizada || 0}
+                  </div>
                 </div>
+
+                {/* Implementos */}
+                {implementos.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Dumbbell className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+                    {implementos.slice(0, 4).map((impl, i) => (
+                      <Badge key={i} variant="outline" className="text-[10px] py-0 px-1.5">
+                        {impl}
+                      </Badge>
+                    ))}
+                    {implementos.length > 4 && (
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                        +{implementos.length - 4}
+                      </Badge>
+                    )}
+                  </div>
+                )}
 
                 {/* Week summary */}
                 <div className="flex flex-wrap gap-1 mb-4">
