@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useRoutine, calcularDuracionTotal } from "@/hooks/useRoutines";
 import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
+import { supabase } from "@/integrations/supabase/client";
 
 // Padel ball SVG component
 function PadelBall({ filled, size = "md" }: { filled: boolean; size?: "sm" | "md" }) {
@@ -204,11 +205,26 @@ export default function RutinaDetalle() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("rutina");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [isProgram, setIsProgram] = useState<boolean | null>(null);
   
   const { data: routine, isLoading, error } = useRoutine(id);
 
+  // Check if this is a program and redirect if so
+  useEffect(() => {
+    if (routine && routine.tipo === "programa") {
+      setIsProgram(true);
+    } else if (routine) {
+      setIsProgram(false);
+    }
+  }, [routine]);
+
+  // Redirect to program page if this is a program
+  if (isProgram === true && id) {
+    return <Navigate to={`/programa/${id}`} replace />;
+  }
+
   // Loading state
-  if (isLoading) {
+  if (isLoading || isProgram === null && !error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
