@@ -29,18 +29,16 @@ import {
   Plus, 
   Minus, 
   Copy, 
-  GripVertical, 
   X, 
   Search,
   Edit,
   Loader2,
   ChevronUp,
   ChevronDown,
-  ImageIcon,
-  MoreVertical,
 } from "lucide-react";
 import { useAvailableRoutines, useCreateProgram, useUpdateProgram } from "@/hooks/usePrograms";
 import ObjectiveRadarChart from "@/components/admin/routines/ObjectiveRadarChart";
+import EditProgramRoutineModal from "./EditProgramRoutineModal";
 import { 
   RutinaObjetivo, 
   APTITUDES_KEYS, 
@@ -147,8 +145,15 @@ export default function CreateProgramModal({
     objetivo?: RutinaObjetivo;
   } | null>(null);
   const [draggedWeekIndex, setDraggedWeekIndex] = useState<number | null>(null);
+  
+  // State for editing routine within program
+  const [editingRoutine, setEditingRoutine] = useState<{
+    weekIndex: number;
+    routineIndex: number;
+    routineId: string;
+    customData: Json | null;
+  } | null>(null);
 
-  // Calculate averaged objectives from all routines in the program
   const calculatedObjetivo = useMemo((): RutinaObjetivo => {
     const allRoutines = formData.weeks.flatMap(w => w.routines);
     if (allRoutines.length === 0) return createEmptyObjetivo();
@@ -412,6 +417,33 @@ export default function CreateProgramModal({
       r.orden = i;
     });
     setFormData(prev => ({ ...prev, weeks: newWeeks }));
+  };
+
+  const handleRoutineCustomDataSave = (customData: Record<string, unknown>) => {
+    if (!editingRoutine) return;
+    
+    const { weekIndex, routineIndex } = editingRoutine;
+    const newWeeks = [...formData.weeks];
+    const routine = newWeeks[weekIndex].routines[routineIndex];
+    
+    const hasCustomizations = Object.keys(customData).length > 0;
+    
+    routine.custom_data = hasCustomizations ? (customData as Json) : null;
+    routine.isCustomized = hasCustomizations;
+    
+    // Update display values if customized
+    if (customData.nombre) {
+      routine.nombre = customData.nombre as string;
+    }
+    if (customData.dificultad) {
+      routine.dificultad = customData.dificultad as string;
+    }
+    if (customData.objetivo) {
+      routine.objetivo = customData.objetivo as RutinaObjetivo;
+    }
+    
+    setFormData(prev => ({ ...prev, weeks: newWeeks }));
+    setEditingRoutine(null);
   };
 
   const validateForm = (): string[] => {
@@ -757,9 +789,11 @@ export default function CreateProgramModal({
                               size="icon"
                               className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => {
-                                toast({
-                                  title: "Próximamente",
-                                  description: "La edición de rutinas dentro del programa estará disponible pronto",
+                                setEditingRoutine({
+                                  weekIndex,
+                                  routineIndex,
+                                  routineId: routine.routine_id,
+                                  customData: routine.custom_data,
                                 });
                               }}
                             >
@@ -905,6 +939,17 @@ export default function CreateProgramModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Edit routine modal */}
+      {editingRoutine && (
+        <EditProgramRoutineModal
+          open={!!editingRoutine}
+          onOpenChange={(open) => !open && setEditingRoutine(null)}
+          routineId={editingRoutine.routineId}
+          currentCustomData={editingRoutine.customData}
+          onSave={handleRoutineCustomDataSave}
+        />
+      )}
     </Dialog>
   );
 }
