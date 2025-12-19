@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink } from "lucide-react";
+import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -24,6 +24,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   useUserEvents,
   useCleanupMissedEvents,
+  useUpdateEventStatus,
   getActivityDotsForDate,
   getDotColorClass,
   calculateWeeklyStats,
@@ -72,6 +73,7 @@ const Index = () => {
   const weeklyGoal = userProfile?.weekly_training_goal || 4;
   const { weeklyAptitudes, monthlyAptitudes } = useAptitudesRadar(weeklyGoal);
   const cleanupMissedEvents = useCleanupMissedEvents();
+  const updateEventStatus = useUpdateEventStatus();
   const { data: activeProgram } = useActiveProgram();
   useEffect(() => {
     cleanupMissedEvents.mutate();
@@ -371,6 +373,18 @@ const Index = () => {
                     </a>
                   )}
                 </div>
+                {event.type === "padel" && event.status === "scheduled" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateEventStatus.mutate({ eventId: event.id, status: "completed" });
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-success/10 text-muted-foreground hover:text-success transition-colors flex-shrink-0"
+                    title="Marcar como completado"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </button>
+                )}
                 <div
                   className={cn(
                     "w-2.5 h-2.5 rounded-full flex-shrink-0",
