@@ -52,13 +52,42 @@ export function useActiveProgram() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Find program assigned to this user
+      // First check for user-enrolled program
+      const { data: enrollment } = await supabase
+        .from("user_programs")
+        .select("program_id, start_week, current_week")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      let programId: string | null = null;
+      let enrollmentStartWeek = 1;
+
+      if (enrollment) {
+        programId = enrollment.program_id;
+        enrollmentStartWeek = enrollment.start_week || 1;
+      } else {
+        // Fallback to admin-assigned program
+        const { data: assignedProgram } = await supabase
+          .from("routines")
+          .select("id")
+          .eq("tipo", "programa")
+          .eq("assigned_user_id", user.id)
+          .eq("estado", "publicada")
+          .maybeSingle();
+
+        if (assignedProgram) {
+          programId = assignedProgram.id;
+        }
+      }
+
+      if (!programId) return null;
+
+      // Fetch program details
       const { data: program, error: programError } = await supabase
         .from("routines")
         .select("id, nombre, descripcion, portada_url, duracion_semanas")
-        .eq("tipo", "programa")
-        .eq("assigned_user_id", user.id)
-        .eq("estado", "publicada")
+        .eq("id", programId)
         .maybeSingle();
 
       if (programError) throw programError;

@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Check, Circle, Users } from "lucide-react";
+import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Users, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { useProgram } from "@/hooks/usePrograms";
+import { useUserProgramEnrollment, useEnrollInProgram } from "@/hooks/useUserPrograms";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
+import { EnrollProgramModal } from "@/components/programa/EnrollProgramModal";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 // Padel ball SVG component for difficulty
 function PadelBall({ filled, size = "md" }: { filled: boolean; size?: "sm" | "md" }) {
@@ -63,8 +67,12 @@ export default function ProgramaDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("programa");
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const { user } = useAuth();
   
   const { data: program, isLoading, error } = useProgram(id);
+  const { data: enrollment } = useUserProgramEnrollment(id);
+  const enrollMutation = useEnrollInProgram();
 
   // Loading state
   if (isLoading) {
@@ -371,25 +379,93 @@ export default function ProgramaDetalle() {
         </Tabs>
       </div>
 
-      {/* Sticky Action Button */}
+      {/* Sticky Action Buttons */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
-        <div className="max-w-lg mx-auto">
-          <Button
-            className="w-full h-12 text-sm font-semibold"
-            onClick={() => {
-              // Navigate to first routine of first week
-              const firstWeek = program.weeks?.sort((a, b) => a.week_number - b.week_number)[0];
-              const firstRoutine = firstWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
-              if (firstRoutine) {
-                navigate(`/rutina/${firstRoutine.routine_id}`);
-              }
-            }}
-            disabled={!program.weeks?.length || !program.weeks[0]?.routines?.length}
-          >
-            Comenzar programa
-          </Button>
+        <div className="flex gap-3 max-w-lg mx-auto">
+          {/* If user is already enrolled, show different UI */}
+          {enrollment ? (
+            <Button
+              className="flex-1 h-12 text-sm font-semibold"
+              onClick={() => {
+                // Navigate to first pending routine based on current week
+                const currentWeek = program.weeks?.find(w => w.week_number === enrollment.current_week);
+                const firstRoutine = currentWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
+                if (firstRoutine) {
+                  navigate(`/rutina/${firstRoutine.routine_id}`);
+                }
+              }}
+              disabled={!program.weeks?.length}
+            >
+              <PlayCircle className="w-4 h-4 mr-2" />
+              Continuar programa
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className="flex-1 h-12 text-sm font-medium"
+                onClick={() => setEnrollModalOpen(true)}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Programar
+              </Button>
+              <Button
+                className="flex-[2] h-12 text-sm font-semibold"
+                onClick={async () => {
+                  if (!user) {
+                    toast.error("Debes iniciar sesión para comenzar un programa");
+                    navigate("/login");
+                    return;
+                  }
+                  
+                  // Enroll and navigate to first routine
+                  try {
+                    await enrollMutation.mutateAsync({
+                      programId: program.id,
+                      startWeek: 1,
+                    });
+                    
+                    toast.success("¡Te has inscrito en el programa!");
+                    
+                    const firstWeek = program.weeks?.sort((a, b) => a.week_number - b.week_number)[0];
+                    const firstRoutine = firstWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
+                    if (firstRoutine) {
+                      navigate(`/rutina/${firstRoutine.routine_id}`);
+                    }
+                  } catch (error) {
+                    toast.error("Error al inscribirse en el programa");
+                  }
+                }}
+                disabled={!program.weeks?.length || !program.weeks[0]?.routines?.length || enrollMutation.isPending}
+              >
+                {enrollMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 mr-2" />
+                )}
+                Comenzar programa
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Enroll Modal */}
+      <EnrollProgramModal
+        open={enrollModalOpen}
+        onOpenChange={setEnrollModalOpen}
+        programId={program.id}
+        programName={program.nombre}
+        totalWeeks={totalWeeks}
+        onEnrollSuccess={() => {
+          const startWeek = 1; // Will be set by modal
+          const weekData = program.weeks?.find(w => w.week_number === startWeek);
+          const firstRoutine = weekData?.routines?.sort((a, b) => a.orden - b.orden)[0];
+          if (firstRoutine) {
+            navigate(`/rutina/${firstRoutine.routine_id}`);
+          }
+        }}
+      />
     </div>
   );
 }
