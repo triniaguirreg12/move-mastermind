@@ -45,13 +45,6 @@ export function ProfessionalCard({
         </div>
       </div>
 
-      {/* Description */}
-      {description && (
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {description}
-        </p>
-      )}
-
       {/* Action */}
       <Button
         variant="accent"
@@ -59,7 +52,7 @@ export function ProfessionalCard({
         onClick={onSchedule}
       >
         <Calendar className="w-4 h-4" />
-        Agendar cita personalizada
+        Solicitar Programa Personalizado
       </Button>
     </div>
   );
