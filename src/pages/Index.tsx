@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2, CalendarClock } from "lucide-react";
+import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChart } from "@/components/home/RadarChart";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -399,18 +399,6 @@ const Index = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {event.type === "profesional" && event.status === "scheduled" && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/profesionales?reschedule=${event.metadata?.professional_id}`);
-                      }}
-                      className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                      title="Reagendar cita"
-                    >
-                      <CalendarClock className="h-4 w-4" />
-                    </button>
-                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -518,13 +506,26 @@ const Index = () => {
             <AlertDialogTitle>¿Eliminar evento?</AlertDialogTitle>
             <AlertDialogDescription>
               {eventToDelete?.type === "profesional" 
-                ? "¿Estás seguro/a de que deseas eliminar esta cita? Esta acción no se puede deshacer."
+                ? "¿Deseas eliminar esta cita definitivamente o prefieres reagendarla?"
                 : "¿Estás seguro/a de que deseas eliminar este evento? Esta acción no se puede deshacer."
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className={eventToDelete?.type === "profesional" ? "flex-col sm:flex-row gap-2" : ""}>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            {eventToDelete?.type === "profesional" && (
+              <AlertDialogAction
+                onClick={() => {
+                  if (eventToDelete?.metadata?.professional_id) {
+                    navigate(`/profesionales?reschedule=${eventToDelete.metadata.professional_id}`);
+                    setEventToDelete(null);
+                  }
+                }}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Reagendar
+              </AlertDialogAction>
+            )}
             <AlertDialogAction
               onClick={() => {
                 if (eventToDelete) {
@@ -534,7 +535,7 @@ const Index = () => {
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Eliminar
+              Eliminar definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
