@@ -426,8 +426,12 @@ export function calculateWeeklyStats(events: UserEvent[]) {
     e => e.type === "padel" && e.status === "scheduled"
   ).length;
 
-  const profesionalEvents = events.filter(
-    e => e.type === "profesional"
+  const completedProfesional = events.filter(
+    e => e.type === "profesional" && e.status === "completed"
+  ).length;
+
+  const scheduledProfesional = events.filter(
+    e => e.type === "profesional" && e.status === "scheduled"
   ).length;
 
   return {
@@ -435,6 +439,7 @@ export function calculateWeeklyStats(events: UserEvent[]) {
     padelCompleted: completedPadel,
     padelScheduled: scheduledPadel,
     padelTotal: completedPadel + scheduledPadel,
-    profesional: profesionalEvents,
+    profesionalCompleted: completedProfesional,
+    profesionalTotal: completedProfesional + scheduledProfesional,
   };
 }
