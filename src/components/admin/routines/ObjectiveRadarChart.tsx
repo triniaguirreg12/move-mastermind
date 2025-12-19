@@ -19,9 +19,9 @@ const ObjectiveRadarChart = ({ objetivo }: ObjectiveRadarChartProps) => {
   }));
 
   return (
-    <div className="w-full h-[200px]">
+    <div className="w-full h-full min-h-[80px]">
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data}>
           <PolarGrid 
             stroke="hsl(var(--border))" 
             strokeOpacity={0.5}
@@ -30,7 +30,7 @@ const ObjectiveRadarChart = ({ objetivo }: ObjectiveRadarChartProps) => {
             dataKey="aptitud"
             tick={{ 
               fill: "hsl(var(--muted-foreground))", 
-              fontSize: 10,
+              fontSize: 8,
             }}
             tickLine={false}
           />
