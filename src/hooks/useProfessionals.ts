@@ -367,17 +367,7 @@ export function useUpdateAppointmentMeetLink() {
       
       if (error) throw error;
       
-      // Update user_event metadata with meet link
-      const { error: eventError } = await supabase
-        .from('user_events')
-        .update({ 
-          metadata: supabase.rpc ? undefined : { google_meet_link: data.meetLink }
-        })
-        .eq('user_id', appointment.user_id)
-        .eq('event_date', appointment.appointment_date)
-        .eq('type', 'profesional');
-      
-      // Alternative: fetch current metadata and merge
+      // Fetch current user_event and merge metadata
       const { data: eventData } = await supabase
         .from('user_events')
         .select('id, metadata')
