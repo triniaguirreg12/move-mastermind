@@ -375,37 +375,39 @@ const Index = () => {
                     </a>
                   )}
                 </div>
-                {event.type === "padel" && event.status === "scheduled" && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {event.type === "padel" && event.status === "scheduled" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateEventStatus.mutate({ eventId: event.id, status: "completed" });
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-success/10 text-muted-foreground hover:text-success transition-colors"
+                      title="Marcar como completado"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateEventStatus.mutate({ eventId: event.id, status: "completed" });
+                      deleteEvent.mutate(event.id);
                     }}
-                    className="p-1.5 rounded-lg hover:bg-success/10 text-muted-foreground hover:text-success transition-colors flex-shrink-0"
-                    title="Marcar como completado"
+                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    title="Eliminar evento"
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteEvent.mutate(event.id);
-                  }}
-                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
-                  title="Eliminar evento"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <div
-                  className={cn(
-                    "w-2.5 h-2.5 rounded-full flex-shrink-0",
-                    getDotColorClass(event.type)
+                  <div
+                    className={cn(
+                      "w-2.5 h-2.5 rounded-full",
+                      getDotColorClass(event.type)
+                    )}
+                  />
+                  {event.type === "entrenamiento" && event.metadata?.routine_id && (
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   )}
-                />
-                {event.type === "entrenamiento" && event.metadata?.routine_id && (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                )}
+                </div>
               </div>
             ))}
           </div>
