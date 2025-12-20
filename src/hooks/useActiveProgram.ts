@@ -55,12 +55,13 @@ export function useActiveProgram() {
       // First check for user-enrolled program (active status only)
       const { data: enrollment } = await supabase
         .from("user_programs")
-        .select("program_id, start_week, current_week, status")
+        .select("program_id, start_week, current_week, status, enrolled_at")
         .eq("user_id", user.id)
         .maybeSingle();
 
       let programId: string | null = null;
       let enrollmentStartWeek = 1;
+      let enrolledAt: string | null = null;
 
       if (enrollment) {
         // If enrolled but status is "completed", don't show as active
@@ -70,6 +71,7 @@ export function useActiveProgram() {
         if (enrollment.status === "active") {
           programId = enrollment.program_id;
           enrollmentStartWeek = enrollment.start_week || 1;
+          enrolledAt = enrollment.enrolled_at;
         }
       }
       
@@ -139,12 +141,20 @@ export function useActiveProgram() {
       if (wrError) throw wrError;
 
       // Fetch user's completed routine events to determine progress
-      const { data: completedEvents, error: eventsError } = await supabase
+      // Only count completions AFTER the enrollment date for this program run
+      let completedEventsQuery = supabase
         .from("user_events")
-        .select("metadata")
+        .select("metadata, created_at")
         .eq("user_id", user.id)
         .eq("type", "entrenamiento")
         .eq("status", "completed");
+      
+      // If we have an enrollment date, only count events after it
+      if (enrolledAt) {
+        completedEventsQuery = completedEventsQuery.gte("created_at", enrolledAt);
+      }
+      
+      const { data: completedEvents, error: eventsError } = await completedEventsQuery;
 
       if (eventsError) throw eventsError;
 
