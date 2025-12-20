@@ -149,8 +149,46 @@ export default function ProgramaDetalle() {
     implementsArray = ["Sin implemento"];
   }
 
-  const handleRoutineClick = (routineId: string) => {
-    navigate(`/rutina/${routineId}`, { state: { from: `/programa/${id}` } });
+  // Find the next routine that should be done in the active program
+  const getNextRoutineId = (): string | null => {
+    if (!enrollment || enrollment.status !== "active") return null;
+    
+    const currentWeek = program.weeks?.find(w => w.week_number === enrollment.current_week);
+    if (!currentWeek?.routines) return null;
+    
+    const sortedRoutines = [...currentWeek.routines].sort((a, b) => a.orden - b.orden);
+    return sortedRoutines.find(r => !completedRoutineIds.has(r.routine_id))?.routine_id || null;
+  };
+
+  const nextRoutineId = getNextRoutineId();
+
+  const handleRoutineClick = (routineId: string, routineOrden: number, weekNumber: number) => {
+    // Determine if this routine is locked (comes after the next one in an active program)
+    let isLocked = false;
+    
+    if (enrollment?.status === "active") {
+      // If clicking on a routine in a future week, it's locked
+      if (weekNumber > enrollment.current_week) {
+        isLocked = true;
+      } else if (weekNumber === enrollment.current_week && nextRoutineId) {
+        // If in the current week, check if the routine comes after the next one
+        const currentWeek = program.weeks?.find(w => w.week_number === enrollment.current_week);
+        const sortedRoutines = [...(currentWeek?.routines || [])].sort((a, b) => a.orden - b.orden);
+        const nextRoutineOrden = sortedRoutines.find(r => r.routine_id === nextRoutineId)?.orden;
+        
+        if (nextRoutineOrden !== undefined && routineOrden > nextRoutineOrden) {
+          isLocked = true;
+        }
+      }
+    }
+    
+    navigate(`/rutina/${routineId}`, { 
+      state: { 
+        from: `/programa/${id}`,
+        isLockedInProgram: isLocked,
+        programName: program.nombre
+      } 
+    });
   };
 
   return (
@@ -311,7 +349,7 @@ export default function ProgramaDetalle() {
                                 return (
                                   <button
                                     key={weekRoutine.id}
-                                    onClick={() => handleRoutineClick(weekRoutine.routine_id)}
+                                    onClick={() => handleRoutineClick(weekRoutine.routine_id, weekRoutine.orden, week.week_number)}
                                     className={cn(
                                       "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
                                       isCompleted 
