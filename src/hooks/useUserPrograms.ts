@@ -73,13 +73,14 @@ export function useEnrollInProgram() {
         .maybeSingle();
 
       if (existing) {
-        // Update existing enrollment
+        // Update existing enrollment - reset enrolled_at when reactivating
         const { data, error } = await supabase
           .from("user_programs")
           .update({
             start_week: startWeek,
             current_week: startWeek,
             status: "active",
+            enrolled_at: new Date().toISOString(), // Reset enrollment date
           })
           .eq("id", existing.id)
           .select()
@@ -144,6 +145,7 @@ export function useScheduleProgramRoutines() {
             start_week: startWeek,
             current_week: startWeek,
             status: "active",
+            enrolled_at: new Date().toISOString(), // Reset enrollment date
           })
           .eq("id", existing.id);
       } else {
