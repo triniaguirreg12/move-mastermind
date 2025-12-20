@@ -515,8 +515,8 @@ export default function ProgramaDetalle() {
       </div>
 
       {/* Sticky Action Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
-        <div className="flex gap-3 max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 px-4 pb-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
+        <div className="flex gap-2 max-w-lg mx-auto">
           {/* If user is already enrolled AND program is active, show continue UI */}
           {enrollment && enrollment.status === "active" ? (
             <Button
@@ -564,7 +564,7 @@ export default function ProgramaDetalle() {
             <>
               <Button
                 variant="outline"
-                className="flex-1 h-12 text-sm font-medium"
+                className="flex-1 h-12 text-xs sm:text-sm font-medium min-w-0"
                 onClick={() => {
                   if (!user) {
                     toast.error("Debes iniciar sesión para agendar un programa");
@@ -578,7 +578,7 @@ export default function ProgramaDetalle() {
                 Agendar rutinas
               </Button>
               <Button
-                className="flex-[2] h-12 text-sm font-semibold"
+                className="flex-1 h-12 text-xs sm:text-sm font-semibold min-w-0"
                 onClick={() => {
                   if (!user) {
                     toast.error("Debes iniciar sesión para comenzar un programa");
