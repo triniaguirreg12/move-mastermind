@@ -225,7 +225,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
         {nextPendingRoutine && !isWeekComplete ? (
           <button
             onClick={handleContinue}
-            className="w-full bg-primary/10 border border-primary/30 rounded-xl p-3 relative z-10 hover:bg-primary/20 transition-colors text-left group"
+            className="w-full bg-primary/10 border border-primary/30 rounded-xl p-4 relative z-10 hover:bg-primary/20 transition-colors text-left group"
           >
             <p className="text-[10px] font-medium text-primary uppercase tracking-wide mb-1">
               Siguiente rutina
