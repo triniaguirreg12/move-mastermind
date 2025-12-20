@@ -176,10 +176,19 @@ export default function ProgramaDetalle() {
   const nextRoutineId = getNextRoutineId();
 
   const handleRoutineClick = (routineId: string, routineOrden: number, weekNumber: number) => {
-    // Determine if this routine is locked (comes after the next one in an active program)
+    // Determine if this routine is locked
     let isLocked = false;
     
-    if (enrollment?.status === "active") {
+    // If user is not enrolled or program is not active, all routines except the first one in week 1 are locked
+    if (!enrollment || enrollment.status !== "active") {
+      // Only the first routine of week 1 is unlocked
+      const firstWeek = program.weeks?.find(w => w.week_number === 1);
+      const sortedRoutinesWeek1 = [...(firstWeek?.routines || [])].sort((a, b) => a.orden - b.orden);
+      const firstRoutineId = sortedRoutinesWeek1[0]?.routine_id;
+      
+      isLocked = routineId !== firstRoutineId;
+    } else {
+      // User is enrolled and active
       // If clicking on a routine in a future week, it's locked
       if (weekNumber > enrollment.current_week) {
         isLocked = true;
