@@ -595,7 +595,7 @@ export default function RutinaDetalle() {
               Rutina bloqueada
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center">
-              Tienes rutinas pendientes por completar en tu programa{programNameFromNav ? ` "${programNameFromNav}"` : ""}. Completa las rutinas anteriores para desbloquear esta.
+              Completa las rutinas anteriores del programa{programNameFromNav ? ` "${programNameFromNav}"` : ""} para desbloquear esta.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center">
