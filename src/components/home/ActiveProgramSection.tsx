@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, Check, Circle, Sparkles, Star, Heart, Trophy, Send } from "lucide-react";
+import { ChevronRight, Check, Sparkles, Star, Heart, Trophy, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -221,9 +221,12 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
           <Progress value={progressPercent} className="h-2" />
         </div>
 
-        {/* Next routine to do - prominent card */}
-        {nextPendingRoutine && !isWeekComplete && (
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-3 relative z-10">
+        {/* Next routine to do - now a clickable button */}
+        {nextPendingRoutine && !isWeekComplete ? (
+          <button
+            onClick={handleContinue}
+            className="w-full bg-primary/10 border border-primary/30 rounded-xl p-3 relative z-10 hover:bg-primary/20 transition-colors text-left group"
+          >
             <p className="text-[10px] font-medium text-primary uppercase tracking-wide mb-1">
               Siguiente rutina
             </p>
@@ -245,55 +248,19 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
                   Rutina {routines.findIndex(r => r.id === nextPendingRoutine.id) + 1} de {routines.length} esta semana
                 </p>
               </div>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <ChevronRight className="h-5 w-5 text-primary-foreground" />
+              </div>
             </div>
+          </button>
+        ) : isWeekComplete ? (
+          <div className="bg-activity-training/10 rounded-xl py-3 px-4 text-center relative z-10">
+            <p className="text-sm font-medium text-activity-training flex items-center justify-center gap-2">
+              <Check className="h-4 w-4" />
+              ¡Semana completada!
+            </p>
           </div>
-        )}
-
-        {/* Routine progress dots */}
-        <div className="flex items-center justify-center gap-2 mb-3 relative z-10">
-          {routines.map((routine, idx) => (
-            <button
-              key={routine.id}
-              onClick={() => handleRoutineClick(routine)}
-              className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                routine.isCompleted
-                  ? "bg-activity-training text-activity-training-foreground"
-                  : routine.id === nextPendingRoutine?.id
-                    ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-card"
-                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-              )}
-              title={routine.routine?.nombre || `Rutina ${idx + 1}`}
-            >
-              {routine.isCompleted ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                idx + 1
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="relative z-10">
-          {isWeekComplete ? (
-            <div className="bg-activity-training/10 rounded-xl py-3 px-4 text-center">
-              <p className="text-sm font-medium text-activity-training flex items-center justify-center gap-2">
-                <Check className="h-4 w-4" />
-                ¡Semana completada!
-              </p>
-            </div>
-          ) : nextPendingRoutine ? (
-            <Button 
-              onClick={handleContinue}
-              className="w-full"
-              size="default"
-            >
-              Continuar programa
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : null}
-        </div>
+        ) : null}
       </div>
     </div>
   );
