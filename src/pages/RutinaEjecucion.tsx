@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,12 @@ import { useRoutine } from "@/hooks/useRoutines";
 import { useWorkoutExecution } from "@/hooks/useWorkoutExecution";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkoutCountdown } from "@/components/workout/WorkoutCountdown";
 import { WorkoutExercise } from "@/components/workout/WorkoutExercise";
 import { WorkoutRest } from "@/components/workout/WorkoutRest";
 import { WorkoutComplete } from "@/components/workout/WorkoutComplete";
-
 // Audio context singleton for sounds - configured to mix with external music
 let audioContextInstance: AudioContext | null = null;
 
@@ -86,10 +86,49 @@ export default function RutinaEjecucion() {
   const { user } = useAuth();
   const { data: routine, isLoading, error } = useRoutine(id);
   const { data: userProfile } = useUserProfile();
+  const { data: activeProgram } = useActiveProgram();
   
   const [workoutStarted, setWorkoutStarted] = useState(false);
   const buzzerRef = useRef<(() => void) | null>(null);
   const beepRef = useRef<(() => void) | null>(null);
+
+  // Determine if this routine is part of the active program and program completion status
+  const programContext = useMemo(() => {
+    if (!activeProgram || !id) {
+      return { isPartOfProgram: false, isProgramComplete: false, programName: undefined };
+    }
+
+    // Check if this routine is part of any week in the active program
+    let routineFoundInProgram = false;
+    let totalRoutinesInProgram = 0;
+    let completedRoutinesInProgram = 0;
+
+    for (const week of activeProgram.weeks) {
+      for (const weekRoutine of week.routines) {
+        totalRoutinesInProgram++;
+        if (weekRoutine.isCompleted) {
+          completedRoutinesInProgram++;
+        }
+        if (weekRoutine.routine_id === id) {
+          routineFoundInProgram = true;
+        }
+      }
+    }
+
+    if (!routineFoundInProgram) {
+      return { isPartOfProgram: false, isProgramComplete: false, programName: undefined };
+    }
+
+    // Check if completing this routine will complete the entire program
+    // (all other routines are complete, and this is the only pending one)
+    const isProgramComplete = completedRoutinesInProgram === totalRoutinesInProgram - 1;
+
+    return {
+      isPartOfProgram: true,
+      isProgramComplete,
+      programName: activeProgram.nombre,
+    };
+  }, [activeProgram, id]);
 
   // Initialize sounds
   useEffect(() => {
@@ -283,6 +322,9 @@ export default function RutinaEjecucion() {
         routineName={routine.nombre}
         routineId={routine.id}
         routineObjetivo={routine.objetivo as unknown as Record<string, number> | null}
+        isPartOfProgram={programContext.isPartOfProgram}
+        isProgramComplete={programContext.isProgramComplete}
+        programName={programContext.programName}
       />
     );
   }
