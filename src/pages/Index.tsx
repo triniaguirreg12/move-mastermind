@@ -314,151 +314,153 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Active Program Section */}
-      {activeProgram && (
-        <ActiveProgramSection program={activeProgram} />
-      )}
-
-      {/* Activities */}
+      {/* Main scrollable content */}
       <div className="flex-1 px-4 py-3 pb-24 overflow-y-auto">
-        <h2 className="text-base font-semibold text-foreground mb-3">
-          Actividades de hoy
-        </h2>
-
-        {todayActivities.length === 0 ? (
-          <div className="p-4 rounded-xl bg-card/50 border border-dashed border-border/50 text-center">
-            <p className="text-sm text-muted-foreground">
-              No tienes actividades programadas para hoy
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3 stagger-children">
-            {todayActivities.map((event) => {
-              const isFromProgram = event.type === "entrenamiento" && event.metadata?.source === "program";
-              const programName = event.metadata?.program_name;
-
-              return (
-                <div
-                  key={event.id}
-                  onClick={() => handleActivityClick(event)}
-                  className={cn(
-                    "bg-card rounded-xl p-3 border border-border flex items-center gap-3 transition-colors",
-                    event.type === "entrenamiento" && event.metadata?.routine_id
-                      ? "hover:border-primary/30 cursor-pointer"
-                      : ""
-                  )}
-                >
-                  <div className={cn(
-                    "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center",
-                    isPadelWithIcon(event) ? "bg-activity-padel/10" : "bg-secondary"
-                  )}>
-                    {event.type === "padel" ? (
-                      getPadelIcon(event.metadata?.padel_subtype as PadelSubtype)
-                    ) : (
-                      <img
-                        src={getEventImage(event)}
-                        alt={event.title || "Actividad"}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium text-sm text-foreground truncate">
-                        {event.title}
-                      </h3>
-                      {event.status === "completed" && (
-                        <span className="text-[10px] bg-activity-training/20 text-activity-training px-1.5 py-0.5 rounded-full flex-shrink-0">
-                          ✓
-                        </span>
-                      )}
-                      {event.status === "missed" && (
-                        <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full flex-shrink-0">
-                          ✗
-                        </span>
-                      )}
-                      {event.type === "padel" && event.status === "scheduled" && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateEventStatus.mutate({ eventId: event.id, status: "completed" });
-                          }}
-                          className="p-1 rounded-lg hover:bg-success/10 text-muted-foreground hover:text-success transition-colors flex-shrink-0"
-                          title="Marcar como completado"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                    {/* Program badge for routines that are part of a program */}
-                    {isFromProgram && programName && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Badge 
-                          variant="outline" 
-                          className="text-[9px] px-1 py-0 h-3.5 border-primary/30 text-primary bg-primary/5"
-                        >
-                          <Puzzle className="h-2 w-2 mr-0.5" />
-                          {programName}
-                        </Badge>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground truncate">
-                      {formatEventTime(event) || (event.status === "scheduled" ? "Programado" : event.status === "missed" ? "No realizada" : "Completado")}
-                    </p>
-                    {event.type === "profesional" && event.metadata?.google_meet_link && (
-                      <a
-                        href={event.metadata.google_meet_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[10px] text-primary hover:underline mt-0.5"
-                      >
-                        <Video className="h-3 w-3" />
-                        Unirse a Meet
-                        <ExternalLink className="h-2.5 w-2.5" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEventToDelete(event);
-                      }}
-                      className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      title="Eliminar evento"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                    <div
-                      className={cn(
-                        "w-2.5 h-2.5 rounded-full",
-                        getDotColorClass(event.type)
-                      )}
-                    />
-                    {event.type === "entrenamiento" && event.metadata?.routine_id && (
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* 1. Active Program Section - shown first if user has an active program */}
+        {activeProgram && (
+          <ActiveProgramSection program={activeProgram} />
         )}
 
-        {/* Your Programs Section - shown if user has programs other than the active one */}
-        {userPrograms.length > 0 && (
+        {/* 2. Activities for today */}
+        <div className={activeProgram ? "mt-4" : ""}>
+          <h2 className="text-base font-semibold text-foreground mb-3">
+            Actividades de hoy
+          </h2>
+
+          {todayActivities.length === 0 ? (
+            <div className="p-4 rounded-xl bg-card/50 border border-dashed border-border/50 text-center">
+              <p className="text-sm text-muted-foreground">
+                No tienes actividades programadas para hoy
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 stagger-children">
+              {todayActivities.map((event) => {
+                const isFromProgram = event.type === "entrenamiento" && event.metadata?.source === "program";
+                const programName = event.metadata?.program_name;
+
+                return (
+                  <div
+                    key={event.id}
+                    onClick={() => handleActivityClick(event)}
+                    className={cn(
+                      "bg-card rounded-xl p-3 border border-border flex items-center gap-3 transition-colors",
+                      event.type === "entrenamiento" && event.metadata?.routine_id
+                        ? "hover:border-primary/30 cursor-pointer"
+                        : ""
+                    )}
+                  >
+                    <div className={cn(
+                      "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center",
+                      isPadelWithIcon(event) ? "bg-activity-padel/10" : "bg-secondary"
+                    )}>
+                      {event.type === "padel" ? (
+                        getPadelIcon(event.metadata?.padel_subtype as PadelSubtype)
+                      ) : (
+                        <img
+                          src={getEventImage(event)}
+                          alt={event.title || "Actividad"}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-medium text-sm text-foreground truncate">
+                          {event.title}
+                        </h3>
+                        {event.status === "completed" && (
+                          <span className="text-[10px] bg-activity-training/20 text-activity-training px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            ✓
+                          </span>
+                        )}
+                        {event.status === "missed" && (
+                          <span className="text-[10px] bg-destructive/20 text-destructive px-1.5 py-0.5 rounded-full flex-shrink-0">
+                            ✗
+                          </span>
+                        )}
+                        {event.type === "padel" && event.status === "scheduled" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateEventStatus.mutate({ eventId: event.id, status: "completed" });
+                            }}
+                            className="p-1 rounded-lg hover:bg-success/10 text-muted-foreground hover:text-success transition-colors flex-shrink-0"
+                            title="Marcar como completado"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      {/* Program badge for routines that are part of a program */}
+                      {isFromProgram && programName && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Badge 
+                            variant="outline" 
+                            className="text-[9px] px-1 py-0 h-3.5 border-primary/30 text-primary bg-primary/5"
+                          >
+                            <Puzzle className="h-2 w-2 mr-0.5" />
+                            {programName}
+                          </Badge>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {formatEventTime(event) || (event.status === "scheduled" ? "Programado" : event.status === "missed" ? "No realizada" : "Completado")}
+                      </p>
+                      {event.type === "profesional" && event.metadata?.google_meet_link && (
+                        <a
+                          href={event.metadata.google_meet_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1 text-[10px] text-primary hover:underline mt-0.5"
+                        >
+                          <Video className="h-3 w-3" />
+                          Unirse a Meet
+                          <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEventToDelete(event);
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Eliminar evento"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <div
+                        className={cn(
+                          "w-2.5 h-2.5 rounded-full",
+                          getDotColorClass(event.type)
+                        )}
+                      />
+                      {event.type === "entrenamiento" && event.metadata?.routine_id && (
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Favorites Section */}
+        <FavoritesSection />
+
+        {/* 4. Your Personalized Programs Section OR No Program CTA - at the end */}
+        {userPrograms.length > 0 ? (
           <YourProgramsSection 
             programs={userPrograms} 
             activeProgramId={activeProgram?.id} 
           />
+        ) : (
+          !activeProgram && <NoProgramCTA />
         )}
-
-        {/* Favorites Section - right after activities */}
-        <FavoritesSection />
-
-        {/* No Program CTA - shown only if user has no programs at all */}
-        {userPrograms.length === 0 && !activeProgram && <NoProgramCTA />}
       </div>
 
       <BottomNav />
