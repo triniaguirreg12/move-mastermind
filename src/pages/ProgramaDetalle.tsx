@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Users, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,15 +65,33 @@ function DifficultyIndicator({ level }: { level: string }) {
 
 export default function ProgramaDetalle() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("programa");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const { user } = useAuth();
   
+  // Get the "from" path from location state, if available
+  const fromPath = (location.state as { from?: string })?.from;
+  
   const { data: program, isLoading, error } = useProgram(id);
   const { data: enrollment } = useUserProgramEnrollment(id);
   const enrollMutation = useEnrollInProgram();
   const scheduleMutation = useScheduleProgramRoutines();
+
+  const handleGoBack = () => {
+    // If we have a stored "from" path, use it
+    if (fromPath) {
+      navigate(fromPath);
+      return;
+    }
+    // Otherwise go back in history, but fallback to home if history is empty
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -145,7 +163,7 @@ export default function ProgramaDetalle() {
       <div className="absolute top-4 left-4 z-50">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={handleGoBack}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />

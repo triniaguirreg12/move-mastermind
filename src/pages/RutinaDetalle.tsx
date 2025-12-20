@@ -408,7 +408,7 @@ export default function RutinaDetalle() {
           {/* Program indicator badge */}
           {isPartOfActiveProgram && programInfo && (
             <button
-              onClick={() => navigate(`/programa/${activeProgram?.id}`)}
+              onClick={() => navigate(`/programa/${activeProgram?.id}`, { state: { from: "/" } })}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
             >
               <Sparkles className="w-3 h-3" />
