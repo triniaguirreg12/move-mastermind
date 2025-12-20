@@ -188,7 +188,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
   }
 
   return (
-    <div className="px-4 py-2">
+    <div className="px-2 py-2">
       <div className="bg-card rounded-2xl p-4 border border-primary/20 overflow-hidden relative">
         {/* Decorative gradient */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
@@ -225,7 +225,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
         {nextPendingRoutine && !isWeekComplete ? (
           <button
             onClick={handleContinue}
-            className="w-full bg-primary/10 border border-primary/30 rounded-xl p-4 relative z-10 hover:bg-primary/20 transition-colors text-left group"
+            className="w-full bg-primary/10 border border-primary/30 rounded-xl p-3 relative z-10 hover:bg-primary/20 transition-colors text-left group"
           >
             <p className="text-[10px] font-medium text-primary uppercase tracking-wide mb-1">
               Siguiente rutina
