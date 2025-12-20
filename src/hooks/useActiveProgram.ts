@@ -161,27 +161,41 @@ export function useActiveProgram() {
 
       if (eventsError) throw eventsError;
 
-      // Build a set of completed routine IDs
-      const completedRoutineIds = new Set<string>();
+      // Build a map of routine completion counts (same routine can appear multiple times)
+      const routineCompletionCounts = new Map<string, number>();
       for (const event of completedEvents || []) {
         const routineId = (event.metadata as any)?.routine_id;
         if (routineId) {
-          completedRoutineIds.add(routineId);
+          routineCompletionCounts.set(routineId, (routineCompletionCounts.get(routineId) || 0) + 1);
         }
       }
 
       // Build weeks with completion status
+      // Track how many times each routine has been "used" for completion
+      const usedCompletions = new Map<string, number>();
+      
       const builtWeeks: ActiveProgramWeek[] = weeks.map(week => {
         const routines = (weekRoutines || [])
           .filter(wr => wr.week_id === week.id)
-          .map(wr => ({
-            id: wr.id,
-            routine_id: wr.routine_id,
-            orden: wr.orden,
-            custom_data: wr.custom_data,
-            routine: wr.routine as ActiveProgramRoutine["routine"],
-            isCompleted: completedRoutineIds.has(wr.routine_id),
-          }));
+          .map(wr => {
+            const totalCompletions = routineCompletionCounts.get(wr.routine_id) || 0;
+            const usedCount = usedCompletions.get(wr.routine_id) || 0;
+            const isCompleted = usedCount < totalCompletions;
+            
+            // Mark this completion as "used"
+            if (isCompleted) {
+              usedCompletions.set(wr.routine_id, usedCount + 1);
+            }
+            
+            return {
+              id: wr.id,
+              routine_id: wr.routine_id,
+              orden: wr.orden,
+              custom_data: wr.custom_data,
+              routine: wr.routine as ActiveProgramRoutine["routine"],
+              isCompleted,
+            };
+          });
 
         const completedCount = routines.filter(r => r.isCompleted).length;
 
