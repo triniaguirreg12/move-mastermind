@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Lock, Play, RotateCcw, ChevronRight, Check, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -169,7 +169,7 @@ export function YourProgramsSection({ programs, activeProgramId }: YourProgramsS
   return (
     <div className="mt-4">
       <h2 className="text-base font-semibold text-foreground mb-3">
-        Tus programas
+        Tus programas personalizados
       </h2>
       <div className="space-y-2">
         {otherPrograms.map((program) => {
@@ -228,6 +228,13 @@ export function YourProgramsSection({ programs, activeProgramId }: YourProgramsS
           );
         })}
       </div>
+
+      {/* CTA to request a new personalized program */}
+      <Link to="/profesionales" className="block mt-3">
+        <Button variant="outline" className="w-full" size="sm">
+          Solicitar nuevo programa personalizado
+        </Button>
+      </Link>
     </div>
   );
 }
