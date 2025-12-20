@@ -563,22 +563,7 @@ export default function ProgramaDetalle() {
           ) : (
             <>
               <Button
-                variant="outline"
-                className="flex-1 h-12 text-xs sm:text-sm font-medium min-w-0"
-                onClick={() => {
-                  if (!user) {
-                    toast.error("Debes iniciar sesión para agendar un programa");
-                    navigate("/login");
-                    return;
-                  }
-                  setScheduleModalOpen(true);
-                }}
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Agendar rutinas
-              </Button>
-              <Button
-                className="flex-1 h-12 text-xs sm:text-sm font-semibold min-w-0"
+                className="w-full h-12 text-sm font-semibold"
                 onClick={() => {
                   if (!user) {
                     toast.error("Debes iniciar sesión para comenzar un programa");
