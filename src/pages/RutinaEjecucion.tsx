@@ -161,7 +161,15 @@ export default function RutinaEjecucion() {
       const today = new Date().toISOString().split("T")[0];
       
       // Build metadata - include program info if this routine is part of a program
-      const metadata: Record<string, unknown> = {
+      const eventMetadata: {
+        routine_id: string;
+        routine_name: string;
+        routine_category: string;
+        routine_cover_url: string | null;
+        source?: string;
+        program_id?: string;
+        program_name?: string;
+      } = {
         routine_id: routine.id,
         routine_name: routine.nombre,
         routine_category: routine.categoria,
@@ -170,19 +178,19 @@ export default function RutinaEjecucion() {
 
       // Add program info if applicable
       if (programContext.isPartOfProgram && activeProgram) {
-        metadata.source = "program";
-        metadata.program_id = activeProgram.id;
-        metadata.program_name = activeProgram.nombre;
+        eventMetadata.source = "program";
+        eventMetadata.program_id = activeProgram.id;
+        eventMetadata.program_name = activeProgram.nombre;
       }
       
-      await supabase.from("user_events").insert({
+      await supabase.from("user_events").insert([{
         user_id: user.id,
         type: "entrenamiento",
         event_date: today,
         status: "completed",
         title: routine.nombre,
-        metadata,
-      });
+        metadata: eventMetadata,
+      }]);
 
       // Update routine's veces_realizada counter
       await supabase
