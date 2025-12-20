@@ -188,7 +188,7 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
   }
 
   return (
-    <div className="px-2 py-2">
+    <div className="py-2">
       <div className="bg-card rounded-2xl p-4 border border-primary/20 overflow-hidden relative">
         {/* Decorative gradient */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
