@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Users, PlayCircle } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Users, PlayCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -10,6 +10,7 @@ import { useUserProgramEnrollment, useEnrollInProgram, useScheduleProgramRoutine
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 import { ScheduleProgramModal } from "@/components/programa/ScheduleProgramModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useScheduledRoutines } from "@/hooks/useScheduledRoutines";
 import { toast } from "sonner";
 
 // Padel ball SVG component for difficulty
@@ -65,32 +66,27 @@ function DifficultyIndicator({ level }: { level: string }) {
 
 export default function ProgramaDetalle() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("programa");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const { user } = useAuth();
   
-  // Get the "from" path from location state, if available
-  const fromPath = (location.state as { from?: string })?.from;
-  
   const { data: program, isLoading, error } = useProgram(id);
   const { data: enrollment } = useUserProgramEnrollment(id);
+  const { data: scheduledRoutines = [] } = useScheduledRoutines();
   const enrollMutation = useEnrollInProgram();
   const scheduleMutation = useScheduleProgramRoutines();
 
+  // Get completed routine IDs from scheduled_routines
+  const completedRoutineIds = new Set(
+    scheduledRoutines
+      .filter(sr => sr.status === "completada")
+      .map(sr => sr.routine_id)
+  );
+
   const handleGoBack = () => {
-    // If we have a stored "from" path, use it
-    if (fromPath) {
-      navigate(fromPath);
-      return;
-    }
-    // Otherwise go back in history, but fallback to home if history is empty
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/");
-    }
+    // Always navigate to home for consistent behavior
+    navigate("/");
   };
 
   // Loading state
@@ -303,45 +299,92 @@ export default function ProgramaDetalle() {
                           {week.routines && week.routines.length > 0 ? (
                             week.routines
                               .sort((a, b) => a.orden - b.orden)
-                              .map((weekRoutine, index) => (
-                                <button
-                                  key={weekRoutine.id}
-                                  onClick={() => handleRoutineClick(weekRoutine.routine_id)}
-                                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary border border-transparent hover:border-border transition-all text-left"
-                                >
-                                  {/* Order number */}
-                                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                      {index + 1}
-                                    </span>
-                                  </div>
-
-                                  {/* Routine thumbnail */}
-                                  {weekRoutine.routine?.portada_url && (
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                                      <img
-                                        src={weekRoutine.routine.portada_url}
-                                        alt={weekRoutine.routine.nombre}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {/* Routine info */}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">
-                                      {weekRoutine.routine?.nombre || "Rutina"}
-                                    </p>
-                                    {weekRoutine.routine?.categoria && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {weekRoutine.routine.categoria}
-                                      </p>
+                              .map((weekRoutine, index) => {
+                                const isCompleted = completedRoutineIds.has(weekRoutine.routine_id);
+                                // Find the first non-completed routine in the current week as "next"
+                                const sortedRoutines = week.routines!.sort((a, b) => a.orden - b.orden);
+                                const nextRoutineId = enrollment?.status === "active" && week.week_number === enrollment.current_week
+                                  ? sortedRoutines.find(r => !completedRoutineIds.has(r.routine_id))?.routine_id
+                                  : null;
+                                const isNext = nextRoutineId === weekRoutine.routine_id;
+                                
+                                return (
+                                  <button
+                                    key={weekRoutine.id}
+                                    onClick={() => handleRoutineClick(weekRoutine.routine_id)}
+                                    className={cn(
+                                      "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                                      isCompleted 
+                                        ? "bg-primary/5 border-primary/20" 
+                                        : isNext
+                                          ? "bg-primary/10 border-primary/30 ring-1 ring-primary/20"
+                                          : "bg-secondary/50 hover:bg-secondary border-transparent hover:border-border"
                                     )}
-                                  </div>
+                                  >
+                                    {/* Status indicator */}
+                                    <div className={cn(
+                                      "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
+                                      isCompleted 
+                                        ? "bg-primary text-primary-foreground" 
+                                        : isNext 
+                                          ? "bg-primary/20 border-2 border-primary"
+                                          : "bg-muted"
+                                    )}>
+                                      {isCompleted ? (
+                                        <Check className="w-3.5 h-3.5" />
+                                      ) : (
+                                        <span className={cn(
+                                          "text-xs font-medium",
+                                          isNext ? "text-primary" : "text-muted-foreground"
+                                        )}>
+                                          {index + 1}
+                                        </span>
+                                      )}
+                                    </div>
 
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                </button>
-                              ))
+                                    {/* Routine thumbnail */}
+                                    {weekRoutine.routine?.portada_url && (
+                                      <div className={cn(
+                                        "w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0",
+                                        isCompleted && "opacity-60"
+                                      )}>
+                                        <img
+                                          src={weekRoutine.routine.portada_url}
+                                          alt={weekRoutine.routine.nombre}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Routine info */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className={cn(
+                                          "text-sm font-medium truncate",
+                                          isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+                                        )}>
+                                          {weekRoutine.routine?.nombre || "Rutina"}
+                                        </p>
+                                        {isNext && (
+                                          <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground rounded">
+                                            Siguiente
+                                          </span>
+                                        )}
+                                      </div>
+                                      {weekRoutine.routine?.categoria && (
+                                        <p className="text-xs text-muted-foreground">
+                                          {weekRoutine.routine.categoria}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <ChevronRight className={cn(
+                                      "h-4 w-4 flex-shrink-0",
+                                      isCompleted ? "text-muted-foreground/50" : "text-muted-foreground"
+                                    )} />
+                                  </button>
+                                );
+                              })
                           ) : (
                             <div className="p-4 rounded-xl bg-muted/30 text-center">
                               <p className="text-sm text-muted-foreground">
@@ -401,22 +444,48 @@ export default function ProgramaDetalle() {
       {/* Sticky Action Buttons */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
         <div className="flex gap-3 max-w-lg mx-auto">
-          {/* If user is already enrolled, show different UI */}
-          {enrollment ? (
+          {/* If user is already enrolled AND program is active, show continue UI */}
+          {enrollment && enrollment.status === "active" ? (
             <Button
               className="flex-1 h-12 text-sm font-semibold"
               onClick={() => {
-                // Navigate to first pending routine based on current week
+                // Navigate to first non-completed routine based on current week
                 const currentWeek = program.weeks?.find(w => w.week_number === enrollment.current_week);
-                const firstRoutine = currentWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
-                if (firstRoutine) {
-                  navigate(`/rutina/${firstRoutine.routine_id}`, { state: { from: `/programa/${id}` } });
+                const sortedRoutines = currentWeek?.routines?.sort((a, b) => a.orden - b.orden) || [];
+                const nextRoutine = sortedRoutines.find(r => !completedRoutineIds.has(r.routine_id)) || sortedRoutines[0];
+                if (nextRoutine) {
+                  navigate(`/rutina/${nextRoutine.routine_id}`, { state: { from: `/programa/${id}` } });
                 }
               }}
               disabled={!program.weeks?.length}
             >
               <PlayCircle className="w-4 h-4 mr-2" />
               Continuar programa
+            </Button>
+          ) : enrollment && enrollment.status === "completed" ? (
+            <Button
+              className="flex-1 h-12 text-sm font-semibold"
+              variant="outline"
+              onClick={async () => {
+                // Re-enroll to restart the program
+                try {
+                  await enrollMutation.mutateAsync({
+                    programId: program.id,
+                    startWeek: 1,
+                  });
+                  toast.success("¡Programa reiniciado!");
+                } catch (error) {
+                  toast.error("Error al reiniciar el programa");
+                }
+              }}
+              disabled={enrollMutation.isPending}
+            >
+              {enrollMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <PlayCircle className="w-4 h-4 mr-2" />
+              )}
+              Reiniciar programa
             </Button>
           ) : (
             <>
