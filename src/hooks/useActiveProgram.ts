@@ -53,10 +53,14 @@ export function useActiveProgram() {
       if (!user) return null;
 
       // First check for user-enrolled program (active status only)
+      // Get the most recently enrolled active program
       const { data: enrollment } = await supabase
         .from("user_programs")
         .select("program_id, start_week, current_week, status, enrolled_at")
         .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       let programId: string | null = null;
@@ -64,15 +68,9 @@ export function useActiveProgram() {
       let enrolledAt: string | null = null;
 
       if (enrollment) {
-        // If enrolled but status is "completed", don't show as active
-        if (enrollment.status === "completed") {
-          return null;
-        }
-        if (enrollment.status === "active") {
-          programId = enrollment.program_id;
-          enrollmentStartWeek = enrollment.start_week || 1;
-          enrolledAt = enrollment.enrolled_at;
-        }
+        programId = enrollment.program_id;
+        enrollmentStartWeek = enrollment.start_week || 1;
+        enrolledAt = enrollment.enrolled_at;
       }
       
       if (!programId) {
