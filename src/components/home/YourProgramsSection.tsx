@@ -132,7 +132,7 @@ export function YourProgramsSection({ programs, activeProgramId }: YourProgramsS
       {
         onSuccess: () => {
           toast.success("¡Programa iniciado!");
-          navigate(`/programa/${program.id}`);
+          navigate(`/programa/${program.id}`, { state: { from: "/" } });
         },
       }
     );
@@ -144,7 +144,7 @@ export function YourProgramsSection({ programs, activeProgramId }: YourProgramsS
       {
         onSuccess: () => {
           toast.success("¡Programa retomado!");
-          navigate(`/programa/${program.id}`);
+          navigate(`/programa/${program.id}`, { state: { from: "/" } });
         },
       }
     );
@@ -156,14 +156,14 @@ export function YourProgramsSection({ programs, activeProgramId }: YourProgramsS
       {
         onSuccess: () => {
           toast.success("¡Programa reiniciado!");
-          navigate(`/programa/${program.id}`);
+          navigate(`/programa/${program.id}`, { state: { from: "/" } });
         },
       }
     );
   };
 
   const handleProgramClick = (program: UserProgramItem) => {
-    navigate(`/programa/${program.id}`);
+    navigate(`/programa/${program.id}`, { state: { from: "/" } });
   };
 
   return (
