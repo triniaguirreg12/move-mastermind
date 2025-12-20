@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams, Navigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell, Sparkles, Lock } from "lucide-react";
+import { ArrowLeft, Star, Clock, Loader2, AlertCircle, Dumbbell, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -240,11 +241,13 @@ export default function RutinaDetalle() {
   const [isProgram, setIsProgram] = useState<boolean | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [showLockedPopup, setShowLockedPopup] = useState(false);
+  const [showSwitchProgramDialog, setShowSwitchProgramDialog] = useState(false);
   
   // Get the "from" path and lock status from location state
   const fromPath = (location.state as { from?: string })?.from;
   const isLockedInProgram = (location.state as { isLockedInProgram?: boolean })?.isLockedInProgram || false;
-  const programName = (location.state as { programName?: string })?.programName;
+  const programNameFromNav = (location.state as { programName?: string })?.programName;
+  const comesFromProgram = fromPath?.startsWith('/programa/');
   
   const { user } = useAuth();
   const isAuthenticated = !!user;
@@ -252,18 +255,9 @@ export default function RutinaDetalle() {
   const { data: routine, isLoading, error } = useRoutine(id);
   const { data: activeProgram } = useActiveProgram();
 
-  // Check if this routine is part of the user's active program
-  const isPartOfActiveProgram = activeProgram?.weeks?.some(week => 
-    week.routines?.some(wr => wr.routine_id === id)
-  ) || false;
-
-  // Get program info if routine is part of active program
-  const programInfo = isPartOfActiveProgram ? {
-    name: activeProgram?.nombre,
-    weekNumber: activeProgram?.weeks?.find(week => 
-      week.routines?.some(wr => wr.routine_id === id)
-    )?.week_number,
-  } : null;
+  // Check if user has an active program that is DIFFERENT from the one they're navigating from
+  const programIdFromNav = fromPath?.match(/\/programa\/([^/]+)/)?.[1];
+  const hasConflictingActiveProgram = activeProgram && programIdFromNav && activeProgram.id !== programIdFromNav;
 
   // Check if this is a program and redirect if so
   useEffect(() => {
@@ -411,22 +405,11 @@ export default function RutinaDetalle() {
 
       {/* Content Section */}
       <div className="px-4 pt-4 space-y-4">
-        {/* Category Badge + Program Badge */}
+        {/* Category Badge */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted/50 text-muted-foreground border border-border/30">
             {routine.categoria}
           </span>
-          
-          {/* Program indicator badge */}
-          {isPartOfActiveProgram && programInfo && (
-            <button
-              onClick={() => navigate(`/programa/${activeProgram?.id}`, { state: { from: "/" } })}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Semana {programInfo.weekNumber} · {programInfo.name}</span>
-            </button>
-          )}
         </div>
 
         {/* Description */}
@@ -569,6 +552,9 @@ export default function RutinaDetalle() {
             onClick={() => {
               if (isLockedInProgram) {
                 setShowLockedPopup(true);
+              } else if (hasConflictingActiveProgram && comesFromProgram) {
+                // User has an active program but is trying to start a routine from a different program
+                setShowSwitchProgramDialog(true);
               } else {
                 navigate(`/rutina/${routine.id}/ejecucion`, { state: { from: location.pathname } });
               }
@@ -609,12 +595,43 @@ export default function RutinaDetalle() {
               Rutina bloqueada
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center">
-              Tienes rutinas pendientes por completar en tu programa{programName ? ` "${programName}"` : ""}. Completa las rutinas anteriores para desbloquear esta.
+              Tienes rutinas pendientes por completar en tu programa{programNameFromNav ? ` "${programNameFromNav}"` : ""}. Completa las rutinas anteriores para desbloquear esta.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center">
             <AlertDialogAction onClick={() => setShowLockedPopup(false)}>
               Entendido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Switch Program Confirmation Dialog */}
+      <AlertDialog open={showSwitchProgramDialog} onOpenChange={setShowSwitchProgramDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cambiar de programa?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Actualmente tienes activo el programa <strong>"{activeProgram?.nombre}"</strong>.
+              </p>
+              <p>
+                Si inicias esta rutina de otro programa, el anterior dejará de mostrar su progreso en el Home. 
+              </p>
+              <p className="text-primary font-medium">
+                No te preocupes: las rutinas que ya completaste siguen contribuyendo a tu mapa de aptitudes.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSwitchProgramDialog(false);
+                navigate(`/rutina/${routine.id}/ejecucion`, { state: { from: location.pathname } });
+              }}
+            >
+              Sí, cambiar programa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
