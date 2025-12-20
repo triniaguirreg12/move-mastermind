@@ -12,18 +12,27 @@ import { WorkoutExercise } from "@/components/workout/WorkoutExercise";
 import { WorkoutRest } from "@/components/workout/WorkoutRest";
 import { WorkoutComplete } from "@/components/workout/WorkoutComplete";
 
-// Audio context singleton for sounds
+// Audio context singleton for sounds - configured to mix with external music
 let audioContextInstance: AudioContext | null = null;
 
 function getAudioContext() {
   if (typeof window === "undefined") return null;
   if (!audioContextInstance) {
-    audioContextInstance = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Create AudioContext that doesn't interrupt other audio sources
+    // Using 'playback' latencyHint for short sound effects that mix with music
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    audioContextInstance = new AudioContextClass({
+      latencyHint: 'playback', // Optimized for sound effects, not interrupting
+    });
+  }
+  // Resume if suspended (required for user gesture on mobile)
+  if (audioContextInstance.state === 'suspended') {
+    audioContextInstance.resume().catch(() => {});
   }
   return audioContextInstance;
 }
 
-// Buzzer sound - plays on countdown (3, 2, 1)
+// Buzzer sound - plays on countdown (3, 2, 1) - short effect that mixes with music
 function createBuzzerSound() {
   return () => {
     const audioContext = getAudioContext();
@@ -38,15 +47,16 @@ function createBuzzerSound() {
     oscillator.frequency.value = 800; // Hz - medium tone
     oscillator.type = "sine";
     
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    // Short duration, moderate volume to blend with external music
+    gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
     
     oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
+    oscillator.stop(audioContext.currentTime + 0.15);
   };
 }
 
-// Beep sound - plays when exercise starts (higher pitch, distinct)
+// Beep sound - plays when exercise starts (higher pitch, distinct) - short effect
 function createBeepSound() {
   return () => {
     const audioContext = getAudioContext();
@@ -61,11 +71,12 @@ function createBeepSound() {
     oscillator.frequency.value = 1200; // Hz - higher tone than buzzer
     oscillator.type = "sine";
     
-    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    // Short duration effect that mixes with background music
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.12);
     
     oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.15);
+    oscillator.stop(audioContext.currentTime + 0.12);
   };
 }
 
