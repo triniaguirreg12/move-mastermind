@@ -18,10 +18,10 @@ export interface UserProgramItem {
 }
 
 /**
- * Fetches all programs for the current user:
- * - Programs explicitly assigned to them (routines.assigned_user_id)
- * - Programs they have enrolled in (user_programs table)
+ * Fetches ONLY personalized/private programs for the current user:
+ * - Programs explicitly assigned to them (routines.assigned_user_id == user.id)
  * 
+ * Does NOT include public library programs even if enrolled.
  * Returns programs with status: not_started, active, completed, paused
  */
 export function useUserAllPrograms() {
@@ -31,7 +31,7 @@ export function useUserAllPrograms() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // 1. Fetch programs assigned directly to this user
+      // ONLY fetch programs assigned directly to this user (private/personalized)
       const { data: assignedPrograms, error: assignedError } = await supabase
         .from("routines")
         .select("id, nombre, descripcion, portada_url, duracion_semanas, assigned_user_id")
@@ -41,7 +41,7 @@ export function useUserAllPrograms() {
 
       if (assignedError) throw assignedError;
 
-      // 2. Fetch user enrollments
+      // Fetch user enrollments (for status tracking)
       const { data: enrollments, error: enrollError } = await supabase
         .from("user_programs")
         .select("id, program_id, status, current_week, start_week")
@@ -55,27 +55,8 @@ export function useUserAllPrograms() {
         enrollmentMap.set(e.program_id, e);
       }
 
-      // 3. Get program IDs from enrollments that aren't in assigned programs
-      const assignedIds = new Set((assignedPrograms || []).map(p => p.id));
-      const enrolledProgramIds = (enrollments || [])
-        .map(e => e.program_id)
-        .filter(id => !assignedIds.has(id));
-
-      // Fetch enrolled programs that aren't assigned
-      let enrolledPrograms: typeof assignedPrograms = [];
-      if (enrolledProgramIds.length > 0) {
-        const { data, error } = await supabase
-          .from("routines")
-          .select("id, nombre, descripcion, portada_url, duracion_semanas, assigned_user_id")
-          .eq("tipo", "programa")
-          .in("id", enrolledProgramIds);
-
-        if (error) throw error;
-        enrolledPrograms = data || [];
-      }
-
-      // Combine all programs
-      const allPrograms = [...(assignedPrograms || []), ...enrolledPrograms];
+      // Only use assigned programs (private/personalized)
+      const allPrograms = assignedPrograms || [];
 
       if (allPrograms.length === 0) return [];
 
