@@ -181,21 +181,13 @@ export default function ProgramaDetalle() {
     
     // If user is not enrolled or program is not active, all routines except the first one in week 1 are locked
     if (!enrollment || enrollment.status !== "active") {
-      // Only the first routine of week 1 is unlocked
+      // Only the first routine of week 1 is unlocked - check BOTH week number AND orden
       const firstWeek = program.weeks?.find(w => w.week_number === 1);
       const sortedRoutinesWeek1 = [...(firstWeek?.routines || [])].sort((a, b) => a.orden - b.orden);
-      const firstRoutineId = sortedRoutinesWeek1[0]?.routine_id;
+      const firstRoutineOrden = sortedRoutinesWeek1[0]?.orden;
       
-      isLocked = routineId !== firstRoutineId;
-      
-      console.log('Lock check - no enrollment:', { 
-        routineId, 
-        firstRoutineId, 
-        isLocked, 
-        enrollment,
-        weekNumber,
-        routineOrden
-      });
+      // Locked if NOT in week 1, OR if in week 1 but not the first routine by orden
+      isLocked = weekNumber !== 1 || routineOrden !== firstRoutineOrden;
     } else {
       // User is enrolled and active
       // If clicking on a routine in a future week, it's locked
@@ -212,8 +204,6 @@ export default function ProgramaDetalle() {
         }
       }
     }
-    
-    console.log('Final lock state:', { isLocked, routineId, enrollment });
     
     navigate(`/rutina/${routineId}`, { 
       state: { 
