@@ -4,9 +4,20 @@ import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useProgram } from "@/hooks/usePrograms";
 import { useUserProgramEnrollment, useEnrollInProgram, useScheduleProgramRoutines } from "@/hooks/useUserPrograms";
+import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 import { ScheduleProgramModal } from "@/components/programa/ScheduleProgramModal";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,10 +80,12 @@ export default function ProgramaDetalle() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("programa");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [showSwitchProgramDialog, setShowSwitchProgramDialog] = useState(false);
   const { user } = useAuth();
   
   const { data: program, isLoading, error } = useProgram(id);
   const { data: enrollment } = useUserProgramEnrollment(id);
+  const { data: activeProgram } = useActiveProgram();
   const { data: scheduledRoutines = [] } = useScheduledRoutines();
   const enrollMutation = useEnrollInProgram();
   const scheduleMutation = useScheduleProgramRoutines();
@@ -189,6 +202,28 @@ export default function ProgramaDetalle() {
         programName: program.nombre
       } 
     });
+  };
+
+  // Function to start/enroll in the program
+  const handleStartProgram = async () => {
+    if (!program) return;
+    
+    try {
+      await enrollMutation.mutateAsync({
+        programId: program.id,
+        startWeek: 1,
+      });
+      
+      toast.success("¡Programa activado! Puedes ejecutar las rutinas libremente.");
+      
+      const firstWeek = program.weeks?.sort((a, b) => a.week_number - b.week_number)[0];
+      const firstRoutine = firstWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
+      if (firstRoutine) {
+        navigate(`/rutina/${firstRoutine.routine_id}`, { state: { from: `/programa/${id}` } });
+      }
+    } catch (error) {
+      toast.error("Error al activar el programa");
+    }
   };
 
   return (
@@ -544,30 +579,21 @@ export default function ProgramaDetalle() {
               </Button>
               <Button
                 className="flex-[2] h-12 text-sm font-semibold"
-                onClick={async () => {
+                onClick={() => {
                   if (!user) {
                     toast.error("Debes iniciar sesión para comenzar un programa");
                     navigate("/login");
                     return;
                   }
                   
-                  // Enroll and navigate to first routine
-                  try {
-                    await enrollMutation.mutateAsync({
-                      programId: program.id,
-                      startWeek: 1,
-                    });
-                    
-                    toast.success("¡Programa activado! Puedes ejecutar las rutinas libremente.");
-                    
-                    const firstWeek = program.weeks?.sort((a, b) => a.week_number - b.week_number)[0];
-                    const firstRoutine = firstWeek?.routines?.sort((a, b) => a.orden - b.orden)[0];
-                    if (firstRoutine) {
-                      navigate(`/rutina/${firstRoutine.routine_id}`, { state: { from: `/programa/${id}` } });
-                    }
-                  } catch (error) {
-                    toast.error("Error al activar el programa");
+                  // Check if there's another active program
+                  if (activeProgram && activeProgram.id !== program.id) {
+                    setShowSwitchProgramDialog(true);
+                    return;
                   }
+                  
+                  // No conflict, proceed directly
+                  handleStartProgram();
                 }}
                 disabled={!program.weeks?.length || !program.weeks[0]?.routines?.length || enrollMutation.isPending}
               >
@@ -615,6 +641,37 @@ export default function ProgramaDetalle() {
           isLoading={scheduleMutation.isPending}
         />
       )}
+
+      {/* Switch Program Confirmation Dialog */}
+      <AlertDialog open={showSwitchProgramDialog} onOpenChange={setShowSwitchProgramDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cambiar de programa?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Actualmente tienes activo el programa <strong>"{activeProgram?.nombre}"</strong>.
+              </p>
+              <p>
+                Si inicias este nuevo programa, el anterior dejará de mostrar su progreso en el Home. 
+              </p>
+              <p className="text-primary font-medium">
+                No te preocupes: las rutinas que ya completaste siguen contribuyendo a tu mapa de aptitudes.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSwitchProgramDialog(false);
+                handleStartProgram();
+              }}
+            >
+              Sí, cambiar programa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
