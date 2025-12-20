@@ -202,9 +202,12 @@ export function ActiveProgramSection({ program }: ActiveProgramSectionProps) {
                 Programa activo
               </span>
             </div>
-            <h3 className="text-lg font-semibold text-foreground line-clamp-1">
+            <button
+              onClick={() => navigate(`/programa/${program.id}`)}
+              className="text-lg font-semibold text-foreground line-clamp-1 hover:text-primary transition-colors text-left"
+            >
               {program.nombre}
-            </h3>
+            </button>
           </div>
         </div>
 
