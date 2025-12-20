@@ -64,7 +64,15 @@ export function useEnrollInProgram() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // First, check if already enrolled
+      // First, deactivate any other active programs (only one active at a time)
+      await supabase
+        .from("user_programs")
+        .update({ status: "inactive" })
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .neq("program_id", programId);
+
+      // Check if already enrolled in this program
       const { data: existing } = await supabase
         .from("user_programs")
         .select("id")
@@ -93,13 +101,13 @@ export function useEnrollInProgram() {
       // Create new enrollment
       const { data, error } = await supabase
         .from("user_programs")
-        .insert({
+        .insert([{
           user_id: user.id,
           program_id: programId,
           start_week: startWeek,
           current_week: startWeek,
           status: "active",
-        })
+        }])
         .select()
         .single();
 
