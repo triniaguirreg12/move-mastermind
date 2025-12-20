@@ -565,16 +565,7 @@ export default function RutinaDetalle() {
         <div className="flex gap-3 max-w-lg mx-auto">
           <Button
             type="button"
-            variant="outline"
-            className="flex-1 h-12 text-sm font-medium"
-            onClick={() => setScheduleModalOpen(true)}
-          >
-            <Calendar className="w-4 h-4 mr-2" />
-            Programar
-          </Button>
-          <Button
-            type="button"
-            className="flex-[2] h-12 text-sm font-semibold"
+            className="w-full h-12 text-sm font-semibold"
             onClick={() => {
               if (isLockedInProgram) {
                 setShowLockedPopup(true);
