@@ -20,6 +20,8 @@ interface WorkoutCompleteProps {
   isProgramComplete?: boolean;
   /** Name of the program (if applicable) */
   programName?: string;
+  /** If this is an assigned (personalized) program - hides favorites */
+  isAssignedProgram?: boolean;
 }
 
 export function WorkoutComplete({
@@ -28,6 +30,7 @@ export function WorkoutComplete({
   isPartOfProgram = false,
   isProgramComplete = false,
   programName,
+  isAssignedProgram = false,
 }: WorkoutCompleteProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -40,6 +43,9 @@ export function WorkoutComplete({
   // 1. Standalone routines (not part of program)
   // 2. Program completion (last routine of program)
   const showRatingAndFavorites = !isPartOfProgram || isProgramComplete;
+  
+  // Hide favorites for assigned (personalized) programs
+  const showFavorites = showRatingAndFavorites && !isAssignedProgram;
 
   const handleRating = async (value: number) => {
     setRating(value);
@@ -127,8 +133,8 @@ export function WorkoutComplete({
         </div>
       )}
 
-      {/* Favorite Button - only for standalone or program completion */}
-      {showRatingAndFavorites && (
+      {/* Favorite Button - only for standalone or program completion, not for assigned programs */}
+      {showFavorites && (
         <div className="w-full max-w-xs bg-card/50 rounded-2xl p-4 border border-border/30 mb-4 animate-fade-in">
           <p className="text-sm text-muted-foreground mb-3">
             ¿Te gustó esta {isProgramComplete ? "experiencia" : "rutina"}?

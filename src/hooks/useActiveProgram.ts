@@ -39,6 +39,8 @@ export interface ActiveProgram {
   currentWeek: number;
   totalWeeks: number;
   completedWeeks: number;
+  /** True if this is an admin-assigned (personalized) program */
+  isAssigned: boolean;
 }
 
 /**
@@ -66,11 +68,13 @@ export function useActiveProgram() {
       let programId: string | null = null;
       let enrollmentStartWeek = 1;
       let enrolledAt: string | null = null;
+      let isAssigned = false;
 
       if (enrollment) {
         programId = enrollment.program_id;
         enrollmentStartWeek = enrollment.start_week || 1;
         enrolledAt = enrollment.enrolled_at;
+        isAssigned = false;
       }
       
       if (!programId) {
@@ -95,6 +99,7 @@ export function useActiveProgram() {
           // Only show if not explicitly completed
           if (!existingEnrollment || existingEnrollment.status !== "completed") {
             programId = assignedProgram.id;
+            isAssigned = true;
           }
         }
       }
@@ -211,6 +216,7 @@ export function useActiveProgram() {
         currentWeek,
         totalWeeks: weeks.length,
         completedWeeks,
+        isAssigned,
       } as ActiveProgram;
     },
   });

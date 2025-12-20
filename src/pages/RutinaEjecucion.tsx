@@ -95,7 +95,7 @@ export default function RutinaEjecucion() {
   // Determine if this routine is part of the active program and program completion status
   const programContext = useMemo(() => {
     if (!activeProgram || !id) {
-      return { isPartOfProgram: false, isProgramComplete: false, programName: undefined };
+      return { isPartOfProgram: false, isProgramComplete: false, programName: undefined, isAssigned: false };
     }
 
     // Check if this routine is part of any week in the active program
@@ -116,17 +116,17 @@ export default function RutinaEjecucion() {
     }
 
     if (!routineFoundInProgram) {
-      return { isPartOfProgram: false, isProgramComplete: false, programName: undefined };
+      return { isPartOfProgram: false, isProgramComplete: false, programName: undefined, isAssigned: false };
     }
 
     // Check if completing this routine will complete the entire program
-    // (all other routines are complete, and this is the only pending one)
     const isProgramComplete = completedRoutinesInProgram === totalRoutinesInProgram - 1;
 
     return {
       isPartOfProgram: true,
       isProgramComplete,
       programName: activeProgram.nombre,
+      isAssigned: activeProgram.isAssigned,
     };
   }, [activeProgram, id]);
 
@@ -160,18 +160,28 @@ export default function RutinaEjecucion() {
       // Create a completed entrenamiento event
       const today = new Date().toISOString().split("T")[0];
       
+      // Build metadata - include program info if this routine is part of a program
+      const metadata: Record<string, unknown> = {
+        routine_id: routine.id,
+        routine_name: routine.nombre,
+        routine_category: routine.categoria,
+        routine_cover_url: routine.portada_url,
+      };
+
+      // Add program info if applicable
+      if (programContext.isPartOfProgram && activeProgram) {
+        metadata.source = "program";
+        metadata.program_id = activeProgram.id;
+        metadata.program_name = activeProgram.nombre;
+      }
+      
       await supabase.from("user_events").insert({
         user_id: user.id,
         type: "entrenamiento",
         event_date: today,
         status: "completed",
         title: routine.nombre,
-        metadata: {
-          routine_id: routine.id,
-          routine_name: routine.nombre,
-          routine_category: routine.categoria,
-          routine_cover_url: routine.portada_url,
-        },
+        metadata,
       });
 
       // Update routine's veces_realizada counter
@@ -183,7 +193,7 @@ export default function RutinaEjecucion() {
     } catch (error) {
       console.error("Error saving workout completion:", error);
     }
-  }, [user, routine]);
+  }, [user, routine, programContext.isPartOfProgram, activeProgram]);
 
   const handleExit = useCallback(() => {
     navigate(`/rutina/${id}`);
@@ -325,6 +335,7 @@ export default function RutinaEjecucion() {
         isPartOfProgram={programContext.isPartOfProgram}
         isProgramComplete={programContext.isProgramComplete}
         programName={programContext.programName}
+        isAssignedProgram={programContext.isAssigned}
       />
     );
   }
