@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle, Puzzle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -277,6 +277,18 @@ const Calendario = () => {
                       </span>
                       {getStatusBadge(event)}
                     </div>
+                    {/* Program badge for routines from programs */}
+                    {event.type === "entrenamiento" && event.metadata?.source === "program" && event.metadata?.program_name && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Badge 
+                          variant="outline" 
+                          className="text-[9px] px-1 py-0 h-3.5 border-primary/30 text-primary bg-primary/5"
+                        >
+                          <Puzzle className="h-2 w-2 mr-0.5" />
+                          {event.metadata.program_name}
+                        </Badge>
+                      </div>
+                    )}
                     {formatEventTime(event) && (
                       <span className="text-xs text-muted-foreground">
                         {formatEventTime(event)}

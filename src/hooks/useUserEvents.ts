@@ -6,6 +6,9 @@ export type EventType = "entrenamiento" | "padel" | "profesional";
 export type EventStatus = "scheduled" | "completed" | "missed";
 export type PadelSubtype = "partido" | "clase" | "torneo";
 
+// Source of a routine: standalone or part of a program
+export type RoutineSource = "standalone" | "program";
+
 export interface UserEvent {
   id: string;
   user_id: string;
@@ -20,7 +23,13 @@ export interface UserEvent {
     routine_name?: string;
     routine_category?: string;
     routine_cover_url?: string;
+    // Program context for routines
+    source?: RoutineSource;
+    program_id?: string;
+    program_name?: string;
+    // Padel specific
     padel_subtype?: PadelSubtype;
+    // Professional specific
     professional_id?: string;
     professional_name?: string;
     appointment_id?: string;
@@ -154,12 +163,18 @@ export function useScheduleRoutineEvent() {
       routineCategory,
       routineCoverUrl,
       date,
+      source,
+      programId,
+      programName,
     }: {
       routineId: string;
       routineName: string;
       routineCategory?: string;
       routineCoverUrl?: string;
       date: Date;
+      source?: RoutineSource;
+      programId?: string;
+      programName?: string;
     }) => {
       return createEvent.mutateAsync({
         type: "entrenamiento",
@@ -171,6 +186,9 @@ export function useScheduleRoutineEvent() {
           routine_name: routineName,
           routine_category: routineCategory,
           routine_cover_url: routineCoverUrl,
+          source: source || "standalone",
+          program_id: programId,
+          program_name: programName,
         },
       });
     },
@@ -187,11 +205,17 @@ export function useCompleteRoutine() {
       routineName,
       routineCategory,
       routineCoverUrl,
+      source,
+      programId,
+      programName,
     }: {
       routineId: string;
       routineName: string;
       routineCategory?: string;
       routineCoverUrl?: string;
+      source?: RoutineSource;
+      programId?: string;
+      programName?: string;
     }) => {
       const today = new Date().toISOString().split("T")[0];
       return createEvent.mutateAsync({
@@ -204,6 +228,9 @@ export function useCompleteRoutine() {
           routine_name: routineName,
           routine_category: routineCategory,
           routine_cover_url: routineCoverUrl,
+          source: source || "standalone",
+          program_id: programId,
+          program_name: programName,
         },
       });
     },
