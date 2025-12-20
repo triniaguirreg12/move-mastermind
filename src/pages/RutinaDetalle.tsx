@@ -1,8 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams, Navigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell, Sparkles } from "lucide-react";
+import { ArrowLeft, Star, Clock, Calendar, Loader2, AlertCircle, Dumbbell, Sparkles, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useRoutine, calcularDuracionTotal } from "@/hooks/useRoutines";
 import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
@@ -230,9 +239,12 @@ export default function RutinaDetalle() {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isProgram, setIsProgram] = useState<boolean | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [showLockedPopup, setShowLockedPopup] = useState(false);
   
-  // Get the "from" path from location state, if available
+  // Get the "from" path and lock status from location state
   const fromPath = (location.state as { from?: string })?.from;
+  const isLockedInProgram = (location.state as { isLockedInProgram?: boolean })?.isLockedInProgram || false;
+  const programName = (location.state as { programName?: string })?.programName;
   
   const { user } = useAuth();
   const isAuthenticated = !!user;
@@ -563,8 +575,15 @@ export default function RutinaDetalle() {
           <Button
             type="button"
             className="flex-[2] h-12 text-sm font-semibold"
-            onClick={() => navigate(`/rutina/${routine.id}/ejecucion`, { state: { from: location.pathname } })}
+            onClick={() => {
+              if (isLockedInProgram) {
+                setShowLockedPopup(true);
+              } else {
+                navigate(`/rutina/${routine.id}/ejecucion`, { state: { from: location.pathname } });
+              }
+            }}
           >
+            {isLockedInProgram && <Lock className="w-4 h-4 mr-2" />}
             Comenzar rutina
           </Button>
         </div>
@@ -587,6 +606,28 @@ export default function RutinaDetalle() {
         title="Desbloquea todos los ejercicios"
         description="Regístrate para ver los detalles de todos los ejercicios, incluyendo videos y tips de ejecución."
       />
+
+      {/* Locked Routine Popup */}
+      <AlertDialog open={showLockedPopup} onOpenChange={setShowLockedPopup}>
+        <AlertDialogContent className="max-w-[320px] rounded-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mb-2">
+              <Lock className="w-6 h-6 text-warning" />
+            </div>
+            <AlertDialogTitle className="text-center">
+              Rutina bloqueada
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Tienes rutinas pendientes por completar en tu programa{programName ? ` "${programName}"` : ""}. Completa las rutinas anteriores para desbloquear esta.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogAction onClick={() => setShowLockedPopup(false)}>
+              Entendido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
