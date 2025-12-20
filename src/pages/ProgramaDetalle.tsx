@@ -187,6 +187,15 @@ export default function ProgramaDetalle() {
       const firstRoutineId = sortedRoutinesWeek1[0]?.routine_id;
       
       isLocked = routineId !== firstRoutineId;
+      
+      console.log('Lock check - no enrollment:', { 
+        routineId, 
+        firstRoutineId, 
+        isLocked, 
+        enrollment,
+        weekNumber,
+        routineOrden
+      });
     } else {
       // User is enrolled and active
       // If clicking on a routine in a future week, it's locked
@@ -203,6 +212,8 @@ export default function ProgramaDetalle() {
         }
       }
     }
+    
+    console.log('Final lock state:', { isLocked, routineId, enrollment });
     
     navigate(`/rutina/${routineId}`, { 
       state: { 
