@@ -170,15 +170,6 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
                           <h5 className="font-semibold text-foreground">
                             Plan {plan.name}
                           </h5>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {plan.description.split("**").map((part, i) => 
-                              i % 2 === 1 ? (
-                                <span key={i} className="font-semibold text-foreground">{part}</span>
-                              ) : (
-                                <span key={i}>{part}</span>
-                              )
-                            )}
-                          </p>
                         </div>
                         
                         <div className="text-right shrink-0">
@@ -192,6 +183,16 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
                           )}
                         </div>
                       </div>
+
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {plan.description.split("**").map((part, i) => 
+                          i % 2 === 1 ? (
+                            <span key={i} className="font-semibold text-foreground">{part}</span>
+                          ) : (
+                            <span key={i}>{part}</span>
+                          )
+                        )}
+                      </p>
 
                       {!isCurrentPlan && (
                         <Button
