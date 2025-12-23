@@ -91,6 +91,7 @@ export default function RutinaEjecucion() {
   const { data: activeProgram } = useActiveProgram();
   
   const [workoutStarted, setWorkoutStarted] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const buzzerRef = useRef<(() => void) | null>(null);
   const beepRef = useRef<(() => void) | null>(null);
 
@@ -246,6 +247,13 @@ export default function RutinaEjecucion() {
     }
   }, [workoutStarted, currentStep?.type, start]);
 
+  // For registered users: show paywall when transitioning from countdown to exercise
+  useEffect(() => {
+    if (!canAccessFullContent && workoutStarted && currentStep?.type === "exercise") {
+      setShowPaywall(true);
+    }
+  }, [canAccessFullContent, workoutStarted, currentStep?.type]);
+
   // Loading state
   if (isLoading || accessLoading) {
     return (
@@ -280,27 +288,62 @@ export default function RutinaEjecucion() {
     );
   }
 
-  // Block registered users without subscription
-  if (!canAccessFullContent) {
+  // Show paywall for registered users when they try to start the actual exercise
+  // This is triggered after the countdown ends
+  if (!canAccessFullContent && showPaywall) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mb-4">
-          <Lock className="w-8 h-8 text-warning" />
+      <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        {/* Video Background */}
+        <div className="absolute inset-0">
+          {routine?.blocks?.[0]?.exercises?.[0]?.exercise?.video_url ? (
+            <video
+              src={routine.blocks[0].exercises[0].exercise.video_url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+              poster={routine.blocks[0].exercises[0].exercise.thumbnail_url || undefined}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-b from-background to-card" />
+          )}
+          <div className="absolute inset-0 bg-black/80" />
         </div>
-        <h1 className="text-xl font-semibold text-foreground mb-2 text-center">
-          Suscríbete para entrenar
-        </h1>
-        <p className="text-muted-foreground text-center mb-6">
-          Necesitas una suscripción activa para ejecutar rutinas completas.
-        </p>
-        <div className="flex flex-col gap-2 w-full max-w-xs">
-          <Button onClick={() => navigate("/configuracion")}>
-            <CreditCard className="w-4 h-4 mr-2" />
-            Ver planes
-          </Button>
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            Volver
-          </Button>
+
+        {/* Paywall Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-warning/20 flex items-center justify-center mb-6">
+            <Lock className="w-10 h-10 text-warning" />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-white mb-3">
+            Para entrenar completo necesitas suscripción
+          </h2>
+          
+          <p className="text-white/70 mb-8 max-w-sm">
+            Accede a todas las rutinas, programas y funciones premium con tu suscripción.
+          </p>
+
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <Button
+              size="lg"
+              className="h-14 text-lg"
+              onClick={() => navigate("/configuracion")}
+            >
+              <CreditCard className="w-5 h-5 mr-2" />
+              Suscribirme
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 bg-white/10 border-white/20 text-white hover:bg-white/20"
+              onClick={() => navigate(`/rutina/${id}`)}
+            >
+              Ver preview
+            </Button>
+          </div>
         </div>
       </div>
     );
