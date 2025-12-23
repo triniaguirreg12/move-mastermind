@@ -6,10 +6,11 @@ import {
   useCreateSubscription, 
   useCancelSubscription,
   PLANS, 
-  formatPlanPrice, 
   getPlanMonthlyPrice,
+  getPlanPrice,
   type SubscriptionPlan 
 } from "@/hooks/useSubscription";
+import { usePaymentGateway, formatPrice } from "@/hooks/usePaymentGateway";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -34,6 +35,7 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
   const { data: subscription, isLoading } = useSubscription();
   const createSubscription = useCreateSubscription();
   const cancelSubscription = useCancelSubscription();
+  const { gateway, currency, isChile } = usePaymentGateway();
   const { toast } = useToast();
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
@@ -45,7 +47,7 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     setSelectedPlan(planId);
     try {
-      await createSubscription.mutateAsync({ plan: planId });
+      await createSubscription.mutateAsync({ plan: planId, provider: gateway });
       toast({
         title: "¡Suscripción activada!",
         description: "Ya tienes acceso completo a Just MUV.",
@@ -123,6 +125,11 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
               )}
             </div>
 
+            {/* Payment method indicator */}
+            <div className="text-center text-sm text-muted-foreground">
+              Pago con {isChile ? "Mercado Pago" : "PayPal"} • Precios en {currency}
+            </div>
+
             {/* Plans Section */}
             <div>
               <h4 className="text-sm font-medium text-muted-foreground mb-3">
@@ -132,7 +139,8 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
               <div className="space-y-3">
                 {PLANS.map((plan) => {
                   const isCurrentPlan = subscription?.plan === plan.id && hasActiveSubscription;
-                  const monthlyPrice = getPlanMonthlyPrice(plan);
+                  const monthlyPrice = getPlanMonthlyPrice(plan, currency);
+                  const totalPrice = getPlanPrice(plan, currency);
                   
                   return (
                     <div
@@ -172,11 +180,11 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
                         
                         <div className="text-right shrink-0">
                           <p className="text-lg font-bold text-primary">
-                            {formatPlanPrice(monthlyPrice)}/mes
+                            {formatPrice(monthlyPrice, currency)}/mes
                           </p>
                           {plan.duration > 1 && (
                             <p className="text-xs text-muted-foreground">
-                              {formatPlanPrice(plan.price)} total
+                              {formatPrice(totalPrice, currency)} total
                             </p>
                           )}
                         </div>
@@ -194,7 +202,7 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
                           ) : (
                             <>
                               <Check className="w-4 h-4 mr-2" />
-                              Seleccionar
+                              Suscribirme
                             </>
                           )}
                         </Button>
