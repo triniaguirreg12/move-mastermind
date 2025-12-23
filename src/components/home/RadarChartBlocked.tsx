@@ -1,14 +1,10 @@
-import { Lock, UserPlus, CreditCard } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { RadarChart } from "@/components/home/RadarChart";
 import { useUserAccess } from "@/hooks/useUserAccess";
-import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface RadarChartBlockedProps {
   data: { label: string; value: number }[];
   className?: string;
-  onSubscribe?: () => void;
 }
 
 // Demo data for preview (registered users)
@@ -35,9 +31,8 @@ const GUEST_RADAR_DATA = [
   { label: "Mo", value: 20 },
 ];
 
-export function RadarChartBlocked({ data, className, onSubscribe }: RadarChartBlockedProps) {
-  const { level, isGuest, canAccessFullContent } = useUserAccess();
-  const navigate = useNavigate();
+export function RadarChartBlocked({ data, className }: RadarChartBlockedProps) {
+  const { isGuest, canAccessFullContent } = useUserAccess();
 
   // Subscribed users see the real chart
   if (canAccessFullContent) {
@@ -47,50 +42,11 @@ export function RadarChartBlocked({ data, className, onSubscribe }: RadarChartBl
   // Get appropriate demo data based on access level
   const displayData = isGuest ? GUEST_RADAR_DATA : DEMO_RADAR_DATA;
 
+  // For non-subscribed users, just show the faded chart (no overlay here)
+  // The unified overlay is handled by the parent section
   return (
-    <div className={cn("relative", className)}>
-      {/* Faded chart */}
-      <div className="opacity-90 pointer-events-none">
-        <RadarChart data={displayData} />
-      </div>
-
-      {/* Overlay */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/40 rounded-lg">
-        <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center mb-2",
-          isGuest ? "bg-primary/10" : "bg-warning/10"
-        )}>
-          {isGuest ? (
-            <UserPlus className="w-5 h-5 text-primary" />
-          ) : (
-            <Lock className="w-5 h-5 text-warning" />
-          )}
-        </div>
-        
-        <p className="text-[10px] text-center text-muted-foreground px-4 mb-2 leading-tight">
-          {isGuest 
-            ? "Regístrate para ver tu progreso" 
-            : "Tu mapa se modificará con tus entrenamientos"
-          }
-        </p>
-        
-        <Button
-          size="sm"
-          variant={isGuest ? "default" : "outline"}
-          className="h-6 text-[10px] px-3"
-          onClick={() => {
-            if (isGuest) {
-              navigate("/login", { state: { mode: "signup" } });
-            } else if (onSubscribe) {
-              onSubscribe();
-            } else {
-              navigate("/configuracion");
-            }
-          }}
-        >
-          {isGuest ? "Registrarme" : "Suscribirme"}
-        </Button>
-      </div>
+    <div className={cn("opacity-80 pointer-events-none", className)}>
+      <RadarChart data={displayData} />
     </div>
   );
 }
