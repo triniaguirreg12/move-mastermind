@@ -208,7 +208,7 @@ const Calendario = () => {
         </div>
 
         {/* Blocking Overlay */}
-        <div className="absolute inset-0 top-16 flex flex-col items-center justify-center px-6 text-center bg-background/70 backdrop-blur-sm">
+        <div className="absolute inset-0 top-16 flex flex-col items-center justify-center px-6 text-center bg-background/60 backdrop-blur-[2px]">
           <div className={cn(
             "w-16 h-16 rounded-full flex items-center justify-center mb-4",
             isGuest ? "bg-primary/10" : "bg-warning/10"
