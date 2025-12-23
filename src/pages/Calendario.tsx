@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle, Puzzle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle, Puzzle, Lock, UserPlus, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -39,6 +39,7 @@ import {
   UserEvent,
   EventType,
 } from "@/hooks/useUserEvents";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { AgendarPadelModal } from "@/components/calendario/AgendarPadelModal";
 
 const weekDays = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
@@ -50,6 +51,7 @@ const Calendario = () => {
   const [eventToDelete, setEventToDelete] = useState<UserEvent | null>(null);
   const navigate = useNavigate();
 
+  const { level: accessLevel, isGuest, canAccessFullContent } = useUserAccess();
   const { data: events = [], isLoading } = useUserEvents();
   const cleanupMissedEvents = useCleanupMissedEvents();
   const deleteEvent = useDeleteEvent();
@@ -139,6 +141,73 @@ const Calendario = () => {
     }
     return null;
   };
+
+  // Show blocked screen for non-subscribed users
+  if (!canAccessFullContent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <header className="px-4 pt-4 pb-2 flex items-center">
+          <Link to="/">
+            <Button variant="ghost" size="icon" className="text-foreground">
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+          </Link>
+          <h1 className="text-xl font-semibold text-foreground ml-2">Calendario</h1>
+        </header>
+
+        {/* Blocked Content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <div className={cn(
+            "w-20 h-20 rounded-full flex items-center justify-center mb-6",
+            isGuest ? "bg-primary/10" : "bg-warning/10"
+          )}>
+            {isGuest ? (
+              <CalendarIcon className="w-10 h-10 text-primary" />
+            ) : (
+              <Lock className="w-10 h-10 text-warning" />
+            )}
+          </div>
+          
+          <h2 className="text-xl font-bold text-foreground mb-3">
+            {isGuest ? "Tu calendario personal" : "Calendario bloqueado"}
+          </h2>
+          
+          <p className="text-muted-foreground mb-6 max-w-sm">
+            {isGuest 
+              ? "Crea tu cuenta para agendar entrenamientos, partidos de pádel y citas con profesionales."
+              : "Con tu suscripción podrás agendar actividades, ver tu progreso y organizar tu semana de entrenamiento."
+            }
+          </p>
+
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            {isGuest ? (
+              <>
+                <Button onClick={() => navigate("/login", { state: { mode: "signup" } })}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Crear cuenta
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/login")}>
+                  Iniciar sesión
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button onClick={() => navigate("/configuracion")}>
+                  Ver planes de suscripción
+                </Button>
+                <Button variant="ghost" onClick={() => navigate("/")}>
+                  Volver al inicio
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
