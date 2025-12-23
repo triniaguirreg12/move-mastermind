@@ -142,10 +142,10 @@ const Calendario = () => {
     return null;
   };
 
-  // Show blocked screen for non-subscribed users
+  // Show blocked overlay for non-subscribed users with calendar preview
   if (!canAccessFullContent) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col relative">
         {/* Header */}
         <header className="px-4 pt-4 pb-2 flex items-center">
           <Link to="/">
@@ -156,31 +156,82 @@ const Calendario = () => {
           <h1 className="text-xl font-semibold text-foreground ml-2">Calendario</h1>
         </header>
 
-        {/* Blocked Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        {/* Calendar Preview (faded) */}
+        <div className="opacity-40 pointer-events-none">
+          {/* Month Navigation */}
+          <div className="px-4 py-4 flex items-center justify-center gap-4">
+            <Button variant="ghost" size="icon">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="text-base font-medium text-foreground min-w-[140px] text-center capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: es })}
+            </span>
+            <Button variant="ghost" size="icon">
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="px-4">
+            {/* Week days header */}
+            <div className="grid grid-cols-7 mb-2">
+              {weekDays.map((d) => (
+                <div key={d} className="text-center text-xs text-muted-foreground font-medium py-2">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Days grid */}
+            <div className="grid grid-cols-7 gap-y-1">
+              {days.map((date, index) => {
+                const isCurrentMonth = isSameMonth(date, currentMonth);
+                const isTodayDate = isToday(date);
+
+                return (
+                  <div key={index} className="flex flex-col items-center py-1">
+                    <div
+                      className={cn(
+                        "w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium",
+                        !isCurrentMonth && "text-muted-foreground/40",
+                        isCurrentMonth && "text-foreground",
+                        isTodayDate && "bg-muted"
+                      )}
+                    >
+                      {format(date, "d")}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Blocking Overlay */}
+        <div className="absolute inset-0 top-16 flex flex-col items-center justify-center px-6 text-center bg-background/70 backdrop-blur-sm">
           <div className={cn(
-            "w-20 h-20 rounded-full flex items-center justify-center mb-6",
+            "w-16 h-16 rounded-full flex items-center justify-center mb-4",
             isGuest ? "bg-primary/10" : "bg-warning/10"
           )}>
             {isGuest ? (
-              <CalendarIcon className="w-10 h-10 text-primary" />
+              <CalendarIcon className="w-8 h-8 text-primary" />
             ) : (
-              <Lock className="w-10 h-10 text-warning" />
+              <Lock className="w-8 h-8 text-warning" />
             )}
           </div>
           
-          <h2 className="text-xl font-bold text-foreground mb-3">
+          <h2 className="text-lg font-bold text-foreground mb-2">
             {isGuest ? "Tu calendario personal" : "Calendario bloqueado"}
           </h2>
           
-          <p className="text-muted-foreground mb-6 max-w-sm">
+          <p className="text-sm text-muted-foreground mb-5 max-w-xs">
             {isGuest 
               ? "Crea tu cuenta para agendar entrenamientos, partidos de pádel y citas con profesionales."
               : "Con tu suscripción podrás agendar actividades, ver tu progreso y organizar tu semana de entrenamiento."
             }
           </p>
 
-          <div className="flex flex-col gap-3 w-full max-w-xs">
+          <div className="flex flex-col gap-2 w-full max-w-xs">
             {isGuest ? (
               <>
                 <Button onClick={() => navigate("/login", { state: { mode: "signup" } })}>
@@ -193,7 +244,7 @@ const Calendario = () => {
               </>
             ) : (
               <>
-                <Button onClick={() => navigate("/configuracion")}>
+                <Button onClick={() => navigate("/configuracion", { state: { scrollTo: "plan-actual" } })}>
                   Ver planes de suscripción
                 </Button>
                 <Button variant="ghost" onClick={() => navigate("/")}>
