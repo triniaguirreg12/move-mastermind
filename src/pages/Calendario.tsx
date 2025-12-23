@@ -157,7 +157,7 @@ const Calendario = () => {
         </header>
 
         {/* Calendar Preview (faded) */}
-        <div className="opacity-60 pointer-events-none">
+        <div className="opacity-75 pointer-events-none">
           {/* Month Navigation */}
           <div className="px-4 py-4 flex items-center justify-center gap-4">
             <Button variant="ghost" size="icon">

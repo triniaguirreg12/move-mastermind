@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2, Puzzle } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { RadarChartBlocked } from "@/components/home/RadarChartBlocked";
-import { ProgressStatsBlocked } from "@/components/home/ProgressStatsBlocked";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +58,107 @@ import agilityImg from "@/assets/agility-routine.png";
 import professionalMeetingImg from "@/assets/professional-meeting.png";
 
 const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
+
+// Summary Content Component with unified blocking overlay
+interface SummaryContentProps {
+  radarData: { label: string; value: number }[];
+  periodStats: { entrenamiento: number; padelCompleted: number; padelTotal: number; profesionalCompleted: number; profesionalTotal: number };
+  summaryPeriod: "semanal" | "mensual";
+  weeklyGoal: number;
+}
+
+function SummaryContent({ radarData, periodStats, summaryPeriod, weeklyGoal }: SummaryContentProps) {
+  const { isGuest, canAccessFullContent } = useUserAccess();
+  const navigate = useNavigate();
+
+  // Subscribed users see everything normally
+  if (canAccessFullContent) {
+    return (
+      <div className="flex items-center gap-4">
+        <div className="w-40 h-40 flex-shrink-0">
+          <RadarChartBlocked data={radarData} />
+        </div>
+        <div className="flex-1 space-y-2 pr-2">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
+            <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
+            <span className="text-xs font-medium text-foreground tabular-nums">
+              {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? weeklyGoal : weeklyGoal * 4}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
+            <span className="text-xs text-muted-foreground flex-1">Pádel</span>
+            <span className="text-xs font-medium text-foreground tabular-nums">
+              {periodStats.padelCompleted}/{periodStats.padelTotal}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
+            <span className="text-xs text-muted-foreground flex-1">Profesional</span>
+            <span className="text-xs font-medium text-foreground tabular-nums">
+              {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Non-subscribed: show faded content with centered overlay
+  return (
+    <div className="relative">
+      {/* Faded background content */}
+      <div className="flex items-center gap-4 opacity-50 pointer-events-none">
+        <div className="w-40 h-40 flex-shrink-0">
+          <RadarChartBlocked data={radarData} />
+        </div>
+        <div className="flex-1 space-y-2 pr-2">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
+            <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
+            <span className="text-xs font-medium text-foreground tabular-nums">0/0</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
+            <span className="text-xs text-muted-foreground flex-1">Pádel</span>
+            <span className="text-xs font-medium text-foreground tabular-nums">0/0</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
+            <span className="text-xs text-muted-foreground flex-1">Profesional</span>
+            <span className="text-xs font-medium text-foreground tabular-nums">0/0</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Centered overlay */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <p className="text-xs text-muted-foreground px-4 mb-2 leading-tight max-w-[200px]">
+          {isGuest 
+            ? "Crea tu cuenta para ver tu progreso" 
+            : "Tu mapa se irá modificando con tus entrenamientos completados"
+          }
+        </p>
+        
+        <Button
+          size="sm"
+          variant={isGuest ? "default" : "outline"}
+          className="h-7 text-xs px-4"
+          onClick={() => {
+            if (isGuest) {
+              navigate("/login", { state: { mode: "signup" } });
+            } else {
+              navigate("/configuracion", { state: { scrollTo: "plan-actual" } });
+            }
+          }}
+        >
+          {isGuest ? "Registrarme" : "Ver planes"}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // Aptitude labels mapping
 const APTITUDES_LABELS: Record<string, string> = {
@@ -282,39 +382,12 @@ const Index = () => {
             </Select>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Radar Chart - blocked for non-subscribed */}
-            <div className="w-40 h-40 flex-shrink-0">
-              <RadarChartBlocked data={radarData} />
-            </div>
-
-            {/* Legend with dynamic stats - blocked for non-subscribed */}
-            <ProgressStatsBlocked className="flex-1">
-              <div className="space-y-2 pr-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                  <span className="text-xs font-medium text-foreground tabular-nums">
-                    {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? (userProfile?.weekly_training_goal || 4) : (userProfile?.weekly_training_goal || 4) * 4}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground flex-1">Pádel</span>
-                  <span className="text-xs font-medium text-foreground tabular-nums">
-                    {periodStats.padelCompleted}/{periodStats.padelTotal}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground flex-1">Profesional</span>
-                  <span className="text-xs font-medium text-foreground tabular-nums">
-                    {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
-                  </span>
-                </div>
-              </div>
-            </ProgressStatsBlocked>
-          </div>
+          <SummaryContent 
+            radarData={radarData}
+            periodStats={periodStats}
+            summaryPeriod={summaryPeriod}
+            weeklyGoal={userProfile?.weekly_training_goal || 4}
+          />
         </div>
       </div>
 
