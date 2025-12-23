@@ -35,7 +35,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { PlanSheet } from "@/components/subscription/PlanSheet";
-import { useSubscription, PLANS, formatPlanPrice } from "@/hooks/useSubscription";
+import { useSubscription, PLANS } from "@/hooks/useSubscription";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 

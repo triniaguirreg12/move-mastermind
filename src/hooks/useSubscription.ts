@@ -22,7 +22,8 @@ export interface PlanInfo {
   id: SubscriptionPlan;
   name: string;
   duration: number; // months
-  price: number; // CLP
+  priceCLP: number; // CLP price for Mercado Pago
+  priceUSD: number; // USD price for PayPal
   description: string;
   recommended?: boolean;
   mercadoPagoPlanId: string;
@@ -34,7 +35,8 @@ export const PLANS: PlanInfo[] = [
     id: "globo",
     name: "Globo",
     duration: 1,
-    price: 9990,
+    priceCLP: 9990,
+    priceUSD: 9.99,
     description: "Acceso a rutinas y seguimiento básico.",
     mercadoPagoPlanId: "b22f44baf6ed4d939e1b8a467a56d366",
     paypalPlanId: "P-0DL48557TX0626019NFFIRZY",
@@ -43,7 +45,8 @@ export const PLANS: PlanInfo[] = [
     id: "volea",
     name: "Volea",
     duration: 3,
-    price: 24990,
+    priceCLP: 24990,
+    priceUSD: 24.99,
     description: "Todo lo básico + programas personalizados.",
     recommended: true,
     mercadoPagoPlanId: "26d91c01c3e345568c151687544ef259",
@@ -53,7 +56,8 @@ export const PLANS: PlanInfo[] = [
     id: "bandeja",
     name: "Bandeja",
     duration: 6,
-    price: 44990,
+    priceCLP: 44990,
+    priceUSD: 44.99,
     description: "Todo Volea + acceso a profesionales.",
     mercadoPagoPlanId: "7919786f7aba4e5ead0e738e4c993c6b",
     paypalPlanId: "P-3K237677GD934415TNFFITVY",
@@ -62,7 +66,8 @@ export const PLANS: PlanInfo[] = [
     id: "smash",
     name: "Smash",
     duration: 12,
-    price: 79990,
+    priceCLP: 79990,
+    priceUSD: 79.99,
     description: "Acceso ilimitado a todo + sesiones 1:1.",
     mercadoPagoPlanId: "928092a26833480cb601e3369cf6985a",
     paypalPlanId: "P-3WJ85705M23567813NFFIUKQ",
@@ -80,6 +85,17 @@ export function getPlanIds(plan: SubscriptionPlan): { mercadoPagoPlanId: string;
     mercadoPagoPlanId: planInfo?.mercadoPagoPlanId ?? "",
     paypalPlanId: planInfo?.paypalPlanId ?? "",
   };
+}
+
+export function getPlanPrice(plan: PlanInfo, currency: "CLP" | "USD"): number {
+  return currency === "CLP" ? plan.priceCLP : plan.priceUSD;
+}
+
+export function getPlanMonthlyPrice(plan: PlanInfo, currency: "CLP" | "USD"): number {
+  const price = getPlanPrice(plan, currency);
+  return currency === "CLP" 
+    ? Math.round(price / plan.duration)
+    : Math.round((price / plan.duration) * 100) / 100;
 }
 
 export function useSubscription() {
@@ -320,18 +336,6 @@ export function useMarkPastDue() {
       queryClient.invalidateQueries({ queryKey: ["subscription"] });
     },
   });
-}
-
-export function formatPlanPrice(price: number): string {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
-export function getPlanMonthlyPrice(plan: PlanInfo): number {
-  return Math.round(plan.price / plan.duration);
 }
 
 export function formatSubscriptionStatus(status: SubscriptionStatus): string {

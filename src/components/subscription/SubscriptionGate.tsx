@@ -1,6 +1,7 @@
-import { useHasActiveSubscription, PLANS, formatPlanPrice, getPlanMonthlyPrice, type SubscriptionPlan } from "@/hooks/useSubscription";
+import { useHasActiveSubscription, PLANS, getPlanMonthlyPrice, getPlanPrice, type SubscriptionPlan } from "@/hooks/useSubscription";
 import { useCreateSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
+import { usePaymentGateway, formatPrice } from "@/hooks/usePaymentGateway";
 import { Button } from "@/components/ui/button";
 import { Lock, Crown, Check, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,7 @@ export function SubscriptionBlockingScreen({
 }: SubscriptionBlockingScreenProps) {
   const navigate = useNavigate();
   const createSubscription = useCreateSubscription();
+  const { gateway, currency, isChile } = usePaymentGateway();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
 
@@ -59,7 +61,7 @@ export function SubscriptionBlockingScreen({
 
     setSelectedPlan(planId);
     try {
-      await createSubscription.mutateAsync({ plan: planId });
+      await createSubscription.mutateAsync({ plan: planId, provider: gateway });
       toast({
         title: "¡Suscripción activada!",
         description: "Ya tienes acceso completo a Just MUV.",
@@ -113,13 +115,19 @@ export function SubscriptionBlockingScreen({
           </div>
         ) : (
           <>
+            {/* Payment method indicator */}
+            <div className="text-center text-sm text-muted-foreground mb-4">
+              Pago con {isChile ? "Mercado Pago" : "PayPal"} • Precios en {currency}
+            </div>
+            
             <h2 className="text-sm font-medium text-muted-foreground mb-4">
               Elige tu plan
             </h2>
             
             <div className="space-y-3">
               {PLANS.map((plan) => {
-                const monthlyPrice = getPlanMonthlyPrice(plan);
+                const monthlyPrice = getPlanMonthlyPrice(plan, currency);
+                const totalPrice = getPlanPrice(plan, currency);
                 
                 return (
                   <div
@@ -153,11 +161,11 @@ export function SubscriptionBlockingScreen({
                       
                       <div className="text-right shrink-0">
                         <p className="text-lg font-bold text-primary">
-                          {formatPlanPrice(monthlyPrice)}/mes
+                          {formatPrice(monthlyPrice, currency)}/mes
                         </p>
                         {plan.duration > 1 && (
                           <p className="text-xs text-muted-foreground">
-                            {formatPlanPrice(plan.price)} total
+                            {formatPrice(totalPrice, currency)} total
                           </p>
                         )}
                       </div>
@@ -174,7 +182,7 @@ export function SubscriptionBlockingScreen({
                       ) : (
                         <>
                           <Check className="w-4 h-4 mr-2" />
-                          Seleccionar
+                          Suscribirme
                         </>
                       )}
                     </Button>
