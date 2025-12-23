@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Lock, UserPlus, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRoutine } from "@/hooks/useRoutines";
 import { useWorkoutExecution } from "@/hooks/useWorkoutExecution";
-import { useAuth } from "@/hooks/useAuth";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { WorkoutCountdown } from "@/components/workout/WorkoutCountdown";
 import { WorkoutExercise } from "@/components/workout/WorkoutExercise";
 import { WorkoutRest } from "@/components/workout/WorkoutRest";
 import { WorkoutComplete } from "@/components/workout/WorkoutComplete";
+import { useAuth } from "@/hooks/useAuth";
 // Audio context singleton for sounds - configured to mix with external music
 let audioContextInstance: AudioContext | null = null;
 
@@ -84,6 +85,7 @@ export default function RutinaEjecucion() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
+  const { level: accessLevel, isGuest, canAccessFullContent, isLoading: accessLoading } = useUserAccess();
   const { data: routine, isLoading, error } = useRoutine(id);
   const { data: userProfile } = useUserProfile();
   const { data: activeProgram } = useActiveProgram();
@@ -245,10 +247,61 @@ export default function RutinaEjecucion() {
   }, [workoutStarted, currentStep?.type, start]);
 
   // Loading state
-  if (isLoading) {
+  if (isLoading || accessLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Block guests - must register
+  if (isGuest) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+          <UserPlus className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-xl font-semibold text-foreground mb-2 text-center">
+          Crea tu cuenta para entrenar
+        </h1>
+        <p className="text-muted-foreground text-center mb-6">
+          Regístrate gratis para acceder a las rutinas de entrenamiento.
+        </p>
+        <div className="flex flex-col gap-2 w-full max-w-xs">
+          <Button onClick={() => navigate("/login", { state: { mode: "signup" } })}>
+            Crear cuenta
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/login")}>
+            Iniciar sesión
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Block registered users without subscription
+  if (!canAccessFullContent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mb-4">
+          <Lock className="w-8 h-8 text-warning" />
+        </div>
+        <h1 className="text-xl font-semibold text-foreground mb-2 text-center">
+          Suscríbete para entrenar
+        </h1>
+        <p className="text-muted-foreground text-center mb-6">
+          Necesitas una suscripción activa para ejecutar rutinas completas.
+        </p>
+        <div className="flex flex-col gap-2 w-full max-w-xs">
+          <Button onClick={() => navigate("/configuracion")}>
+            <CreditCard className="w-4 h-4 mr-2" />
+            Ver planes
+          </Button>
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            Volver
+          </Button>
+        </div>
       </div>
     );
   }

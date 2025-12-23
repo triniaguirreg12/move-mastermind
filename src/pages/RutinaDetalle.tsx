@@ -18,10 +18,10 @@ import { useRoutine, calcularDuracionTotal } from "@/hooks/useRoutines";
 import { ScheduleRoutineModal } from "@/components/rutina/ScheduleRoutineModal";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 import { useActiveProgram } from "@/hooks/useActiveProgram";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { AuthPromptModal } from "@/components/auth/AuthPromptModal";
-
+import { useUserAccess } from "@/hooks/useUserAccess";
+import { ExerciseLockedOverlay } from "@/components/subscription/ExerciseLockedOverlay";
+import { GuestBlockingModal } from "@/components/subscription/GuestBlockingModal";
+import { PlanSheet } from "@/components/subscription/PlanSheet";
 // Padel ball SVG component
 function PadelBall({ filled, size = "md" }: { filled: boolean; size?: "sm" | "md" }) {
   const dimensions = size === "sm" ? 12 : 16;
@@ -82,25 +82,33 @@ interface ExerciseItemProps {
     tips: string | null;
   };
   exerciseIndex: number;
-  isAuthenticated: boolean;
+  accessLevel: "guest" | "registered" | "subscribed";
   onAuthRequired: () => void;
+  onSubscribeRequired: () => void;
 }
 
-function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired }: ExerciseItemProps) {
+function ExerciseItem({ exercise, exerciseIndex, accessLevel, onAuthRequired, onSubscribeRequired }: ExerciseItemProps) {
   const [showPreview, setShowPreview] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Guest users can only preview first 2 exercises (index 0 and 1)
-  const canPreview = isAuthenticated || exerciseIndex < 2;
+  // Determine if this exercise is accessible based on access level
+  // - Subscribed: all exercises accessible
+  // - Registered: only first 2 exercises (index 0 and 1) are fully accessible
+  // - Guest: only first 2 exercises accessible (but with auth prompt)
+  const isLocked = accessLevel !== "subscribed" && exerciseIndex >= 2;
+  const canPreview = accessLevel === "subscribed" || exerciseIndex < 2;
 
   const handleClick = () => {
-    if (!canPreview) {
+    if (accessLevel === "guest" && exerciseIndex >= 2) {
       onAuthRequired();
+      return;
+    }
+    if (isLocked) {
+      onSubscribeRequired();
       return;
     }
     setShowPreview(true);
   };
-
   const handleClose = () => {
     setShowPreview(false);
   };
@@ -112,11 +120,16 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
   };
 
   return (
-    <>
+    <div className="relative">
+      {isLocked && <ExerciseLockedOverlay onSubscribe={onSubscribeRequired} />}
       <button
         type="button"
-        className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 hover:border-primary/30 transition-all cursor-pointer w-full text-left"
+        className={cn(
+          "flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/30 transition-all w-full text-left",
+          isLocked ? "opacity-60" : "hover:border-primary/30 cursor-pointer"
+        )}
         onClick={handleClick}
+        disabled={isLocked}
       >
         {/* Thumbnail */}
         <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted shrink-0">
@@ -132,10 +145,14 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
           {exercise.nombre}
         </span>
 
-        {/* Tap hint */}
-        <span className="text-[10px] text-muted-foreground">
-          Toca para ver
-        </span>
+        {/* Tap hint or lock icon */}
+        {isLocked ? (
+          <Lock className="w-4 h-4 text-muted-foreground" />
+        ) : (
+          <span className="text-[10px] text-muted-foreground">
+            Toca para ver
+          </span>
+        )}
       </button>
 
       {/* Preview Modal */}
@@ -201,7 +218,7 @@ function ExerciseItem({ exercise, exerciseIndex, isAuthenticated, onAuthRequired
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -239,7 +256,8 @@ export default function RutinaDetalle() {
   const [activeTab, setActiveTab] = useState("rutina");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isProgram, setIsProgram] = useState<boolean | null>(null);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
   const [showLockedPopup, setShowLockedPopup] = useState(false);
   const [showSwitchProgramDialog, setShowSwitchProgramDialog] = useState(false);
   
@@ -249,8 +267,8 @@ export default function RutinaDetalle() {
   const programNameFromNav = (location.state as { programName?: string })?.programName;
   const comesFromProgram = fromPath?.startsWith('/programa/');
   
-  const { user } = useAuth();
-  const isAuthenticated = !!user;
+  const { level: accessLevel, isGuest, canAccessFullContent } = useUserAccess();
+  
   
   const { data: routine, isLoading, error } = useRoutine(id);
   const { data: activeProgram } = useActiveProgram();
@@ -487,8 +505,9 @@ export default function RutinaDetalle() {
                             key={blockExercise.id} 
                             exercise={exercise}
                             exerciseIndex={globalExerciseIndex}
-                            isAuthenticated={isAuthenticated}
-                            onAuthRequired={() => setShowAuthPrompt(true)}
+                            accessLevel={accessLevel}
+                            onAuthRequired={() => setShowGuestModal(true)}
+                            onSubscribeRequired={() => setShowPlanSheet(true)}
                           />
                         );
                       })}
@@ -576,12 +595,18 @@ export default function RutinaDetalle() {
         routineCoverUrl={routine.portada_url || undefined}
       />
 
-      {/* Auth Prompt Modal */}
-      <AuthPromptModal
-        isOpen={showAuthPrompt}
-        onClose={() => setShowAuthPrompt(false)}
+      {/* Guest Blocking Modal */}
+      <GuestBlockingModal
+        isOpen={showGuestModal}
+        onClose={() => setShowGuestModal(false)}
         title="Desbloquea todos los ejercicios"
         description="Regístrate para ver los detalles de todos los ejercicios, incluyendo videos y tips de ejecución."
+      />
+
+      {/* Plan Sheet for subscription */}
+      <PlanSheet
+        open={showPlanSheet}
+        onOpenChange={setShowPlanSheet}
       />
 
       {/* Locked Routine Popup */}
