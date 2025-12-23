@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Users, PlayCircle, Check } from "lucide-react";
+import { ArrowLeft, Star, Calendar, Loader2, AlertCircle, Dumbbell, ChevronRight, Users, PlayCircle, Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -20,8 +20,10 @@ import { useUserProgramEnrollment, useEnrollInProgram, useScheduleProgramRoutine
 import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { RoutineRadarChart } from "@/components/rutina/RoutineRadarChart";
 import { ScheduleProgramModal } from "@/components/programa/ScheduleProgramModal";
-import { useAuth } from "@/hooks/useAuth";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { useScheduledRoutines } from "@/hooks/useScheduledRoutines";
+import { GuestBlockingModal } from "@/components/subscription/GuestBlockingModal";
+import { PlanSheet } from "@/components/subscription/PlanSheet";
 import { toast } from "sonner";
 
 // Padel ball SVG component for difficulty
@@ -81,7 +83,10 @@ export default function ProgramaDetalle() {
   const [activeTab, setActiveTab] = useState("programa");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [showSwitchProgramDialog, setShowSwitchProgramDialog] = useState(false);
-  const { user } = useAuth();
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
+  
+  const { level: accessLevel, isGuest, canAccessFullContent } = useUserAccess();
   
   const { data: program, isLoading, error } = useProgram(id);
   const { data: enrollment } = useUserProgramEnrollment(id);
@@ -575,9 +580,13 @@ export default function ProgramaDetalle() {
               <Button
                 className="w-full h-12 text-sm font-semibold"
                 onClick={() => {
-                  if (!user) {
-                    toast.error("Debes iniciar sesión para comenzar un programa");
-                    navigate("/login");
+                  if (isGuest) {
+                    setShowGuestModal(true);
+                    return;
+                  }
+                  
+                  if (!canAccessFullContent) {
+                    setShowPlanSheet(true);
                     return;
                   }
                   
@@ -667,6 +676,20 @@ export default function ProgramaDetalle() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Guest Blocking Modal */}
+      <GuestBlockingModal
+        isOpen={showGuestModal}
+        onClose={() => setShowGuestModal(false)}
+        title="Crea tu cuenta para comenzar"
+        description="Regístrate gratis para explorar programas. Con una suscripción tendrás acceso completo."
+      />
+
+      {/* Plan Sheet for subscription */}
+      <PlanSheet
+        open={showPlanSheet}
+        onOpenChange={setShowPlanSheet}
+      />
     </div>
   );
 }
