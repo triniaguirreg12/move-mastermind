@@ -171,10 +171,13 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
                             Plan {plan.name}
                           </h5>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {plan.description}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {plan.duration} {plan.duration === 1 ? "mes" : "meses"}
+                            {plan.description.split("**").map((part, i) => 
+                              i % 2 === 1 ? (
+                                <span key={i} className="font-semibold text-foreground">{part}</span>
+                              ) : (
+                                <span key={i}>{part}</span>
+                              )
+                            )}
                           </p>
                         </div>
                         
