@@ -90,7 +90,7 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
             <SheetTitle className="text-xl font-bold">Plan actual</SheetTitle>
           </SheetHeader>
 
-          <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-120px)] pb-8">
+          <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-120px)] pb-8 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {/* Current Status Card */}
             <div className="bg-card rounded-2xl p-6 text-center border border-border/50">
               <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-2xl flex items-center justify-center">
