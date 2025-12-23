@@ -525,6 +525,39 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           admin_notes: string | null
@@ -678,7 +711,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      subscription_plan: "globo" | "volea" | "bandeja" | "smash"
+      subscription_status: "activa" | "cancelada" | "vencida" | "pago_fallido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -805,6 +839,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_plan: ["globo", "volea", "bandeja", "smash"],
+      subscription_status: ["activa", "cancelada", "vencida", "pago_fallido"],
+    },
   },
 } as const

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, User, Target, CreditCard, LogOut, Moon, Bell, ChevronLeft, Check, MessageCircle, AlertTriangle, Lightbulb } from "lucide-react";
+import { ChevronRight, User, Target, CreditCard, LogOut, Moon, Bell, ChevronLeft, Check, MessageCircle, AlertTriangle, Lightbulb, Crown } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -34,6 +34,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { PlanSheet } from "@/components/subscription/PlanSheet";
+import { useSubscription, PLANS, formatPlanPrice } from "@/hooks/useSubscription";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface SettingsItemProps {
   icon: React.ReactNode;
@@ -61,6 +65,44 @@ function SettingsItem({ icon, label, description, onClick, trailing }: SettingsI
       {trailing || (
         <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
       )}
+    </button>
+  );
+}
+
+function PlanSettingsItem({ onOpenPlan }: { onOpenPlan: () => void }) {
+  const { data: subscription, isLoading } = useSubscription();
+  
+  const hasActiveSubscription = subscription && 
+    (subscription.status === "activa" || subscription.status === "cancelada") &&
+    new Date(subscription.end_date) > new Date();
+
+  const currentPlan = subscription ? PLANS.find(p => p.id === subscription.plan) : null;
+  
+  let description = "Activa tu suscripción";
+  
+  if (hasActiveSubscription && currentPlan) {
+    const status = subscription.status === "cancelada" ? "Cancelado" : "Activo";
+    const endDate = format(new Date(subscription.end_date), "d MMM yyyy", { locale: es });
+    description = `${currentPlan.name} · ${status} hasta ${endDate}`;
+  }
+
+  return (
+    <button
+      onClick={onOpenPlan}
+      className="w-full flex items-center gap-4 p-4 rounded-xl bg-card/50 hover:bg-card transition-all duration-200 group"
+    >
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+        hasActiveSubscription ? "bg-primary/20 text-primary" : "bg-secondary text-accent"
+      }`}>
+        {hasActiveSubscription ? <Crown className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+      </div>
+      <div className="flex-1 text-left">
+        <p className="font-medium text-foreground">Plan actual</p>
+        <p className={`text-sm ${hasActiveSubscription ? "text-primary" : "text-muted-foreground"}`}>
+          {isLoading ? "Cargando..." : description}
+        </p>
+      </div>
+      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
     </button>
   );
 }
@@ -250,12 +292,7 @@ const Configuracion = () => {
                 setShowGoalSheet(true);
               }}
             />
-            <SettingsItem
-              icon={<CreditCard className="w-5 h-5" />}
-              label="Plan actual"
-              description="Revisa tu suscripción activa"
-              onClick={() => setShowPlanSheet(true)}
-            />
+            <PlanSettingsItem onOpenPlan={() => setShowPlanSheet(true)} />
           </div>
         </section>
 
@@ -492,66 +529,7 @@ const Configuracion = () => {
       </Sheet>
 
       {/* Plan Sheet */}
-      <Sheet open={showPlanSheet} onOpenChange={setShowPlanSheet}>
-        <SheetContent side="right" className="w-full sm:max-w-md">
-          <SheetHeader className="mb-6">
-            <SheetTitle className="text-xl font-display">Plan actual</SheetTitle>
-          </SheetHeader>
-          
-          <div className="space-y-6">
-            {/* No active plan state */}
-            <div className="p-6 rounded-xl bg-secondary/50 border border-border text-center">
-              <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-semibold text-foreground mb-2">No tienes un plan activo</h3>
-              <p className="text-sm text-muted-foreground">
-                Elige un plan para desbloquear todas las funcionalidades de Just MUV.
-              </p>
-            </div>
-            
-            {/* Available plans */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground">Planes disponibles</h4>
-              
-              <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-foreground">Plan Básico</h3>
-                  <span className="text-primary font-bold">$9.990/mes</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Acceso a rutinas funcionales y seguimiento básico.
-                </p>
-              </div>
-              
-              <div className="p-4 rounded-xl bg-card border-2 border-primary relative hover:bg-card/80 transition-colors cursor-pointer">
-                <div className="absolute -top-2 left-4 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full">
-                  Recomendado
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-foreground">Plan Pro</h3>
-                  <span className="text-primary font-bold">$19.990/mes</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Todo lo básico + programas personalizados y acceso a profesionales.
-                </p>
-              </div>
-              
-              <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-foreground">Plan Premium</h3>
-                  <span className="text-primary font-bold">$29.990/mes</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Acceso ilimitado a todo + sesiones 1:1 con kinesiólogos.
-                </p>
-              </div>
-            </div>
-            
-            <p className="text-xs text-center text-muted-foreground">
-              Los planes se pueden cancelar en cualquier momento.
-            </p>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <PlanSheet open={showPlanSheet} onOpenChange={setShowPlanSheet} />
 
       {/* Support Sheet */}
       <Sheet open={showSupportSheet} onOpenChange={setShowSupportSheet}>
