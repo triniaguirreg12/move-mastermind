@@ -25,6 +25,8 @@ export interface PlanInfo {
   price: number; // CLP
   description: string;
   recommended?: boolean;
+  mercadoPagoPlanId: string;
+  paypalPlanId: string;
 }
 
 export const PLANS: PlanInfo[] = [
@@ -34,6 +36,8 @@ export const PLANS: PlanInfo[] = [
     duration: 1,
     price: 9990,
     description: "Acceso a rutinas y seguimiento básico.",
+    mercadoPagoPlanId: "b22f44baf6ed4d939e1b8a467a56d366",
+    paypalPlanId: "P-0DL48557TX0626019NFFIRZY",
   },
   {
     id: "volea",
@@ -42,6 +46,8 @@ export const PLANS: PlanInfo[] = [
     price: 24990,
     description: "Todo lo básico + programas personalizados.",
     recommended: true,
+    mercadoPagoPlanId: "26d91c01c3e345568c151687544ef259",
+    paypalPlanId: "P-3TV44115M64157340NFFIS7A",
   },
   {
     id: "bandeja",
@@ -49,6 +55,8 @@ export const PLANS: PlanInfo[] = [
     duration: 6,
     price: 44990,
     description: "Todo Volea + acceso a profesionales.",
+    mercadoPagoPlanId: "7919786f7aba4e5ead0e738e4c993c6b",
+    paypalPlanId: "P-3K237677GD934415TNFFITVY",
   },
   {
     id: "smash",
@@ -56,12 +64,22 @@ export const PLANS: PlanInfo[] = [
     duration: 12,
     price: 79990,
     description: "Acceso ilimitado a todo + sesiones 1:1.",
+    mercadoPagoPlanId: "928092a26833480cb601e3369cf6985a",
+    paypalPlanId: "P-3WJ85705M23567813NFFIUKQ",
   },
 ];
 
 export function getPlanDuration(plan: SubscriptionPlan): number {
   const planInfo = PLANS.find(p => p.id === plan);
   return planInfo?.duration ?? 1;
+}
+
+export function getPlanIds(plan: SubscriptionPlan): { mercadoPagoPlanId: string; paypalPlanId: string } {
+  const planInfo = PLANS.find(p => p.id === plan);
+  return {
+    mercadoPagoPlanId: planInfo?.mercadoPagoPlanId ?? "",
+    paypalPlanId: planInfo?.paypalPlanId ?? "",
+  };
 }
 
 export function useSubscription() {
