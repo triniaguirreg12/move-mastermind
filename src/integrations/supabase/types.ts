@@ -527,30 +527,36 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          auto_renew: boolean
           created_at: string
           end_date: string
           id: string
           plan: Database["public"]["Enums"]["subscription_plan"]
+          provider: string
           start_date: string
           status: Database["public"]["Enums"]["subscription_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_renew?: boolean
           created_at?: string
           end_date: string
           id?: string
           plan: Database["public"]["Enums"]["subscription_plan"]
+          provider?: string
           start_date?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_renew?: boolean
           created_at?: string
           end_date?: string
           id?: string
           plan?: Database["public"]["Enums"]["subscription_plan"]
+          provider?: string
           start_date?: string
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
@@ -708,7 +714,71 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cancel_subscription: {
+        Args: { _user_id: string }
+        Returns: {
+          auto_renew: boolean
+          created_at: string
+          end_date: string
+          id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider: string
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      expire_old_subscriptions: { Args: never; Returns: undefined }
+      has_valid_subscription: { Args: { _user_id: string }; Returns: boolean }
+      mark_subscription_past_due: {
+        Args: { _user_id: string }
+        Returns: {
+          auto_renew: boolean
+          created_at: string
+          end_date: string
+          id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider: string
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      renew_subscription: {
+        Args: { _user_id: string }
+        Returns: {
+          auto_renew: boolean
+          created_at: string
+          end_date: string
+          id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider: string
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       subscription_plan: "globo" | "volea" | "bandeja" | "smash"

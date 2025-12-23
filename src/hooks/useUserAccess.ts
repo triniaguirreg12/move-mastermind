@@ -13,11 +13,35 @@ interface UserAccess {
   canAccessFullContent: boolean;
   canAccessPreview: boolean;
   requiresAuth: boolean;
+  // Subscription details
+  isPastDue: boolean;
+  isExpired: boolean;
+  autoRenew: boolean;
 }
 
+/**
+ * Hook to determine user's access level based on authentication and subscription status
+ * 
+ * Access levels:
+ * - guest: Not logged in
+ * - registered: Logged in but no active subscription
+ * - subscribed: Logged in with active subscription (status = 'activa' OR 'cancelada' with end_date >= today)
+ * 
+ * Rules:
+ * - User is 'subscribed' only if status = 'activa' AND end_date >= today
+ * - Cancelled users keep access until end_date (hasAccess = true, but level = 'subscribed')
+ * - Past due users (failed payment) have NO access
+ * - Expired users have NO access
+ */
 export const useUserAccess = (): UserAccess => {
   const { user, loading: authLoading } = useAuth();
-  const { hasAccess, isLoading: subscriptionLoading } = useHasActiveSubscription();
+  const { 
+    hasAccess, 
+    isLoading: subscriptionLoading,
+    isPastDue,
+    isExpired,
+    autoRenew,
+  } = useHasActiveSubscription();
 
   const isLoading = authLoading || (user ? subscriptionLoading : false);
 
@@ -36,5 +60,9 @@ export const useUserAccess = (): UserAccess => {
     canAccessFullContent: level === "subscribed",
     canAccessPreview: level === "registered" || level === "subscribed",
     requiresAuth: level === "guest",
+    // Subscription details
+    isPastDue: !!isPastDue,
+    isExpired: !!isExpired,
+    autoRenew: !!autoRenew,
   };
 };

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type SubscriptionPlan = "globo" | "volea" | "bandeja" | "smash";
 export type SubscriptionStatus = "activa" | "cancelada" | "vencida" | "pago_fallido";
+export type SubscriptionProvider = "paypal" | "mercado_pago";
 
 export interface Subscription {
   id: string;
@@ -11,6 +12,8 @@ export interface Subscription {
   status: SubscriptionStatus;
   start_date: string;
   end_date: string;
+  auto_renew: boolean;
+  provider: SubscriptionProvider;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +59,11 @@ export const PLANS: PlanInfo[] = [
   },
 ];
 
+export function getPlanDuration(plan: SubscriptionPlan): number {
+  const planInfo = PLANS.find(p => p.id === plan);
+  return planInfo?.duration ?? 1;
+}
+
 export function useSubscription() {
   return useQuery({
     queryKey: ["subscription"],
@@ -75,22 +83,48 @@ export function useSubscription() {
   });
 }
 
+/**
+ * Determines if user has active subscription access
+ * Rules:
+ * - isActive: status = 'activa' AND end_date >= today
+ * - hasAccess: (status = 'activa' OR status = 'cancelada') AND end_date >= today
+ * - Users with 'cancelada' keep access until end_date
+ * - Users with 'pago_fallido' or 'vencida' have NO access
+ */
 export function useHasActiveSubscription() {
   const { data: subscription, isLoading } = useSubscription();
   
+  const now = new Date();
+  const endDate = subscription ? new Date(subscription.end_date) : null;
+  const isNotExpired = endDate ? endDate >= now : false;
+  
+  // User has active subscription (auto-renew enabled, actively paying)
   const isActive = subscription && 
     subscription.status === "activa" && 
-    new Date(subscription.end_date) > new Date();
+    isNotExpired;
   
+  // User has access to premium content
+  // Active users OR cancelled users (until their end_date)
   const hasAccess = subscription && 
     (subscription.status === "activa" || subscription.status === "cancelada") &&
-    new Date(subscription.end_date) > new Date();
+    isNotExpired;
+
+  // User's payment failed - blocked from premium
+  const isPastDue = subscription?.status === "pago_fallido";
+  
+  // Subscription has expired
+  const isExpired = subscription?.status === "vencida" || 
+    (subscription && !isNotExpired);
 
   return {
     subscription,
     isActive: !!isActive,
     hasAccess: !!hasAccess,
+    isPastDue,
+    isExpired,
     isLoading,
+    autoRenew: subscription?.auto_renew ?? false,
+    provider: subscription?.provider,
   };
 }
 
@@ -98,7 +132,13 @@ export function useCreateSubscription() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (plan: SubscriptionPlan) => {
+    mutationFn: async ({ 
+      plan, 
+      provider = "mercado_pago" 
+    }: { 
+      plan: SubscriptionPlan; 
+      provider?: SubscriptionProvider;
+    }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
@@ -112,7 +152,7 @@ export function useCreateSubscription() {
       // Check if user already has a subscription
       const { data: existing } = await supabase
         .from("subscriptions")
-        .select("id")
+        .select("id, status")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -125,6 +165,8 @@ export function useCreateSubscription() {
             status: "activa",
             start_date: startDate.toISOString(),
             end_date: endDate.toISOString(),
+            auto_renew: true,
+            provider,
           })
           .eq("id", existing.id)
           .select()
@@ -143,6 +185,8 @@ export function useCreateSubscription() {
           status: "activa",
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
+          auto_renew: true,
+          provider,
         })
         .select()
         .single();
@@ -156,7 +200,37 @@ export function useCreateSubscription() {
   });
 }
 
+/**
+ * Cancel subscription - sets auto_renew to false
+ * User keeps access until end_date
+ */
 export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Use the database function for consistent behavior
+      const { data, error } = await supabase.rpc('cancel_subscription', {
+        _user_id: user.id
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription"] });
+    },
+  });
+}
+
+/**
+ * Reactivate subscription - sets auto_renew back to true
+ * Only works if subscription is still active
+ */
+export function useReactivateSubscription() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -166,10 +240,60 @@ export function useCancelSubscription() {
 
       const { data, error } = await supabase
         .from("subscriptions")
-        .update({ status: "cancelada" })
+        .update({ auto_renew: true })
         .eq("user_id", user.id)
+        .eq("status", "activa")
         .select()
         .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription"] });
+    },
+  });
+}
+
+/**
+ * Handle successful renewal from payment gateway
+ * Extends end_date by plan duration
+ */
+export function useRenewSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.rpc('renew_subscription', {
+        _user_id: user.id
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription"] });
+    },
+  });
+}
+
+/**
+ * Mark subscription as past_due when payment fails
+ */
+export function useMarkPastDue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.rpc('mark_subscription_past_due', {
+        _user_id: user.id
+      });
 
       if (error) throw error;
       return data;
@@ -190,4 +314,14 @@ export function formatPlanPrice(price: number): string {
 
 export function getPlanMonthlyPrice(plan: PlanInfo): number {
   return Math.round(plan.price / plan.duration);
+}
+
+export function formatSubscriptionStatus(status: SubscriptionStatus): string {
+  const statusMap: Record<SubscriptionStatus, string> = {
+    activa: "Activa",
+    cancelada: "Cancelada (acceso hasta fin de período)",
+    vencida: "Vencida",
+    pago_fallido: "Pago fallido",
+  };
+  return statusMap[status] || status;
 }
