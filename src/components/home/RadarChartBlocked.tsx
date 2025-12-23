@@ -50,7 +50,7 @@ export function RadarChartBlocked({ data, className, onSubscribe }: RadarChartBl
   return (
     <div className={cn("relative", className)}>
       {/* Blurred/faded chart */}
-      <div className="opacity-40 pointer-events-none">
+      <div className="opacity-60 pointer-events-none">
         <RadarChart data={displayData} />
       </div>
 
