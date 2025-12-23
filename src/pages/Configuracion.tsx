@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronRight, User, Target, CreditCard, LogOut, Moon, Bell, ChevronLeft, Check, MessageCircle, AlertTriangle, Lightbulb, Crown } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,7 @@ interface UserProfile {
 
 const Configuracion = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -131,6 +132,20 @@ const Configuracion = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
+  const planSectionRef = useRef<HTMLDivElement>(null);
+
+  // Handle scroll to plan-actual from navigation state
+  useEffect(() => {
+    const state = location.state as { scrollTo?: string } | null;
+    if (state?.scrollTo === "plan-actual") {
+      // Small delay to ensure the component is rendered
+      setTimeout(() => {
+        setShowPlanSheet(true);
+      }, 100);
+      // Clear the state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchProfile = async () => {
