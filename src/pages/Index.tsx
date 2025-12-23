@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { Calendar, Settings, ChevronRight, Info, Trophy, Cone, Video, ExternalLink, CheckCircle, Trash2, Puzzle } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
-import { RadarChart } from "@/components/home/RadarChart";
+import { RadarChartBlocked } from "@/components/home/RadarChartBlocked";
+import { ProgressStatsBlocked } from "@/components/home/ProgressStatsBlocked";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAptitudesRadar } from "@/hooks/useAptitudesRadar";
 import { useActiveProgram } from "@/hooks/useActiveProgram";
 import { useUserAllPrograms } from "@/hooks/useUserAllPrograms";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { ActiveProgramSection, NoProgramCTA } from "@/components/home/ActiveProgramSection";
 import { YourProgramsSection } from "@/components/home/YourProgramsSection";
 import { FavoritesSection } from "@/components/home/FavoritesSection";
@@ -281,35 +283,37 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Radar Chart */}
+            {/* Radar Chart - blocked for non-subscribed */}
             <div className="w-40 h-40 flex-shrink-0">
-              <RadarChart data={radarData} />
+              <RadarChartBlocked data={radarData} />
             </div>
 
-            {/* Legend with dynamic stats */}
-            <div className="flex-1 space-y-2 pr-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
-                <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
-                <span className="text-xs font-medium text-foreground tabular-nums">
-                  {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? (userProfile?.weekly_training_goal || 4) : (userProfile?.weekly_training_goal || 4) * 4}
-                </span>
+            {/* Legend with dynamic stats - blocked for non-subscribed */}
+            <ProgressStatsBlocked className="flex-1">
+              <div className="space-y-2 pr-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-activity-training flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground flex-1">Entrenamiento</span>
+                  <span className="text-xs font-medium text-foreground tabular-nums">
+                    {periodStats.entrenamiento}/{summaryPeriod === "semanal" ? (userProfile?.weekly_training_goal || 4) : (userProfile?.weekly_training_goal || 4) * 4}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground flex-1">Pádel</span>
+                  <span className="text-xs font-medium text-foreground tabular-nums">
+                    {periodStats.padelCompleted}/{periodStats.padelTotal}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground flex-1">Profesional</span>
+                  <span className="text-xs font-medium text-foreground tabular-nums">
+                    {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-activity-padel flex-shrink-0" />
-                <span className="text-xs text-muted-foreground flex-1">Pádel</span>
-                <span className="text-xs font-medium text-foreground tabular-nums">
-                  {periodStats.padelCompleted}/{periodStats.padelTotal}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-activity-custom flex-shrink-0" />
-                <span className="text-xs text-muted-foreground flex-1">Profesional</span>
-                <span className="text-xs font-medium text-foreground tabular-nums">
-                  {periodStats.profesionalCompleted}/{periodStats.profesionalTotal}
-                </span>
-              </div>
-            </div>
+            </ProgressStatsBlocked>
           </div>
         </div>
       </div>
