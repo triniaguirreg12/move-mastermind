@@ -45,7 +45,7 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     setSelectedPlan(planId);
     try {
-      await createSubscription.mutateAsync(planId);
+      await createSubscription.mutateAsync({ plan: planId });
       toast({
         title: "¡Suscripción activada!",
         description: "Ya tienes acceso completo a Just MUV.",

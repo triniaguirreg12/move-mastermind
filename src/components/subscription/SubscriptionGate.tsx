@@ -59,7 +59,7 @@ export function SubscriptionBlockingScreen({
 
     setSelectedPlan(planId);
     try {
-      await createSubscription.mutateAsync(planId);
+      await createSubscription.mutateAsync({ plan: planId });
       toast({
         title: "¡Suscripción activada!",
         description: "Ya tienes acceso completo a Just MUV.",
