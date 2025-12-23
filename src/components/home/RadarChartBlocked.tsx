@@ -49,13 +49,13 @@ export function RadarChartBlocked({ data, className, onSubscribe }: RadarChartBl
 
   return (
     <div className={cn("relative", className)}>
-      {/* Blurred/faded chart */}
-      <div className="opacity-75 pointer-events-none">
+      {/* Faded chart */}
+      <div className="opacity-90 pointer-events-none">
         <RadarChart data={displayData} />
       </div>
 
       {/* Overlay */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/60 backdrop-blur-[2px] rounded-lg">
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/40 rounded-lg">
         <div className={cn(
           "w-10 h-10 rounded-full flex items-center justify-center mb-2",
           isGuest ? "bg-primary/10" : "bg-warning/10"
@@ -70,7 +70,7 @@ export function RadarChartBlocked({ data, className, onSubscribe }: RadarChartBl
         <p className="text-[10px] text-center text-muted-foreground px-4 mb-2 leading-tight">
           {isGuest 
             ? "Regístrate para ver tu progreso" 
-            : "Tu mapa se moverá con tus entrenamientos"
+            : "Tu mapa se modificará con tus entrenamientos"
           }
         </p>
         
