@@ -569,12 +569,19 @@ export default function RutinaDetalle() {
             type="button"
             className="w-full h-12 text-sm font-semibold"
             onClick={() => {
+              // Guest: show registration modal
+              if (isGuest) {
+                setShowGuestModal(true);
+                return;
+              }
+              
               if (isLockedInProgram) {
                 setShowLockedPopup(true);
               } else if (hasConflictingActiveProgram && comesFromProgram) {
                 // User has an active program but is trying to start a routine from a different program
                 setShowSwitchProgramDialog(true);
               } else {
+                // Both registered and subscribed can navigate - paywall handled in RutinaEjecucion
                 navigate(`/rutina/${routine.id}/ejecucion`, { state: { from: location.pathname } });
               }
             }}
