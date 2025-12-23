@@ -19,7 +19,7 @@ export function ProgressStatsBlocked({ children, className }: ProgressStatsBlock
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative flex items-center justify-center", className)}>
       {/* Blurred content */}
       <div className="opacity-30 pointer-events-none select-none">
         {children}
