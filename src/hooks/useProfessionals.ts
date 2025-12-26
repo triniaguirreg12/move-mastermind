@@ -119,7 +119,7 @@ export function useBookedSlots(professionalId: string | undefined, dates: string
         .select('appointment_date, start_time, end_time')
         .eq('professional_id', professionalId)
         .in('appointment_date', dates)
-        .in('status', ['pending_payment', 'confirmed']);
+        .in('status', ['pending_payment', 'confirmed', 'completed']);
       
       if (error) throw error;
       return data;
