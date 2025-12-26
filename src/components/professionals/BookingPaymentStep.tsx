@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, ChevronLeft, CreditCard, Calendar, Clock, User, Loader2, CheckCircle } from "lucide-react";
 import { format, addMinutes, parse } from "date-fns";
 import { es } from "date-fns/locale";
-import { Professional, useConfirmAppointmentPayment } from "@/hooks/useProfessionals";
+import { Professional } from "@/hooks/useProfessionals";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface BookingPaymentStepProps {
@@ -12,12 +13,15 @@ interface BookingPaymentStepProps {
   appointmentId: string;
   selectedDate: Date;
   selectedTime: string;
-  onComplete: () => void;
+  onComplete: (meetLink?: string) => void;
   onBack: () => void;
   onClose: () => void;
 }
 
-const APPOINTMENT_PRICE = 35000; // CLP
+const PRICE_CLP = 45000;
+const PRICE_USD = 50;
+
+type PaymentMethod = 'mercadopago' | 'paypal';
 
 export function BookingPaymentStep({ 
   professional, 
@@ -29,39 +33,90 @@ export function BookingPaymentStep({
   onClose 
 }: BookingPaymentStepProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const confirmPayment = useConfirmAppointmentPayment();
+  const [userCountry, setUserCountry] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
+
+  // Detect user country for payment routing
+  useEffect(() => {
+    const detectCountry = async () => {
+      try {
+        // First try to get from user profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('country')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profile?.country) {
+            setUserCountry(profile.country);
+            setPaymentMethod(profile.country.toLowerCase() === 'chile' ? 'mercadopago' : 'paypal');
+            return;
+          }
+        }
+        
+        // Fallback to geolocation API
+        const response = await fetch('https://ipapi.co/json/');
+        if (response.ok) {
+          const data = await response.json();
+          setUserCountry(data.country_name);
+          setPaymentMethod(data.country_code === 'CL' ? 'mercadopago' : 'paypal');
+        }
+      } catch (error) {
+        console.error('Error detecting country:', error);
+        // Default to MercadoPago
+        setPaymentMethod('mercadopago');
+      }
+    };
+    
+    detectCountry();
+  }, []);
 
   const handlePayment = async () => {
     setIsProcessing(true);
     
-    // Simulate payment processing (in production, integrate with Stripe or payment provider)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
     try {
-      await confirmPayment.mutateAsync({
-        appointmentId,
-        paymentId: `PAY_${Date.now()}`,
-        professionalId: professional.id,
-        professionalName: professional.name,
-        appointmentDate: format(selectedDate, 'yyyy-MM-dd'),
-        startTime: selectedTime + ':00',
-        endTime: format(addMinutes(parse(selectedTime, 'HH:mm', new Date()), 60), 'HH:mm:ss')
-      });
+      const successUrl = `${window.location.origin}/profesionales?payment=success&appointment=${appointmentId}`;
+      const cancelUrl = `${window.location.origin}/profesionales?payment=cancelled&appointment=${appointmentId}`;
       
-      toast.success("¡Pago realizado con éxito!");
-      onComplete();
+      const { data, error } = await supabase.functions.invoke('appointment-payment-create', {
+        body: {
+          appointmentId,
+          paymentMethod,
+          successUrl,
+          cancelUrl
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.paymentUrl) {
+        // Redirect to payment provider
+        window.location.href = data.paymentUrl;
+      } else {
+        throw new Error('No payment URL received');
+      }
     } catch (error) {
+      console.error('Payment error:', error);
       toast.error("Error al procesar el pago. Inténtalo de nuevo.");
       setIsProcessing(false);
     }
   };
 
-  const formatPrice = (amount: number) => {
+  const formatPrice = () => {
+    if (paymentMethod === 'paypal') {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0
+      }).format(PRICE_USD);
+    }
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(PRICE_CLP);
   };
 
   return (
@@ -117,7 +172,7 @@ export function BookingPaymentStep({
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Sesión personalizada</span>
               <span className="font-display font-bold text-xl text-foreground">
-                {formatPrice(APPOINTMENT_PRICE)}
+                {formatPrice()}
               </span>
             </div>
           </div>
@@ -129,14 +184,31 @@ export function BookingPaymentStep({
           
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-white" />
+              {paymentMethod === 'mercadopago' ? (
+                <span className="text-white font-bold text-xs">MP</span>
+              ) : (
+                <span className="text-white font-bold text-xs">PP</span>
+              )}
             </div>
             <div className="flex-1">
-              <p className="font-medium text-foreground">Tarjeta de crédito o débito</p>
-              <p className="text-sm text-muted-foreground">Pago seguro con cifrado SSL</p>
+              <p className="font-medium text-foreground">
+                {paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'PayPal'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {paymentMethod === 'mercadopago' 
+                  ? 'Tarjeta, transferencia o efectivo'
+                  : 'Tarjeta o cuenta PayPal'
+                }
+              </p>
             </div>
             <CheckCircle className="w-5 h-5 text-success" />
           </div>
+
+          {userCountry && (
+            <p className="text-xs text-muted-foreground text-center">
+              Detectamos que estás en {userCountry}
+            </p>
+          )}
         </Card>
 
         {/* Security Note */}
@@ -146,7 +218,9 @@ export function BookingPaymentStep({
           </div>
           <div className="text-sm">
             <p className="font-medium text-foreground">Pago 100% seguro</p>
-            <p className="text-muted-foreground">Tu información de pago está protegida con los más altos estándares de seguridad.</p>
+            <p className="text-muted-foreground">
+              La cita se confirma automáticamente al completar el pago. Recibirás un link de Google Meet para tu sesión.
+            </p>
           </div>
         </div>
       </div>
@@ -162,12 +236,12 @@ export function BookingPaymentStep({
           {isProcessing ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Procesando pago...
+              Redirigiendo al pago...
             </>
           ) : (
             <>
               <CreditCard className="w-5 h-5" />
-              Pagar y confirmar cita
+              Pagar {formatPrice()}
             </>
           )}
         </Button>
