@@ -1,15 +1,18 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle, Calendar, Clock, User, Home, CalendarDays } from "lucide-react";
+import { CheckCircle, Calendar, Clock, User, Home, CalendarDays, Video, ExternalLink, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Professional } from "@/hooks/useProfessionals";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 interface BookingConfirmationProps {
   professional: Professional;
   selectedDate: Date;
   selectedTime: string;
+  appointmentId?: string;
   onClose: () => void;
 }
 
@@ -17,9 +20,59 @@ export function BookingConfirmation({
   professional, 
   selectedDate, 
   selectedTime,
+  appointmentId,
   onClose 
 }: BookingConfirmationProps) {
   const navigate = useNavigate();
+  const [meetLink, setMeetLink] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch Meet link from appointment
+  useEffect(() => {
+    const fetchMeetLink = async () => {
+      if (!appointmentId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Poll for Meet link (it's created async by webhook)
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const poll = async () => {
+          const { data, error } = await supabase
+            .from('appointments')
+            .select('google_meet_link, status')
+            .eq('id', appointmentId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching appointment:', error);
+            setIsLoading(false);
+            return;
+          }
+
+          if (data?.google_meet_link) {
+            setMeetLink(data.google_meet_link);
+            setIsLoading(false);
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(poll, 2000); // Poll every 2 seconds
+          } else {
+            setIsLoading(false);
+          }
+        };
+
+        poll();
+      } catch (error) {
+        console.error('Error fetching meet link:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchMeetLink();
+  }, [appointmentId]);
 
   const handleGoHome = () => {
     onClose();
@@ -29,6 +82,12 @@ export function BookingConfirmation({
   const handleGoCalendar = () => {
     onClose();
     navigate('/calendario');
+  };
+
+  const handleOpenMeet = () => {
+    if (meetLink) {
+      window.open(meetLink, '_blank');
+    }
   };
 
   return (
@@ -46,7 +105,7 @@ export function BookingConfirmation({
             ¡Tu cita quedó agendada!
           </h2>
           <p className="text-muted-foreground">
-            Te hemos enviado un correo con los detalles de tu sesión.
+            El pago fue exitoso. Te hemos enviado un correo con los detalles de tu sesión.
           </p>
         </div>
 
@@ -73,6 +132,37 @@ export function BookingConfirmation({
                 <Clock className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">{selectedTime} hrs</span>
               </div>
+            </div>
+
+            {/* Google Meet Link */}
+            <div className="pt-3 border-t border-border">
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Generando link de Google Meet...</span>
+                </div>
+              ) : meetLink ? (
+                <button 
+                  onClick={handleOpenMeet}
+                  className="w-full flex items-center justify-between p-3 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Video className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-foreground text-sm">Google Meet</p>
+                      <p className="text-xs text-muted-foreground">Enlace para tu sesión virtual</p>
+                    </div>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-primary group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 py-3 text-muted-foreground">
+                  <Video className="w-4 h-4" />
+                  <span className="text-sm">El enlace de Meet será enviado a tu correo</span>
+                </div>
+              )}
             </div>
           </Card>
         </div>

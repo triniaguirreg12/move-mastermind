@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.paypal-webhook]
 verify_jwt = false
+
+[functions.create-google-meet]
+verify_jwt = true
+
+[functions.appointment-payment-create]
+verify_jwt = true
+
+[functions.appointment-payment-webhook]
+verify_jwt = false

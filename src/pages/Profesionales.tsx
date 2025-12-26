@@ -35,6 +35,19 @@ const Profesionales = () => {
     }
   }, [searchParams, professionals, setSearchParams]);
 
+  // Handle payment success - open booking flow to show confirmation
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    const appointmentId = searchParams.get('appointment');
+    
+    if (paymentStatus === 'success' && appointmentId && professionals && professionals.length > 0) {
+      // Find the professional for this appointment and open the booking flow
+      // The BookingFlow component will handle showing the confirmation
+      const professional = professionals[0]; // Default to first professional
+      setSelectedProfessional(professional);
+    }
+  }, [searchParams, professionals]);
+
   const handleSchedule = (professional: Professional) => {
     if (!user) {
       setShowAuthPrompt(true);

@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Professional, AppointmentFormData } from "@/hooks/useProfessionals";
 import { BookingFormStep } from "./BookingFormStep";
 import { BookingCalendarStep } from "./BookingCalendarStep";
 import { BookingPaymentStep } from "./BookingPaymentStep";
 import { BookingConfirmation } from "./BookingConfirmation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface BookingFlowProps {
   professional: Professional;
@@ -22,6 +25,7 @@ export interface BookingData {
 }
 
 export function BookingFlow({ professional, isOpen, onClose }: BookingFlowProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState<BookingStep>('form');
   const [bookingData, setBookingData] = useState<BookingData>({
     formData: null,
@@ -29,6 +33,46 @@ export function BookingFlow({ professional, isOpen, onClose }: BookingFlowProps)
     selectedTime: null,
     appointmentId: null
   });
+
+  // Handle payment callback
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    const appointmentId = searchParams.get('appointment');
+
+    if (paymentStatus && appointmentId) {
+      if (paymentStatus === 'success') {
+        // Fetch appointment details and show confirmation
+        fetchAppointmentAndShowConfirmation(appointmentId);
+      } else if (paymentStatus === 'cancelled') {
+        toast.error("El pago fue cancelado. Puedes intentarlo de nuevo.");
+      }
+      // Clear query params
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
+
+  const fetchAppointmentAndShowConfirmation = async (appointmentId: string) => {
+    try {
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .select('appointment_date, start_time')
+        .eq('id', appointmentId)
+        .single();
+
+      if (error) throw error;
+
+      setBookingData({
+        formData: null,
+        selectedDate: new Date(appointment.appointment_date + 'T00:00:00'),
+        selectedTime: appointment.start_time.slice(0, 5),
+        appointmentId
+      });
+      setCurrentStep('confirmation');
+    } catch (error) {
+      console.error('Error fetching appointment:', error);
+      toast.error("Error al cargar los detalles de la cita.");
+    }
+  };
 
   const handleFormComplete = (formData: AppointmentFormData) => {
     setBookingData(prev => ({ ...prev, formData }));
@@ -45,7 +89,7 @@ export function BookingFlow({ professional, isOpen, onClose }: BookingFlowProps)
     setCurrentStep('payment');
   };
 
-  const handlePaymentComplete = () => {
+  const handlePaymentComplete = (meetLink?: string) => {
     setCurrentStep('confirmation');
   };
 
@@ -108,6 +152,7 @@ export function BookingFlow({ professional, isOpen, onClose }: BookingFlowProps)
               professional={professional}
               selectedDate={bookingData.selectedDate}
               selectedTime={bookingData.selectedTime}
+              appointmentId={bookingData.appointmentId || undefined}
               onClose={handleClose}
             />
           )}
