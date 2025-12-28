@@ -487,37 +487,3 @@ export function useUpdateAppointmentMeetLink() {
     }
   });
 }
-
-// Admin: Cancel appointment
-export function useCancelAppointment() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (appointmentId: string) => {
-      const { data: appointment, error } = await supabase
-        .from('appointments')
-        .update({ status: 'cancelled' })
-        .eq('id', appointmentId)
-        .select('user_id, appointment_date')
-        .single();
-      
-      if (error) throw error;
-      
-      // Update corresponding user_event
-      if (appointment) {
-        await supabase
-          .from('user_events')
-          .update({ status: 'cancelled' })
-          .eq('user_id', appointment.user_id)
-          .eq('event_date', appointment.appointment_date)
-          .eq('type', 'profesional');
-      }
-      
-      return appointment;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['user-events'] });
-    }
-  });
-}
