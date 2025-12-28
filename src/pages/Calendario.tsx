@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle, Puzzle, Lock, UserPlus, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Video, ExternalLink, CheckCircle, Puzzle, Lock, UserPlus, Calendar as CalendarIcon, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -428,6 +428,18 @@ const Calendario = () => {
                       </a>
                     )}
                   </div>
+                  {event.type === "profesional" && event.status === "scheduled" && event.metadata?.professional_id && event.metadata?.appointment_id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/profesionales?reschedule=${event.metadata?.professional_id}&appointment=${event.metadata?.appointment_id}`);
+                      }}
+                      className="p-2 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                      title="Reprogramar cita"
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                    </button>
+                  )}
                   {event.type === "padel" && event.status === "scheduled" && (
                     <button
                       onClick={(e) => {
