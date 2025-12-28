@@ -370,14 +370,21 @@ export function useAllAppointments() {
       
       if (error) throw error;
       
+      if (!data || data.length === 0) return [];
+      
       // Fetch user profiles for all appointments
       const userIds = [...new Set(data.map(a => a.user_id))];
-      const { data: profiles } = await supabase
+      
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, name, email')
         .in('user_id', userIds);
       
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+      }
+      
+      const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
       
       return data.map(apt => ({
         ...apt,
