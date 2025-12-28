@@ -40,6 +40,8 @@ import { AppointmentDetailDrawer } from "./AppointmentDetailDrawer";
 interface UserProfile {
   name: string;
   email: string;
+  sex?: string;
+  birth_date?: string;
 }
 
 export const AppointmentsTab = () => {
@@ -144,7 +146,7 @@ export const AppointmentsTab = () => {
     // Fetch user profile
     const { data: profile } = await supabase
       .from("profiles")
-      .select("name, email")
+      .select("name, email, sex, birth_date")
       .eq("user_id", appointment.user_id)
       .maybeSingle();
 

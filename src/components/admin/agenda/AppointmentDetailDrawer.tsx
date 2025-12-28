@@ -37,7 +37,7 @@ import {
   CreditCard,
   Ban,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import {
@@ -50,6 +50,8 @@ import {
 interface UserProfile {
   name: string;
   email: string;
+  sex?: string;
+  birth_date?: string;
 }
 
 interface AppointmentDetailDrawerProps {
@@ -269,6 +271,20 @@ export const AppointmentDetailDrawer = ({
                     <span className="text-sm text-foreground">
                       {userProfile.email}
                     </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {userProfile.sex && (
+                      <span>
+                        Sexo: <span className="text-foreground">{userProfile.sex}</span>
+                      </span>
+                    )}
+                    {userProfile.birth_date && (
+                      <span>
+                        Edad: <span className="text-foreground">
+                          {differenceInYears(new Date(), parseISO(userProfile.birth_date))} años
+                        </span>
+                      </span>
+                    )}
                   </div>
                 </div>
               ) : (

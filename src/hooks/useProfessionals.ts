@@ -377,7 +377,7 @@ export function useAllAppointments() {
       
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, name, email')
+        .select('user_id, name, email, sex, birth_date')
         .in('user_id', userIds);
       
       if (profileError) {
