@@ -33,8 +33,8 @@ interface CreateMeetRequest {
   description?: string;
 }
 
-// Create JWT for Google API authentication with domain-wide delegation
-async function createJWT(serviceAccount: GoogleServiceAccountKey, targetEmail: string): Promise<string> {
+// Create JWT for Google API authentication (service account, no impersonation)
+async function createJWT(serviceAccount: GoogleServiceAccountKey): Promise<string> {
   const header = {
     alg: "RS256",
     typ: "JWT"
@@ -43,7 +43,7 @@ async function createJWT(serviceAccount: GoogleServiceAccountKey, targetEmail: s
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: serviceAccount.client_email,
-    sub: targetEmail, // Impersonate the target user (Just Muv calendar owner)
+    // NO 'sub' field - service account authenticates as itself
     scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events",
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
@@ -83,9 +83,9 @@ async function createJWT(serviceAccount: GoogleServiceAccountKey, targetEmail: s
   return `${signatureInput}.${signatureB64}`;
 }
 
-// Get access token using JWT
-async function getAccessToken(serviceAccount: GoogleServiceAccountKey, targetEmail: string): Promise<string> {
-  const jwt = await createJWT(serviceAccount, targetEmail);
+// Get access token using JWT (service account credentials)
+async function getAccessToken(serviceAccount: GoogleServiceAccountKey): Promise<string> {
+  const jwt = await createJWT(serviceAccount);
   
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -240,9 +240,9 @@ serve(async (req) => {
     const body: CreateMeetRequest = await req.json();
     console.log("Create Meet request:", JSON.stringify(body, null, 2));
 
-    // Get access token (impersonating the Just Muv calendar owner)
-    const accessToken = await getAccessToken(serviceAccount, JUST_MUV_CALENDAR_ID);
-    console.log("Got access token for Just Muv calendar");
+    // Get access token (service account authenticates as itself, uses shared calendar permissions)
+    const accessToken = await getAccessToken(serviceAccount);
+    console.log("Got access token for service account (accessing shared Just Muv calendar)");
 
     // Format date/time for Google Calendar (ISO 8601 with timezone offset for Chile)
     const startDateTime = `${body.appointmentDate}T${body.startTime}:00-03:00`;
