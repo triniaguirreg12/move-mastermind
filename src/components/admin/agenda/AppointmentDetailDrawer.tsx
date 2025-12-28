@@ -36,6 +36,7 @@ import {
   RefreshCw,
   CreditCard,
   Ban,
+  CalendarClock,
 } from "lucide-react";
 import { format, parseISO, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
@@ -43,9 +44,11 @@ import { toast } from "sonner";
 import {
   useUpdateAppointmentStatus,
   useCancelAppointment,
+  useAllProfessionals,
   type Appointment,
   type Professional,
 } from "@/hooks/useProfessionals";
+import { RescheduleFlow } from "@/components/professionals/RescheduleFlow";
 
 interface UserProfile {
   name: string;
@@ -73,9 +76,11 @@ export const AppointmentDetailDrawer = ({
     "completed" | "missed" | "cancel" | null
   >(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
 
   const updateStatus = useUpdateAppointmentStatus();
   const cancelAppointment = useCancelAppointment();
+  const { data: professionals = [] } = useAllProfessionals();
 
   if (!appointment) return null;
 
@@ -472,6 +477,15 @@ export const AppointmentDetailDrawer = ({
                     </Button>
                   </div>
                   <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/50 text-primary hover:bg-primary/10"
+                    onClick={() => setShowReschedule(true)}
+                    disabled={isUpdating}
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Reprogramar Cita
+                  </Button>
+                  <Button
                     variant="destructive"
                     className="w-full gap-2"
                     onClick={() => setConfirmDialog("cancel")}
@@ -514,6 +528,19 @@ export const AppointmentDetailDrawer = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reschedule Flow */}
+      {professional && (
+        <RescheduleFlow
+          professional={professional}
+          appointmentId={appointment.id}
+          isOpen={showReschedule}
+          onClose={() => {
+            setShowReschedule(false);
+            onClose();
+          }}
+        />
+      )}
     </>
   );
 };
