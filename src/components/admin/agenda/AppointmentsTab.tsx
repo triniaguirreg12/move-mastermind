@@ -292,9 +292,14 @@ export const AppointmentsTab = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm truncate max-w-[150px]">
-                          {apt.consultation_goal}
-                        </span>
+                        <div>
+                          <span className="text-sm font-medium">
+                            {(apt as any).user_profile?.name || "Usuario"}
+                          </span>
+                          <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                            {(apt as any).user_profile?.email || ""}
+                          </p>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
