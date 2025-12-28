@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { X, ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react";
-import { format, addDays, isBefore, startOfDay, getDay, parse, addMinutes } from "date-fns";
+import { format, addDays, isBefore, startOfDay, getDay, parse, addMinutes, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Professional, 
@@ -13,6 +13,7 @@ import {
   useCreateAppointment,
   useGoogleCalendarBusySlots
 } from "@/hooks/useProfessionals";
+import { useFutureAvailabilityExceptions } from "@/hooks/useAvailability";
 import { toast } from "sonner";
 
 interface BookingCalendarStepProps {
@@ -34,6 +35,7 @@ export function BookingCalendarStep({
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
   const { data: availability = [] } = useProfessionalAvailability(professional.id);
+  const { data: exceptions = [] } = useFutureAvailabilityExceptions(professional.id);
   const createAppointment = useCreateAppointment();
   
   // Get dates for the next 30 days to check booked slots
@@ -67,14 +69,31 @@ export function BookingCalendarStep({
     return availability.map(a => a.day_of_week);
   }, [availability]);
 
-  // Disable dates that are not available or in the past
+  // Check if a date has an all-day exception
+  const isDateBlocked = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return exceptions.some(ex => ex.exception_date === dateStr && ex.all_day);
+  };
+
+  // Get partial exceptions for a specific date
+  const getDateExceptions = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return exceptions.filter(ex => ex.exception_date === dateStr && !ex.all_day);
+  };
+
+  // Disable dates that are not available, in the past, or blocked
   const disabledDates = (date: Date) => {
     const today = startOfDay(new Date());
     if (isBefore(date, today)) return true;
     
     // Check if this day of week has availability
     const dayOfWeek = getDay(date);
-    return !availableDaysOfWeek.includes(dayOfWeek);
+    if (!availableDaysOfWeek.includes(dayOfWeek)) return true;
+    
+    // Check if this specific date has an all-day block
+    if (isDateBlocked(date)) return true;
+    
+    return false;
   };
 
   // Helper function to check if a time slot overlaps with a busy period
@@ -94,6 +113,31 @@ export function BookingCalendarStep({
       
       // Check if there's any overlap
       return slotStartMins < busyEndMins && slotEndMins > busyStartMins;
+    });
+  };
+
+  // Check if a time slot is blocked by a partial exception
+  const isSlotBlockedByException = (slotTime: string, slotDuration: number): boolean => {
+    if (!selectedDate) return false;
+    
+    const dateExceptions = getDateExceptions(selectedDate);
+    if (dateExceptions.length === 0) return false;
+    
+    const slotStart = parse(slotTime, 'HH:mm', new Date());
+    const slotEnd = addMinutes(slotStart, slotDuration);
+    const slotStartMins = slotStart.getHours() * 60 + slotStart.getMinutes();
+    const slotEndMins = slotEnd.getHours() * 60 + slotEnd.getMinutes();
+    
+    return dateExceptions.some(ex => {
+      if (!ex.start_time || !ex.end_time) return false;
+      
+      const exStart = parse(ex.start_time.substring(0, 5), 'HH:mm', new Date());
+      const exEnd = parse(ex.end_time.substring(0, 5), 'HH:mm', new Date());
+      const exStartMins = exStart.getHours() * 60 + exStart.getMinutes();
+      const exEndMins = exEnd.getHours() * 60 + exEnd.getMinutes();
+      
+      // Check if there's any overlap
+      return slotStartMins < exEndMins && slotEndMins > exStartMins;
     });
   };
 
@@ -126,15 +170,17 @@ export function BookingCalendarStep({
       .filter(b => b.appointment_date === dateStr)
       .map(b => b.start_time.substring(0, 5));
     
-    // Filter out database booked slots AND Google Calendar busy slots
+    // Filter out database booked slots, Google Calendar busy slots, AND exception blocks
     return slots.filter(slot => {
       // Check if booked in database
       if (bookedTimes.includes(slot)) return false;
       // Check if busy in Google Calendar
       if (isSlotBusy(slot, slotDuration)) return false;
+      // Check if blocked by exception
+      if (isSlotBlockedByException(slot, slotDuration)) return false;
       return true;
     });
-  }, [selectedDate, availability, bookedSlots, googleBusySlots]);
+  }, [selectedDate, availability, bookedSlots, googleBusySlots, exceptions]);
 
   const handleContinue = async () => {
     if (!selectedDate || !selectedTime) return;

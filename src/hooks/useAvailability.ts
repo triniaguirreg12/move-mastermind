@@ -89,6 +89,29 @@ export const useAvailabilityExceptions = (professionalId: string | undefined) =>
   });
 };
 
+// Hook for public use - fetches future exceptions only
+export const useFutureAvailabilityExceptions = (professionalId: string | undefined) => {
+  return useQuery({
+    queryKey: ["future-availability-exceptions", professionalId],
+    queryFn: async () => {
+      if (!professionalId) return [];
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from("availability_exceptions")
+        .select("*")
+        .eq("professional_id", professionalId)
+        .gte("exception_date", today)
+        .order("exception_date");
+
+      if (error) throw error;
+      return data as AvailabilityException[];
+    },
+    enabled: !!professionalId,
+  });
+};
+
 export const useSaveAvailabilitySettings = () => {
   const queryClient = useQueryClient();
 

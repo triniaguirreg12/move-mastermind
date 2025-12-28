@@ -141,7 +141,7 @@ export function useBookedSlots(professionalId: string | undefined, dates: string
       if (!professionalId || dates.length === 0) return [];
       const { data, error } = await supabase
         .from('appointments')
-        .select('appointment_date, start_time, end_time')
+        .select('id, appointment_date, start_time, end_time')
         .eq('professional_id', professionalId)
         .in('appointment_date', dates)
         .in('status', ['pending_payment', 'confirmed', 'completed']);
