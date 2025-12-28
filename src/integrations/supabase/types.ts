@@ -19,13 +19,16 @@ export type Database = {
           additional_comments: string | null
           appointment_date: string
           available_equipment: string[] | null
+          calendar_event_id: string | null
           consultation_goal: string
           created_at: string
+          currency: string
           end_time: string
           google_meet_link: string | null
           id: string
           injury_condition: string
           payment_id: string | null
+          payment_provider: string | null
           payment_status: string
           price_amount: number
           professional_id: string
@@ -38,13 +41,16 @@ export type Database = {
           additional_comments?: string | null
           appointment_date: string
           available_equipment?: string[] | null
+          calendar_event_id?: string | null
           consultation_goal: string
           created_at?: string
+          currency?: string
           end_time: string
           google_meet_link?: string | null
           id?: string
           injury_condition: string
           payment_id?: string | null
+          payment_provider?: string | null
           payment_status?: string
           price_amount?: number
           professional_id: string
@@ -57,13 +63,16 @@ export type Database = {
           additional_comments?: string | null
           appointment_date?: string
           available_equipment?: string[] | null
+          calendar_event_id?: string | null
           consultation_goal?: string
           created_at?: string
+          currency?: string
           end_time?: string
           google_meet_link?: string | null
           id?: string
           injury_condition?: string
           payment_id?: string | null
+          payment_provider?: string | null
           payment_status?: string
           price_amount?: number
           professional_id?: string
@@ -77,6 +86,85 @@ export type Database = {
             foreignKeyName: "appointments_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_exceptions: {
+        Row: {
+          all_day: boolean
+          created_at: string
+          end_time: string | null
+          exception_date: string
+          id: string
+          professional_id: string
+          reason: string | null
+          start_time: string | null
+        }
+        Insert: {
+          all_day?: boolean
+          created_at?: string
+          end_time?: string | null
+          exception_date: string
+          id?: string
+          professional_id: string
+          reason?: string | null
+          start_time?: string | null
+        }
+        Update: {
+          all_day?: boolean
+          created_at?: string
+          end_time?: string | null
+          exception_date?: string
+          id?: string
+          professional_id?: string
+          reason?: string | null
+          start_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_exceptions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_settings: {
+        Row: {
+          buffer_minutes: number
+          created_at: string
+          id: string
+          meeting_duration_minutes: number
+          professional_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          buffer_minutes?: number
+          created_at?: string
+          id?: string
+          meeting_duration_minutes?: number
+          professional_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          buffer_minutes?: number
+          created_at?: string
+          id?: string
+          meeting_duration_minutes?: number
+          professional_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_settings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
             referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
