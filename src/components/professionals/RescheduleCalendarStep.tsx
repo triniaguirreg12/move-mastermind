@@ -9,8 +9,10 @@ import {
   Professional, 
   useProfessionalAvailability,
   useBookedSlots,
-  useRescheduleAppointment
+  useRescheduleAppointment,
+  useGoogleCalendarBusySlots
 } from "@/hooks/useProfessionals";
+import { useFutureAvailabilityExceptions } from "@/hooks/useAvailability";
 import { toast } from "sonner";
 
 interface RescheduleCalendarStepProps {
@@ -30,6 +32,7 @@ export function RescheduleCalendarStep({
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
   const { data: availability = [] } = useProfessionalAvailability(professional.id);
+  const { data: exceptions = [] } = useFutureAvailabilityExceptions(professional.id);
   const rescheduleAppointment = useRescheduleAppointment();
   
   // Get dates for the next 30 days to check booked slots
@@ -44,19 +47,93 @@ export function RescheduleCalendarStep({
   
   const { data: bookedSlots = [] } = useBookedSlots(professional.id, dateRange);
 
+  // Get day availability for selected date to determine time range
+  const selectedDayAvailability = useMemo(() => {
+    if (!selectedDate || availability.length === 0) return null;
+    const dayOfWeek = getDay(selectedDate);
+    return availability.find(a => a.day_of_week === dayOfWeek) || null;
+  }, [selectedDate, availability]);
+
+  // Check Google Calendar busy slots for the selected date
+  const { data: googleBusySlots = [], isLoading: isLoadingGoogleSlots } = useGoogleCalendarBusySlots(
+    selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
+    selectedDayAvailability?.start_time?.substring(0, 5) || '08:00',
+    selectedDayAvailability?.end_time?.substring(0, 5) || '20:00'
+  );
+
   // Get available days of week from availability
   const availableDaysOfWeek = useMemo(() => {
     return availability.map(a => a.day_of_week);
   }, [availability]);
 
-  // Disable dates that are not available or in the past
+  // Check if a date has an all-day exception
+  const isDateBlocked = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return exceptions.some(ex => ex.exception_date === dateStr && ex.all_day);
+  };
+
+  // Get partial exceptions for a specific date
+  const getDateExceptions = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return exceptions.filter(ex => ex.exception_date === dateStr && !ex.all_day);
+  };
+
+  // Disable dates that are not available, in the past, or blocked
   const disabledDates = (date: Date) => {
     const today = startOfDay(new Date());
     if (isBefore(date, today)) return true;
     
     // Check if this day of week has availability
     const dayOfWeek = getDay(date);
-    return !availableDaysOfWeek.includes(dayOfWeek);
+    if (!availableDaysOfWeek.includes(dayOfWeek)) return true;
+    
+    // Check if this specific date has an all-day block
+    if (isDateBlocked(date)) return true;
+    
+    return false;
+  };
+
+  // Helper function to check if a time slot overlaps with a busy period
+  const isSlotBusy = (slotTime: string, slotDuration: number): boolean => {
+    if (!googleBusySlots || googleBusySlots.length === 0) return false;
+    
+    const slotStart = parse(slotTime, 'HH:mm', new Date());
+    const slotEnd = addMinutes(slotStart, slotDuration);
+    const slotStartMins = slotStart.getHours() * 60 + slotStart.getMinutes();
+    const slotEndMins = slotEnd.getHours() * 60 + slotEnd.getMinutes();
+    
+    return googleBusySlots.some((busy: { start: string; end: string }) => {
+      const busyStart = parse(busy.start, 'HH:mm', new Date());
+      const busyEnd = parse(busy.end, 'HH:mm', new Date());
+      const busyStartMins = busyStart.getHours() * 60 + busyStart.getMinutes();
+      const busyEndMins = busyEnd.getHours() * 60 + busyEnd.getMinutes();
+      
+      return slotStartMins < busyEndMins && slotEndMins > busyStartMins;
+    });
+  };
+
+  // Check if a time slot is blocked by a partial exception
+  const isSlotBlockedByException = (slotTime: string, slotDuration: number): boolean => {
+    if (!selectedDate) return false;
+    
+    const dateExceptions = getDateExceptions(selectedDate);
+    if (dateExceptions.length === 0) return false;
+    
+    const slotStart = parse(slotTime, 'HH:mm', new Date());
+    const slotEnd = addMinutes(slotStart, slotDuration);
+    const slotStartMins = slotStart.getHours() * 60 + slotStart.getMinutes();
+    const slotEndMins = slotEnd.getHours() * 60 + slotEnd.getMinutes();
+    
+    return dateExceptions.some(ex => {
+      if (!ex.start_time || !ex.end_time) return false;
+      
+      const exStart = parse(ex.start_time.substring(0, 5), 'HH:mm', new Date());
+      const exEnd = parse(ex.end_time.substring(0, 5), 'HH:mm', new Date());
+      const exStartMins = exStart.getHours() * 60 + exStart.getMinutes();
+      const exEndMins = exEnd.getHours() * 60 + exEnd.getMinutes();
+      
+      return slotStartMins < exEndMins && slotEndMins > exStartMins;
+    });
   };
 
   // Generate time slots for selected date
@@ -85,11 +162,17 @@ export function RescheduleCalendarStep({
     // Filter out already booked slots (except current appointment)
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const bookedTimes = bookedSlots
-      .filter(b => b.appointment_date === dateStr)
+      .filter(b => b.appointment_date === dateStr && b.id !== appointmentId)
       .map(b => b.start_time.substring(0, 5));
     
-    return slots.filter(slot => !bookedTimes.includes(slot));
-  }, [selectedDate, availability, bookedSlots]);
+    // Filter out database booked slots, Google Calendar busy slots, AND exception blocks
+    return slots.filter(slot => {
+      if (bookedTimes.includes(slot)) return false;
+      if (isSlotBusy(slot, slotDuration)) return false;
+      if (isSlotBlockedByException(slot, slotDuration)) return false;
+      return true;
+    });
+  }, [selectedDate, availability, bookedSlots, googleBusySlots, exceptions, appointmentId]);
 
   const handleReschedule = async () => {
     if (!selectedDate || !selectedTime) return;
@@ -163,7 +246,12 @@ export function RescheduleCalendarStep({
               <span>Horarios disponibles para {format(selectedDate, "d 'de' MMMM", { locale: es })}</span>
             </div>
             
-            {timeSlots.length > 0 ? (
+            {isLoadingGoogleSlots ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Consultando disponibilidad...</span>
+              </div>
+            ) : timeSlots.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {timeSlots.map((time) => (
                   <Badge
