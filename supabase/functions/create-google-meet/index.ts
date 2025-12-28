@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// The Just Muv calendar ID (contacto.justmuv@gmail.com)
+const JUST_MUV_CALENDAR_ID = 'contacto.justmuv@gmail.com';
+
 interface GoogleServiceAccountKey {
   type: string;
   project_id: string;
@@ -30,8 +33,8 @@ interface CreateMeetRequest {
   description?: string;
 }
 
-// Create JWT for Google API authentication
-async function createJWT(serviceAccount: GoogleServiceAccountKey): Promise<string> {
+// Create JWT for Google API authentication with domain-wide delegation
+async function createJWT(serviceAccount: GoogleServiceAccountKey, targetEmail: string): Promise<string> {
   const header = {
     alg: "RS256",
     typ: "JWT"
@@ -40,7 +43,7 @@ async function createJWT(serviceAccount: GoogleServiceAccountKey): Promise<strin
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: serviceAccount.client_email,
-    sub: serviceAccount.client_email,
+    sub: targetEmail, // Impersonate the target user (Just Muv calendar owner)
     scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events",
     aud: "https://oauth2.googleapis.com/token",
     iat: now,
@@ -81,8 +84,8 @@ async function createJWT(serviceAccount: GoogleServiceAccountKey): Promise<strin
 }
 
 // Get access token using JWT
-async function getAccessToken(serviceAccount: GoogleServiceAccountKey): Promise<string> {
-  const jwt = await createJWT(serviceAccount);
+async function getAccessToken(serviceAccount: GoogleServiceAccountKey, targetEmail: string): Promise<string> {
+  const jwt = await createJWT(serviceAccount, targetEmail);
   
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -101,6 +104,48 @@ async function getAccessToken(serviceAccount: GoogleServiceAccountKey): Promise<
 
   const data = await response.json();
   return data.access_token;
+}
+
+// Check if time slot is busy using freebusy API
+async function checkBusy(
+  accessToken: string,
+  calendarId: string,
+  startDateTime: string,
+  endDateTime: string
+): Promise<boolean> {
+  const requestBody = {
+    timeMin: startDateTime,
+    timeMax: endDateTime,
+    timeZone: 'America/Santiago',
+    items: [{ id: calendarId }]
+  };
+
+  console.log("Checking freebusy:", JSON.stringify(requestBody, null, 2));
+
+  const response = await fetch(
+    'https://www.googleapis.com/calendar/v3/freeBusy',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("FreeBusy API error:", error);
+    // If we can't check, proceed anyway but log the error
+    return false;
+  }
+
+  const data = await response.json();
+  const busy = data.calendars?.[calendarId]?.busy || [];
+  console.log("Busy periods found:", busy.length);
+  
+  return busy.length > 0;
 }
 
 // Create Google Calendar event with Meet
@@ -195,18 +240,31 @@ serve(async (req) => {
     const body: CreateMeetRequest = await req.json();
     console.log("Create Meet request:", JSON.stringify(body, null, 2));
 
-    // Get access token
-    const accessToken = await getAccessToken(serviceAccount);
-    console.log("Got access token");
+    // Get access token (impersonating the Just Muv calendar owner)
+    const accessToken = await getAccessToken(serviceAccount, JUST_MUV_CALENDAR_ID);
+    console.log("Got access token for Just Muv calendar");
 
-    // Format date/time for Google Calendar
-    const startDateTime = `${body.appointmentDate}T${body.startTime}:00`;
-    const endDateTime = `${body.appointmentDate}T${body.endTime}:00`;
+    // Format date/time for Google Calendar (ISO 8601 with timezone offset for Chile)
+    const startDateTime = `${body.appointmentDate}T${body.startTime}:00-03:00`;
+    const endDateTime = `${body.appointmentDate}T${body.endTime}:00-03:00`;
 
-    // Create calendar event with Meet
+    // Check if the time slot is busy
+    const isBusy = await checkBusy(accessToken, JUST_MUV_CALENDAR_ID, startDateTime, endDateTime);
+    if (isBusy) {
+      console.log("Time slot is busy, rejecting appointment");
+      return new Response(JSON.stringify({ 
+        error: 'El horario seleccionado ya no está disponible. Por favor elige otro horario.',
+        code: 'SLOT_BUSY'
+      }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Create calendar event with Meet in the Just Muv calendar
     const { meetLink, eventId } = await createCalendarEvent(
       accessToken,
-      serviceAccount.client_email, // Use service account's calendar
+      JUST_MUV_CALENDAR_ID,
       {
         summary: body.summary,
         description: body.description,
