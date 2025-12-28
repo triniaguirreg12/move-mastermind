@@ -355,7 +355,7 @@ export function useCancelAppointment() {
   });
 }
 
-// Admin: Fetch all appointments
+// Admin: Fetch all appointments with user profiles
 export function useAllAppointments() {
   return useQuery({
     queryKey: ['all-appointments'],
@@ -369,7 +369,20 @@ export function useAllAppointments() {
         .order('appointment_date', { ascending: true });
       
       if (error) throw error;
-      return data;
+      
+      // Fetch user profiles for all appointments
+      const userIds = [...new Set(data.map(a => a.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, name, email')
+        .in('user_id', userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      
+      return data.map(apt => ({
+        ...apt,
+        user_profile: profileMap.get(apt.user_id) || null
+      }));
     }
   });
 }
