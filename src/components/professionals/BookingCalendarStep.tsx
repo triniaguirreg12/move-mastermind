@@ -10,7 +10,8 @@ import {
   AppointmentFormData,
   useProfessionalAvailability,
   useBookedSlots,
-  useCreateAppointment
+  useCreateAppointment,
+  useGoogleCalendarBusySlots
 } from "@/hooks/useProfessionals";
 import { toast } from "sonner";
 
@@ -47,6 +48,20 @@ export function BookingCalendarStep({
   
   const { data: bookedSlots = [] } = useBookedSlots(professional.id, dateRange);
 
+  // Get day availability for selected date to determine time range
+  const selectedDayAvailability = useMemo(() => {
+    if (!selectedDate || availability.length === 0) return null;
+    const dayOfWeek = getDay(selectedDate);
+    return availability.find(a => a.day_of_week === dayOfWeek) || null;
+  }, [selectedDate, availability]);
+
+  // Check Google Calendar busy slots for the selected date
+  const { data: googleBusySlots = [], isLoading: isLoadingGoogleSlots } = useGoogleCalendarBusySlots(
+    selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
+    selectedDayAvailability?.start_time?.substring(0, 5) || '08:00',
+    selectedDayAvailability?.end_time?.substring(0, 5) || '20:00'
+  );
+
   // Get available days of week from availability
   const availableDaysOfWeek = useMemo(() => {
     return availability.map(a => a.day_of_week);
@@ -60,6 +75,26 @@ export function BookingCalendarStep({
     // Check if this day of week has availability
     const dayOfWeek = getDay(date);
     return !availableDaysOfWeek.includes(dayOfWeek);
+  };
+
+  // Helper function to check if a time slot overlaps with a busy period
+  const isSlotBusy = (slotTime: string, slotDuration: number): boolean => {
+    if (!googleBusySlots || googleBusySlots.length === 0) return false;
+    
+    const slotStart = parse(slotTime, 'HH:mm', new Date());
+    const slotEnd = addMinutes(slotStart, slotDuration);
+    const slotStartMins = slotStart.getHours() * 60 + slotStart.getMinutes();
+    const slotEndMins = slotEnd.getHours() * 60 + slotEnd.getMinutes();
+    
+    return googleBusySlots.some((busy: { start: string; end: string }) => {
+      const busyStart = parse(busy.start, 'HH:mm', new Date());
+      const busyEnd = parse(busy.end, 'HH:mm', new Date());
+      const busyStartMins = busyStart.getHours() * 60 + busyStart.getMinutes();
+      const busyEndMins = busyEnd.getHours() * 60 + busyEnd.getMinutes();
+      
+      // Check if there's any overlap
+      return slotStartMins < busyEndMins && slotEndMins > busyStartMins;
+    });
   };
 
   // Generate time slots for selected date
@@ -85,14 +120,21 @@ export function BookingCalendarStep({
       currentSlot = slotEndTime;
     }
     
-    // Filter out already booked slots
+    // Filter out already booked slots from database
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const bookedTimes = bookedSlots
       .filter(b => b.appointment_date === dateStr)
       .map(b => b.start_time.substring(0, 5));
     
-    return slots.filter(slot => !bookedTimes.includes(slot));
-  }, [selectedDate, availability, bookedSlots]);
+    // Filter out database booked slots AND Google Calendar busy slots
+    return slots.filter(slot => {
+      // Check if booked in database
+      if (bookedTimes.includes(slot)) return false;
+      // Check if busy in Google Calendar
+      if (isSlotBusy(slot, slotDuration)) return false;
+      return true;
+    });
+  }, [selectedDate, availability, bookedSlots, googleBusySlots]);
 
   const handleContinue = async () => {
     if (!selectedDate || !selectedTime) return;
@@ -167,7 +209,12 @@ export function BookingCalendarStep({
               <span>Horarios disponibles para {format(selectedDate, "d 'de' MMMM", { locale: es })}</span>
             </div>
             
-            {timeSlots.length > 0 ? (
+            {isLoadingGoogleSlots ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Consultando disponibilidad...</span>
+              </div>
+            ) : timeSlots.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {timeSlots.map((time) => (
                   <Badge

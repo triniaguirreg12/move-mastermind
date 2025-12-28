@@ -2,6 +2,31 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+// Hook to check Google Calendar busy slots for a specific date
+export function useGoogleCalendarBusySlots(date: string | undefined, startTime: string, endTime: string) {
+  return useQuery({
+    queryKey: ['google-calendar-busy', date, startTime, endTime],
+    queryFn: async () => {
+      if (!date) return [];
+      
+      const { data, error } = await supabase.functions.invoke('check-calendar-availability', {
+        body: { date, startTime, endTime }
+      });
+      
+      if (error) {
+        console.error('Error checking Google Calendar:', error);
+        return [];
+      }
+      
+      console.log('Google Calendar busy slots:', data);
+      return data.busySlots || [];
+    },
+    enabled: !!date,
+    staleTime: 30000, // Cache for 30 seconds
+    refetchOnWindowFocus: false
+  });
+}
+
 export interface Professional {
   id: string;
   name: string;

@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.appointment-payment-webhook]
 verify_jwt = false
+
+[functions.check-calendar-availability]
+verify_jwt = false
