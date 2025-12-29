@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,17 +8,9 @@ const corsHeaders = {
 interface CreateSubscriptionRequest {
   user_id: string;
   user_email: string;
-  plan_id: string;
+  plan_id: string; // preapproval_plan_id de Mercado Pago
   plan: "globo" | "volea" | "bandeja" | "smash";
 }
-
-// Plan prices in CLP (Chilean Pesos)
-const PLAN_PRICES: Record<string, { amount: number; months: number }> = {
-  globo: { amount: 9990, months: 1 },
-  volea: { amount: 26990, months: 3 },
-  bandeja: { amount: 47990, months: 6 },
-  smash: { amount: 79990, months: 12 },
-};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -33,21 +24,16 @@ serve(async (req) => {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
     }
 
-    const { user_id, user_email, plan }: CreateSubscriptionRequest = await req.json();
+    const { user_id, user_email, plan_id, plan }: CreateSubscriptionRequest = await req.json();
     
-    console.log(`Creating Mercado Pago subscription for user ${user_id}, plan: ${plan}`);
+    console.log(`Creating Mercado Pago subscription for user ${user_id}, plan: ${plan}, plan_id: ${plan_id}`);
 
-    const planConfig = PLAN_PRICES[plan];
-    if (!planConfig) {
-      throw new Error(`Invalid plan: ${plan}`);
+    if (!plan_id) {
+      throw new Error('plan_id (preapproval_plan_id) is required');
     }
 
-    // Calculate dates
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + planConfig.months);
-
-    // Create preapproval WITHOUT plan_id - this generates init_point for checkout
+    // Crear suscripción usando el plan existente en Mercado Pago
+    // Al usar preapproval_plan_id, MP genera automáticamente el init_point
     const response = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
       headers: {
@@ -55,17 +41,9 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        preapproval_plan_id: plan_id,
         payer_email: user_email,
         external_reference: `${user_id}|${plan}`,
-        reason: `Just MUV - Plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
-        auto_recurring: {
-          frequency: planConfig.months,
-          frequency_type: "months",
-          transaction_amount: planConfig.amount,
-          currency_id: "CLP",
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-        },
         back_url: `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app')}/configuracion?subscription=success`,
         status: 'pending',
       }),
@@ -75,16 +53,16 @@ serve(async (req) => {
     
     if (!response.ok) {
       console.error('Mercado Pago error:', data);
-      throw new Error(data.message || 'Failed to create subscription');
+      throw new Error(data.message || JSON.stringify(data) || 'Failed to create subscription');
     }
 
-    console.log('Mercado Pago subscription created:', data.id);
+    console.log('Mercado Pago subscription created:', data.id, 'init_point:', data.init_point);
 
     return new Response(
       JSON.stringify({
         success: true,
         subscription_id: data.id,
-        init_point: data.init_point, // URL to redirect user to pay
+        init_point: data.init_point,
         status: data.status,
       }),
       { 

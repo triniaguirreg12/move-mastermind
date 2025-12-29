@@ -30,47 +30,47 @@ export interface PlanInfo {
   paypalPlanId: string;
 }
 
-// Precios deben coincidir con los de la edge function mercadopago-create-subscription
+// Planes de suscripción con precios oficiales y IDs de Mercado Pago
 export const PLANS: PlanInfo[] = [
   {
     id: "globo",
     name: "Globo",
     duration: 1,
-    priceCLP: 9990,
-    priceUSD: 10.99,
+    priceCLP: 19990,
+    priceUSD: 20.99,
     description: "El inicio de todo gran punto. Prueba **1 mes** y empieza a elevar tu juego.",
-    mercadoPagoPlanId: "", // No se usa - precios inline en edge function
+    mercadoPagoPlanId: "b22f44baf6ed4d939e1b8a467a56d366",
     paypalPlanId: "P-0DL48557TX0626019NFFIRZY",
   },
   {
     id: "volea",
     name: "Volea",
     duration: 3,
-    priceCLP: 26990,
-    priceUSD: 28.99,
+    priceCLP: 49990,
+    priceUSD: 52.99,
     description: "Constancia y control. **3 meses** para tomar ritmo y sentir cambios reales en tu rendimiento.",
     recommended: true,
-    mercadoPagoPlanId: "",
+    mercadoPagoPlanId: "26d91c01c3e345568c151687544ef259",
     paypalPlanId: "P-3TV44115M64157340NFFIS7A",
   },
   {
     id: "bandeja",
     name: "Bandeja",
     duration: 6,
-    priceCLP: 47990,
-    priceUSD: 51.99,
+    priceCLP: 89990,
+    priceUSD: 94.99,
     description: "El golpe que ordena el juego. **6 meses** para consolidar tu nivel y entrenar con foco.",
-    mercadoPagoPlanId: "",
+    mercadoPagoPlanId: "7919786f7aba4e5ead0e738e4c993",
     paypalPlanId: "P-3K237677GD934415TNFFITVY",
   },
   {
     id: "smash",
     name: "Smash",
     duration: 12,
-    priceCLP: 79990,
-    priceUSD: 85.99,
+    priceCLP: 159990,
+    priceUSD: 168.99,
     description: "El golpe definitivo. **1 año** entrenando para rendir al máximo dentro y fuera de la cancha.",
-    mercadoPagoPlanId: "",
+    mercadoPagoPlanId: "928092a26833480cb601e3369cf6985a",
     paypalPlanId: "P-3WJ85705M23567813NFFIUKQ",
   },
 ];
@@ -187,6 +187,7 @@ export function useInitiatePayment() {
           body: {
             user_id: user.id,
             user_email: user.email,
+            plan_id: planInfo.mercadoPagoPlanId,
             plan: plan,
           },
         });
