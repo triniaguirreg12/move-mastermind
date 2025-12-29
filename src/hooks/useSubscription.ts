@@ -162,6 +162,63 @@ export function useHasActiveSubscription() {
   };
 }
 
+/**
+ * Initiate payment flow - calls edge function and redirects to payment gateway
+ * Does NOT create subscription in DB - that happens via webhook after successful payment
+ */
+export function useInitiatePayment() {
+  return useMutation({
+    mutationFn: async ({ 
+      plan, 
+      provider = "mercado_pago" 
+    }: { 
+      plan: SubscriptionPlan; 
+      provider?: SubscriptionProvider;
+    }): Promise<{ init_point: string }> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const planInfo = PLANS.find(p => p.id === plan);
+      if (!planInfo) throw new Error("Invalid plan");
+
+      if (provider === "mercado_pago") {
+        const { data, error } = await supabase.functions.invoke("mercadopago-create-subscription", {
+          body: {
+            user_id: user.id,
+            user_email: user.email,
+            plan_id: planInfo.mercadoPagoPlanId,
+            plan: plan,
+          },
+        });
+
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Failed to create payment");
+        
+        return { init_point: data.init_point };
+      } else {
+        // PayPal flow
+        const { data, error } = await supabase.functions.invoke("paypal-create-subscription", {
+          body: {
+            user_id: user.id,
+            user_email: user.email,
+            plan_id: planInfo.paypalPlanId,
+            plan: plan,
+          },
+        });
+
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || "Failed to create payment");
+        
+        return { init_point: data.approval_url };
+      }
+    },
+  });
+}
+
+/**
+ * Create subscription directly in DB - used by webhooks after successful payment
+ * NOT for direct UI usage - use useInitiatePayment instead
+ */
 export function useCreateSubscription() {
   const queryClient = useQueryClient();
 

@@ -1,9 +1,9 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Check, Crown, X } from "lucide-react";
+import { CreditCard, Check, Crown, X, Loader2 } from "lucide-react";
 import { 
   useSubscription, 
-  useCreateSubscription, 
+  useInitiatePayment, 
   useCancelSubscription,
   PLANS, 
   getPlanMonthlyPrice,
@@ -33,7 +33,7 @@ interface PlanSheetProps {
 
 export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
   const { data: subscription, isLoading } = useSubscription();
-  const createSubscription = useCreateSubscription();
+  const initiatePayment = useInitiatePayment();
   const cancelSubscription = useCancelSubscription();
   const { gateway, currency, isChile } = usePaymentGateway();
   const { toast } = useToast();
@@ -47,16 +47,15 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
   const handleSelectPlan = async (planId: SubscriptionPlan) => {
     setSelectedPlan(planId);
     try {
-      await createSubscription.mutateAsync({ plan: planId, provider: gateway });
-      toast({
-        title: "¡Suscripción activada!",
-        description: "Ya tienes acceso completo a Just MUV.",
-      });
-      setSelectedPlan(null);
+      const { init_point } = await initiatePayment.mutateAsync({ plan: planId, provider: gateway });
+      
+      // Redirect to payment gateway
+      window.location.href = init_point;
     } catch (error) {
+      console.error("Payment initiation error:", error);
       toast({
         title: "Error",
-        description: "No se pudo procesar la suscripción. Intenta de nuevo.",
+        description: "No se pudo iniciar el pago. Intenta de nuevo.",
         variant: "destructive",
       });
       setSelectedPlan(null);
@@ -199,10 +198,13 @@ export function PlanSheet({ open, onOpenChange }: PlanSheetProps) {
                           className="w-full mt-4"
                           variant={plan.recommended ? "default" : "outline"}
                           onClick={() => handleSelectPlan(plan.id)}
-                          disabled={createSubscription.isPending}
+                          disabled={initiatePayment.isPending}
                         >
                           {selectedPlan === plan.id ? (
-                            "Procesando..."
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Redirigiendo...
+                            </>
                           ) : (
                             <>
                               <Check className="w-4 h-4 mr-2" />
