@@ -46,7 +46,9 @@ serve(async (req) => {
       const preapproval = await response.json();
       console.log('Preapproval details:', JSON.stringify(preapproval, null, 2));
 
-      const userId = preapproval.external_reference;
+      // Parse external_reference: "user_id|plan"
+      const externalRef = preapproval.external_reference || '';
+      const [userId, planFromRef] = externalRef.split('|');
       const status = preapproval.status;
       
       if (!userId) {
@@ -77,9 +79,6 @@ serve(async (req) => {
           dbStatus = 'vencida';
       }
 
-      // Get or determine plan from preapproval
-      const planId = preapproval.preapproval_plan_id;
-      
       // Fetch existing subscription to get plan info
       const { data: existingSub } = await supabase
         .from('subscriptions')
@@ -87,7 +86,8 @@ serve(async (req) => {
         .eq('user_id', userId)
         .maybeSingle();
 
-      const plan = existingSub?.plan || 'globo';
+      // Use plan from external_reference, fallback to existing or default
+      const plan = planFromRef || existingSub?.plan || 'globo';
       const duration = PLAN_DURATIONS[plan] || 1;
 
       // Calculate dates
@@ -147,7 +147,9 @@ serve(async (req) => {
       const payment = await response.json();
       console.log('Payment details:', JSON.stringify(payment, null, 2));
 
-      const userId = payment.external_reference;
+      // Parse external_reference: "user_id|plan"
+      const externalRef = payment.external_reference || '';
+      const [userId] = externalRef.split('|');
       
       if (userId && payment.status === 'rejected') {
         // Payment failed - mark subscription as past_due
