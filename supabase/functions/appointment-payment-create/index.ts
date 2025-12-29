@@ -44,10 +44,10 @@ serve(async (req) => {
     const professionalName = appointment.professional?.name || 'Profesional';
 
     if (body.paymentMethod === 'mercadopago') {
-      // Mercado Pago - Single payment
-      const mercadoPagoToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+      // Mercado Pago - Single payment (uses separate token from subscriptions)
+      const mercadoPagoToken = Deno.env.get('MERCADOPAGO_ONE_TIME_TOKEN');
       if (!mercadoPagoToken) {
-        throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
+        throw new Error('MERCADOPAGO_ONE_TIME_TOKEN not configured');
       }
 
       const preferenceData = {

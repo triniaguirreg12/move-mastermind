@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MapPin, Award, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Professional } from "@/hooks/useProfessionals";
 
 interface ProfessionalCardProps {
@@ -7,11 +7,23 @@ interface ProfessionalCardProps {
   onSchedule?: () => void;
 }
 
+// Launch pricing
+const ORIGINAL_PRICE = 70000;
+const LAUNCH_PRICE = 30000;
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0
+  }).format(price);
+};
+
 export function ProfessionalCard({
   professional,
   onSchedule,
 }: ProfessionalCardProps) {
-  const { name, title, specialty, description, avatar_url } = professional;
+  const { name, title, specialty, avatar_url } = professional;
   
   return (
     <div className="glass-card p-5 space-y-4">
@@ -42,6 +54,22 @@ export function ProfessionalCard({
           {specialty && (
             <p className="text-muted-foreground text-sm mt-1">{specialty}</p>
           )}
+        </div>
+      </div>
+
+      {/* Pricing */}
+      <div className="flex items-center justify-between py-3 px-4 bg-success/10 rounded-xl border border-success/20">
+        <div>
+          <p className="text-xs text-muted-foreground">Programa Personalizado</p>
+          <p className="text-xs text-success font-medium">¡Precio de lanzamiento!</p>
+        </div>
+        <div className="text-right">
+          <span className="text-muted-foreground line-through text-sm mr-2">
+            {formatPrice(ORIGINAL_PRICE)}
+          </span>
+          <span className="font-display font-bold text-lg text-success">
+            {formatPrice(LAUNCH_PRICE)}
+          </span>
         </div>
       </div>
 
