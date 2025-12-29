@@ -1,7 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
+import { Calendar, Info } from "lucide-react";
 import { Professional } from "@/hooks/useProfessionals";
 import { usePaymentGateway, formatPrice } from "@/hooks/usePaymentGateway";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProfessionalCardProps {
   professional: Professional;
@@ -58,9 +64,25 @@ export function ProfessionalCard({
 
       {/* Pricing */}
       <div className="flex items-center justify-between py-3 px-4 bg-success/10 rounded-xl border border-success/20">
-        <div>
-          <p className="text-xs text-muted-foreground">Programa Personalizado</p>
-          <p className="text-xs text-success font-medium">¡Precio de lanzamiento!</p>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="text-xs text-muted-foreground">Programa Personalizado</p>
+            <p className="text-xs text-success font-medium">¡Precio de lanzamiento!</p>
+          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="p-1 rounded-full hover:bg-muted/50 transition-colors">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[250px] text-center">
+                <p className="text-sm">
+                  Solicita un programa de entrenamiento diseñado 100% según tus objetivos, necesidades y nivel físico.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className="text-right">
           <span className="text-muted-foreground line-through text-sm mr-2">
