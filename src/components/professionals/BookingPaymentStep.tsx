@@ -38,6 +38,28 @@ export function BookingPaymentStep({
   const [isProcessing, setIsProcessing] = useState(false);
   const [userCountry, setUserCountry] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
+  const [meetingDuration, setMeetingDuration] = useState<number | null>(null);
+
+  // Fetch meeting duration from availability settings
+  useEffect(() => {
+    const fetchMeetingDuration = async () => {
+      try {
+        const { data } = await supabase
+          .from('availability_settings')
+          .select('meeting_duration_minutes')
+          .eq('professional_id', professional.id)
+          .single();
+        
+        if (data?.meeting_duration_minutes) {
+          setMeetingDuration(data.meeting_duration_minutes);
+        }
+      } catch (error) {
+        console.error('Error fetching meeting duration:', error);
+      }
+    };
+    
+    fetchMeetingDuration();
+  }, [professional.id]);
 
   // Detect user country for payment routing
   useEffect(() => {
@@ -171,7 +193,7 @@ export function BookingPaymentStep({
             
             <div className="flex items-center gap-3 text-foreground">
               <Clock className="w-5 h-5 text-muted-foreground" />
-              <span>{selectedTime} hrs</span>
+              <span>{selectedTime} hrs{meetingDuration ? ` (${meetingDuration} min)` : ''}</span>
             </div>
           </div>
 
