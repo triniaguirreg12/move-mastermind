@@ -8,9 +8,41 @@ const corsHeaders = {
 interface CreateSubscriptionRequest {
   user_id: string;
   user_email: string;
-  plan_id: string; // preapproval_plan_id de Mercado Pago
   plan: "globo" | "volea" | "bandeja" | "smash";
 }
+
+// Configuración de planes - precios y frecuencias que coinciden con los planes en MP
+const PLAN_CONFIG: Record<string, { 
+  amount: number; 
+  frequency: number; 
+  frequency_type: string;
+  reason: string;
+}> = {
+  globo: { 
+    amount: 19990, 
+    frequency: 1, 
+    frequency_type: "months",
+    reason: "Just MUV - Plan Globo (1 mes)"
+  },
+  volea: { 
+    amount: 49990, 
+    frequency: 3, 
+    frequency_type: "months",
+    reason: "Just MUV - Plan Volea (3 meses)"
+  },
+  bandeja: { 
+    amount: 89990, 
+    frequency: 6, 
+    frequency_type: "months",
+    reason: "Just MUV - Plan Bandeja (6 meses)"
+  },
+  smash: { 
+    amount: 159990, 
+    frequency: 12, 
+    frequency_type: "months",
+    reason: "Just MUV - Plan Smash (12 meses)"
+  },
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -24,16 +56,17 @@ serve(async (req) => {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
     }
 
-    const { user_id, user_email, plan_id, plan }: CreateSubscriptionRequest = await req.json();
+    const { user_id, user_email, plan }: CreateSubscriptionRequest = await req.json();
     
-    console.log(`Creating Mercado Pago subscription for user ${user_id}, plan: ${plan}, plan_id: ${plan_id}`);
+    console.log(`Creating Mercado Pago subscription for user ${user_id}, plan: ${plan}`);
 
-    if (!plan_id) {
-      throw new Error('plan_id (preapproval_plan_id) is required');
+    const planConfig = PLAN_CONFIG[plan];
+    if (!planConfig) {
+      throw new Error(`Invalid plan: ${plan}`);
     }
 
-    // Crear suscripción usando el plan existente en Mercado Pago
-    // Al usar preapproval_plan_id, MP genera automáticamente el init_point
+    // Para obtener init_point (checkout redirect), NO usamos preapproval_plan_id
+    // Creamos una suscripción pendiente con auto_recurring inline
     const response = await fetch('https://api.mercadopago.com/preapproval', {
       method: 'POST',
       headers: {
@@ -41,9 +74,15 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        preapproval_plan_id: plan_id,
         payer_email: user_email,
         external_reference: `${user_id}|${plan}`,
+        reason: planConfig.reason,
+        auto_recurring: {
+          frequency: planConfig.frequency,
+          frequency_type: planConfig.frequency_type,
+          transaction_amount: planConfig.amount,
+          currency_id: "CLP",
+        },
         back_url: `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app')}/configuracion?subscription=success`,
         status: 'pending',
       }),
