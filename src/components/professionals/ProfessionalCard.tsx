@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 import { Professional } from "@/hooks/useProfessionals";
+import { usePaymentGateway, formatPrice } from "@/hooks/usePaymentGateway";
 
 interface ProfessionalCardProps {
   professional: Professional;
@@ -8,22 +9,20 @@ interface ProfessionalCardProps {
 }
 
 // Launch pricing
-const ORIGINAL_PRICE = 70000;
-const LAUNCH_PRICE = 30000;
-
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
-    minimumFractionDigits: 0
-  }).format(price);
-};
+const ORIGINAL_PRICE_CLP = 70000;
+const LAUNCH_PRICE_CLP = 30000;
+const ORIGINAL_PRICE_USD = 75;
+const LAUNCH_PRICE_USD = 35;
 
 export function ProfessionalCard({
   professional,
   onSchedule,
 }: ProfessionalCardProps) {
   const { name, title, specialty, avatar_url } = professional;
+  const { isChile, currency } = usePaymentGateway();
+  
+  const originalPrice = isChile ? ORIGINAL_PRICE_CLP : ORIGINAL_PRICE_USD;
+  const launchPrice = isChile ? LAUNCH_PRICE_CLP : LAUNCH_PRICE_USD;
   
   return (
     <div className="glass-card p-5 space-y-4">
@@ -65,10 +64,10 @@ export function ProfessionalCard({
         </div>
         <div className="text-right">
           <span className="text-muted-foreground line-through text-sm mr-2">
-            {formatPrice(ORIGINAL_PRICE)}
+            {formatPrice(originalPrice, currency)}
           </span>
           <span className="font-display font-bold text-lg text-success">
-            {formatPrice(LAUNCH_PRICE)}
+            {formatPrice(launchPrice, currency)}
           </span>
         </div>
       </div>
