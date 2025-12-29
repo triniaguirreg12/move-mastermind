@@ -54,24 +54,13 @@ export function ProfessionalCard({
 
         {/* Info */}
         <div className="flex-1">
-          <h3 className="font-display font-semibold text-foreground text-lg">{name}</h3>
-          <p className="text-accent text-sm font-medium">{title}</p>
-          {specialty && (
-            <p className="text-muted-foreground text-sm mt-1">{specialty}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Pricing */}
-      <div className="flex items-center justify-between py-3 px-4 bg-success/10 rounded-xl border border-success/20">
-        <div>
-          <div className="flex items-center gap-1">
-            <p className="text-xs text-muted-foreground">Programa Personalizado</p>
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-display font-semibold text-foreground text-lg">{name}</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button className="p-0.5 rounded-full hover:bg-muted/50 transition-colors">
-                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                    <Info className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-[250px] text-center">
@@ -82,6 +71,17 @@ export function ProfessionalCard({
               </Tooltip>
             </TooltipProvider>
           </div>
+          <p className="text-accent text-sm font-medium">{title}</p>
+          {specialty && (
+            <p className="text-muted-foreground text-sm mt-1">{specialty}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Pricing */}
+      <div className="flex items-center justify-between py-3 px-4 bg-success/10 rounded-xl border border-success/20">
+        <div>
+          <p className="text-xs text-muted-foreground">Programa Personalizado</p>
           <p className="text-xs text-success font-medium">¡Precio de lanzamiento!</p>
         </div>
         <div className="text-right">
