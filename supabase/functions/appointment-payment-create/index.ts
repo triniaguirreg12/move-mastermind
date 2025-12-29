@@ -106,8 +106,8 @@ serve(async (req) => {
         throw new Error('PayPal credentials not configured');
       }
 
-      // Use sandbox API for testing
-      const PAYPAL_API_BASE = 'https://api-m.sandbox.paypal.com';
+      // Production API
+      const PAYPAL_API_BASE = 'https://api-m.paypal.com';
 
       // Get PayPal access token
       const authResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
