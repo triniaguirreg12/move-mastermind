@@ -64,25 +64,25 @@ export function ProfessionalCard({
 
       {/* Pricing */}
       <div className="flex items-center justify-between py-3 px-4 bg-success/10 rounded-xl border border-success/20">
-        <div className="flex items-center gap-2">
-          <div>
+        <div>
+          <div className="flex items-center gap-1">
             <p className="text-xs text-muted-foreground">Programa Personalizado</p>
-            <p className="text-xs text-success font-medium">¡Precio de lanzamiento!</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="p-0.5 rounded-full hover:bg-muted/50 transition-colors">
+                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[250px] text-center">
+                  <p className="text-sm">
+                    Solicita un programa de entrenamiento diseñado 100% según tus objetivos, necesidades y nivel físico.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="p-1 rounded-full hover:bg-muted/50 transition-colors">
-                  <Info className="w-4 h-4 text-muted-foreground" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[250px] text-center">
-                <p className="text-sm">
-                  Solicita un programa de entrenamiento diseñado 100% según tus objetivos, necesidades y nivel físico.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <p className="text-xs text-success font-medium">¡Precio de lanzamiento!</p>
         </div>
         <div className="text-right">
           <span className="text-muted-foreground line-through text-sm mr-2">
