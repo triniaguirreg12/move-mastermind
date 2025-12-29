@@ -187,7 +187,6 @@ export function useInitiatePayment() {
           body: {
             user_id: user.id,
             user_email: user.email,
-            plan_id: planInfo.mercadoPagoPlanId,
             plan: plan,
           },
         });
