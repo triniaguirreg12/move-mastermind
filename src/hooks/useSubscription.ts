@@ -60,7 +60,7 @@ export const PLANS: PlanInfo[] = [
     priceCLP: 89990,
     priceUSD: 94.99,
     description: "El golpe que ordena el juego. **6 meses** para consolidar tu nivel y entrenar con foco.",
-    mercadoPagoPlanId: "7919786f7aba4e5ead0e738e4c993",
+    mercadoPagoPlanId: "7919786f7aba4e5ead0e738e4c993c6b",
     paypalPlanId: "P-3K237677GD934415TNFFITVY",
   },
   {
