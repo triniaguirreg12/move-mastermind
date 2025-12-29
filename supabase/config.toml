@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.check-calendar-availability]
 verify_jwt = false
+
+[functions.mercadopago-one-time-payment]
+verify_jwt = true
