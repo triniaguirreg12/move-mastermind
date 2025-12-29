@@ -29,10 +29,10 @@ serve(async (req) => {
       console.log("Webhook received:", JSON.stringify(body, null, 2));
 
       if (body.type === 'payment') {
-        // Get payment details from MercadoPago
-        const mercadoPagoToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+        // Get payment details from MercadoPago (uses one-time token)
+        const mercadoPagoToken = Deno.env.get('MERCADOPAGO_ONE_TIME_TOKEN');
         if (!mercadoPagoToken) {
-          throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
+          throw new Error('MERCADOPAGO_ONE_TIME_TOKEN not configured');
         }
 
         const paymentResponse = await fetch(

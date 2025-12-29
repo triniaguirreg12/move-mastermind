@@ -18,7 +18,9 @@ interface BookingPaymentStepProps {
   onClose: () => void;
 }
 
-const PRICE_CLP = 45000;
+// Launch pricing
+const ORIGINAL_PRICE_CLP = 70000;
+const LAUNCH_PRICE_CLP = 30000;
 const PRICE_USD = 50;
 
 type PaymentMethod = 'mercadopago' | 'paypal';
@@ -104,20 +106,23 @@ export function BookingPaymentStep({
     }
   };
 
-  const formatPrice = () => {
-    if (paymentMethod === 'paypal') {
+  const formatPrice = (price: number, currency: 'CLP' | 'USD' = 'CLP') => {
+    if (currency === 'USD') {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
         minimumFractionDigits: 0
-      }).format(PRICE_USD);
+      }).format(price);
     }
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP',
       minimumFractionDigits: 0
-    }).format(PRICE_CLP);
+    }).format(price);
   };
+
+  const currentPrice = paymentMethod === 'paypal' ? PRICE_USD : LAUNCH_PRICE_CLP;
+  const displayCurrency = paymentMethod === 'paypal' ? 'USD' : 'CLP';
 
   return (
     <div className="flex flex-col h-full">
@@ -170,11 +175,21 @@ export function BookingPaymentStep({
 
           <div className="border-t border-border pt-4 mt-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Sesión personalizada</span>
-              <span className="font-display font-bold text-xl text-foreground">
-                {formatPrice()}
-              </span>
+              <span className="text-muted-foreground">Programa personalizado</span>
+              <div className="text-right">
+                {paymentMethod === 'mercadopago' && (
+                  <span className="text-muted-foreground line-through text-sm mr-2">
+                    {formatPrice(ORIGINAL_PRICE_CLP, 'CLP')}
+                  </span>
+                )}
+                <span className="font-display font-bold text-xl text-success">
+                  {formatPrice(currentPrice, displayCurrency)}
+                </span>
+              </div>
             </div>
+            {paymentMethod === 'mercadopago' && (
+              <p className="text-xs text-success mt-1 text-right">¡Precio de lanzamiento!</p>
+            )}
           </div>
         </Card>
 
@@ -241,7 +256,7 @@ export function BookingPaymentStep({
           ) : (
             <>
               <CreditCard className="w-5 h-5" />
-              Pagar {formatPrice()}
+              Pagar {formatPrice(currentPrice, displayCurrency)}
             </>
           )}
         </Button>

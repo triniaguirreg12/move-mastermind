@@ -205,7 +205,9 @@ export function useCreateAppointment() {
           available_equipment: data.form_data.available_equipment,
           additional_comments: data.form_data.additional_comments || null,
           status: 'pending_payment',
-          payment_status: 'pending'
+          payment_status: 'pending',
+          price_amount: 30000, // Launch price
+          currency: 'CLP'
         })
         .select()
         .single();
