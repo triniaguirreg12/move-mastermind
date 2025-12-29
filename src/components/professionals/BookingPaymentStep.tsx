@@ -171,7 +171,7 @@ export function BookingPaymentStep({
             
             <div className="flex items-center gap-3 text-foreground">
               <Clock className="w-5 h-5 text-muted-foreground" />
-              <span>{selectedTime} hrs (60 min)</span>
+              <span>{selectedTime} hrs</span>
             </div>
           </div>
 
