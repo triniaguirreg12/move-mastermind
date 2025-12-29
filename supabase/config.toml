@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.mercadopago-one-time-payment]
 verify_jwt = true
+
+[functions.admin-email-create-campaign]
+verify_jwt = true
+
+[functions.admin-email-process-queue]
+verify_jwt = true
+
+[functions.email-unsubscribe]
+verify_jwt = false

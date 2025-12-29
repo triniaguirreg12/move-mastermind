@@ -218,6 +218,119 @@ export type Database = {
           },
         ]
       }
+      email_campaigns: {
+        Row: {
+          audience_type: Database["public"]["Enums"]["email_audience_type"]
+          body: string
+          body_format: Database["public"]["Enums"]["email_body_format"]
+          created_at: string
+          created_by_admin_id: string
+          cta_text: string | null
+          cta_url: string | null
+          filters_json: Json | null
+          finished_at: string | null
+          id: string
+          is_test: boolean
+          name: string | null
+          preheader: string | null
+          scheduled_at: string | null
+          selected_user_ids_json: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["email_campaign_status"]
+          subject: string
+          total_recipients: number
+        }
+        Insert: {
+          audience_type: Database["public"]["Enums"]["email_audience_type"]
+          body: string
+          body_format?: Database["public"]["Enums"]["email_body_format"]
+          created_at?: string
+          created_by_admin_id: string
+          cta_text?: string | null
+          cta_url?: string | null
+          filters_json?: Json | null
+          finished_at?: string | null
+          id?: string
+          is_test?: boolean
+          name?: string | null
+          preheader?: string | null
+          scheduled_at?: string | null
+          selected_user_ids_json?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["email_campaign_status"]
+          subject: string
+          total_recipients?: number
+        }
+        Update: {
+          audience_type?: Database["public"]["Enums"]["email_audience_type"]
+          body?: string
+          body_format?: Database["public"]["Enums"]["email_body_format"]
+          created_at?: string
+          created_by_admin_id?: string
+          cta_text?: string | null
+          cta_url?: string | null
+          filters_json?: Json | null
+          finished_at?: string | null
+          id?: string
+          is_test?: boolean
+          name?: string | null
+          preheader?: string | null
+          scheduled_at?: string | null
+          selected_user_ids_json?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["email_campaign_status"]
+          subject?: string
+          total_recipients?: number
+        }
+        Relationships: []
+      }
+      email_messages: {
+        Row: {
+          campaign_id: string
+          email_to: string
+          error_message: string | null
+          id: string
+          provider_message_id: string | null
+          provider_name: string | null
+          queued_at: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["email_message_status"]
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          email_to: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          provider_name?: string | null
+          queued_at?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["email_message_status"]
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          email_to?: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          provider_name?: string | null
+          queued_at?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["email_message_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           aptitudes_primarias: string[] | null
@@ -685,6 +798,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_email_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          opt_out: boolean
+          opt_out_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opt_out?: boolean
+          opt_out_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opt_out?: boolean
+          opt_out_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_events: {
         Row: {
           created_at: string
@@ -869,6 +1009,10 @@ export type Database = {
       }
     }
     Enums: {
+      email_audience_type: "single" | "selected" | "filtered"
+      email_body_format: "markdown" | "html"
+      email_campaign_status: "draft" | "queued" | "sending" | "sent" | "failed"
+      email_message_status: "queued" | "sent" | "failed" | "skipped_opt_out"
       subscription_plan: "globo" | "volea" | "bandeja" | "smash"
       subscription_status: "activa" | "cancelada" | "vencida" | "pago_fallido"
     }
@@ -998,6 +1142,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      email_audience_type: ["single", "selected", "filtered"],
+      email_body_format: ["markdown", "html"],
+      email_campaign_status: ["draft", "queued", "sending", "sent", "failed"],
+      email_message_status: ["queued", "sent", "failed", "skipped_opt_out"],
       subscription_plan: ["globo", "volea", "bandeja", "smash"],
       subscription_status: ["activa", "cancelada", "vencida", "pago_fallido"],
     },
