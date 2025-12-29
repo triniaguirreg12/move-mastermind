@@ -21,7 +21,8 @@ interface BookingPaymentStepProps {
 // Launch pricing
 const ORIGINAL_PRICE_CLP = 70000;
 const LAUNCH_PRICE_CLP = 30000;
-const PRICE_USD = 50;
+const ORIGINAL_PRICE_USD = 75;
+const LAUNCH_PRICE_USD = 35;
 
 type PaymentMethod = 'mercadopago' | 'paypal';
 
@@ -121,7 +122,8 @@ export function BookingPaymentStep({
     }).format(price);
   };
 
-  const currentPrice = paymentMethod === 'paypal' ? PRICE_USD : LAUNCH_PRICE_CLP;
+  const currentPrice = paymentMethod === 'paypal' ? LAUNCH_PRICE_USD : LAUNCH_PRICE_CLP;
+  const originalPrice = paymentMethod === 'paypal' ? ORIGINAL_PRICE_USD : ORIGINAL_PRICE_CLP;
   const displayCurrency = paymentMethod === 'paypal' ? 'USD' : 'CLP';
 
   return (
@@ -177,19 +179,15 @@ export function BookingPaymentStep({
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Programa personalizado</span>
               <div className="text-right">
-                {paymentMethod === 'mercadopago' && (
-                  <span className="text-muted-foreground line-through text-sm mr-2">
-                    {formatPrice(ORIGINAL_PRICE_CLP, 'CLP')}
-                  </span>
-                )}
+                <span className="text-muted-foreground line-through text-sm mr-2">
+                  {formatPrice(originalPrice, displayCurrency)}
+                </span>
                 <span className="font-display font-bold text-xl text-success">
                   {formatPrice(currentPrice, displayCurrency)}
                 </span>
               </div>
             </div>
-            {paymentMethod === 'mercadopago' && (
-              <p className="text-xs text-success mt-1 text-right">¡Precio de lanzamiento!</p>
-            )}
+            <p className="text-xs text-success mt-1 text-right">¡Precio de lanzamiento!</p>
           </div>
         </Card>
 
