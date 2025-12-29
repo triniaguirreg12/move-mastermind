@@ -65,6 +65,9 @@ serve(async (req) => {
       throw new Error(`Invalid plan: ${plan}`);
     }
 
+    // Build the base URL for redirects
+    const baseUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || '';
+    
     // Para obtener init_point (checkout redirect), NO usamos preapproval_plan_id
     // Creamos una suscripción pendiente con auto_recurring inline
     const response = await fetch('https://api.mercadopago.com/preapproval', {
@@ -83,7 +86,9 @@ serve(async (req) => {
           transaction_amount: planConfig.amount,
           currency_id: "CLP",
         },
-        back_url: `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app')}/configuracion?subscription=success`,
+        // back_url se usa para volver a la app después del checkout
+        // Mercado Pago añade el parámetro preapproval_id automáticamente
+        back_url: `${baseUrl}/configuracion?subscription_result=pending`,
         status: 'pending',
       }),
     });

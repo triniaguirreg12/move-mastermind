@@ -133,6 +133,37 @@ const Configuracion = () => {
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const planSectionRef = useRef<HTMLDivElement>(null);
+  const { data: subscription, refetch: refetchSubscription } = useSubscription();
+
+  // Handle subscription result from Mercado Pago redirect
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const subscriptionResult = params.get('subscription_result');
+    const preapprovalId = params.get('preapproval_id');
+    
+    if (subscriptionResult || preapprovalId) {
+      // Clear the URL params
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      if (preapprovalId) {
+        // User completed the checkout - subscription is being processed
+        toast.success("¡Suscripción en proceso!", {
+          description: "Estamos confirmando tu pago. Esto puede tomar unos segundos.",
+        });
+        // Refetch subscription to check status
+        setTimeout(() => {
+          refetchSubscription();
+          queryClient.invalidateQueries({ queryKey: ["subscription"] });
+        }, 2000);
+      } else if (subscriptionResult === 'pending') {
+        // User cancelled or closed the checkout
+        toast.info("Proceso de suscripción cancelado", {
+          description: "Puedes intentar de nuevo cuando quieras.",
+        });
+      }
+    }
+  }, [location.search, refetchSubscription, queryClient]);
 
   // Handle scroll to plan-actual from navigation state
   useEffect(() => {
