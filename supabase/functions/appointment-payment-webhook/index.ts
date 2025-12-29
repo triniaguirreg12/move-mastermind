@@ -61,8 +61,8 @@ serve(async (req) => {
       const paypalClientId = Deno.env.get('PAYPAL_CLIENT_ID');
       const paypalSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
 
-      // Use sandbox API for testing
-      const PAYPAL_API_BASE = 'https://api-m.sandbox.paypal.com';
+      // Production API
+      const PAYPAL_API_BASE = 'https://api-m.paypal.com';
 
       if (paypalClientId && paypalSecret) {
         // Get access token
