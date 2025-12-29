@@ -61,9 +61,12 @@ serve(async (req) => {
       const paypalClientId = Deno.env.get('PAYPAL_CLIENT_ID');
       const paypalSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
 
+      // Use sandbox API for testing
+      const PAYPAL_API_BASE = 'https://api-m.sandbox.paypal.com';
+
       if (paypalClientId && paypalSecret) {
         // Get access token
-        const authResponse = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+        const authResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
           method: 'POST',
           headers: {
             'Authorization': `Basic ${btoa(`${paypalClientId}:${paypalSecret}`)}`,
@@ -77,7 +80,7 @@ serve(async (req) => {
 
           // Capture the order
           const captureResponse = await fetch(
-            `https://api-m.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`,
+            `${PAYPAL_API_BASE}/v2/checkout/orders/${paypalOrderId}/capture`,
             {
               method: 'POST',
               headers: {
@@ -94,7 +97,13 @@ serve(async (req) => {
             appointmentId = captureData.purchase_units?.[0]?.reference_id;
             paymentId = captureData.id;
             paymentStatus = captureData.status === 'COMPLETED' ? 'approved' : 'pending';
+          } else {
+            const captureError = await captureResponse.text();
+            console.error("PayPal capture error:", captureError);
           }
+        } else {
+          const authError = await authResponse.text();
+          console.error("PayPal auth error in webhook:", authError);
         }
       }
     }

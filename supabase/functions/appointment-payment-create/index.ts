@@ -98,7 +98,7 @@ serve(async (req) => {
       });
 
     } else if (body.paymentMethod === 'paypal') {
-      // PayPal - Single payment order
+      // PayPal - Single payment order (Sandbox for testing)
       const paypalClientId = Deno.env.get('PAYPAL_CLIENT_ID');
       const paypalSecret = Deno.env.get('PAYPAL_CLIENT_SECRET');
       
@@ -106,8 +106,11 @@ serve(async (req) => {
         throw new Error('PayPal credentials not configured');
       }
 
+      // Use sandbox API for testing
+      const PAYPAL_API_BASE = 'https://api-m.sandbox.paypal.com';
+
       // Get PayPal access token
-      const authResponse = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+      const authResponse = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${btoa(`${paypalClientId}:${paypalSecret}`)}`,
@@ -125,17 +128,17 @@ serve(async (req) => {
       const authData = await authResponse.json();
       const accessToken = authData.access_token;
 
-      // Convert CLP to USD (approximate)
-      const usdAmount = (priceAmount / 900).toFixed(2);
+      // Fixed launch price in USD for foreign users
+      const LAUNCH_PRICE_USD = '35.00';
 
       const orderData = {
         intent: 'CAPTURE',
         purchase_units: [{
           reference_id: body.appointmentId,
-          description: `Cita personalizada con ${professionalName}`,
+          description: `Programa personalizado con ${professionalName}`,
           amount: {
             currency_code: 'USD',
-            value: usdAmount
+            value: LAUNCH_PRICE_USD
           }
         }],
         application_context: {
@@ -149,7 +152,7 @@ serve(async (req) => {
 
       console.log("Creating PayPal order:", JSON.stringify(orderData, null, 2));
 
-      const orderResponse = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
+      const orderResponse = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
