@@ -452,10 +452,8 @@ const CoverPhotoModal = ({
                         <img
                           src={currentImage}
                           alt="Preview Card"
-                          className="absolute select-none"
+                          className="absolute select-none max-w-none"
                           style={{
-                            width: imageDimensions.naturalWidth,
-                            height: imageDimensions.naturalHeight,
                             left: '50%',
                             top: '50%',
                             transform: `translate(-50%, -50%) translate(${localCropCard.x}px, ${localCropCard.y}px) scale(${cardTotalScale})`,
@@ -512,10 +510,8 @@ const CoverPhotoModal = ({
                         <img
                           src={currentImage}
                           alt="Preview Detalle"
-                          className="absolute select-none"
+                          className="absolute select-none max-w-none"
                           style={{
-                            width: imageDimensions.naturalWidth,
-                            height: imageDimensions.naturalHeight,
                             left: '50%',
                             top: '50%',
                             transform: `translate(-50%, -50%) translate(${localCropDetail.x}px, ${localCropDetail.y}px) scale(${detailTotalScale})`,
