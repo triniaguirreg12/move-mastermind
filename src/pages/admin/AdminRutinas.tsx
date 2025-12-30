@@ -24,7 +24,11 @@ import {
   useAllRoutinesWithDetails, 
   dbRoutineToAdminRutina,
   useDeleteRoutine,
+  useCreateRoutine,
+  useUpdateRoutine,
 } from "@/hooks/useRoutines";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 type SortOption = "none" | "rating-desc" | "rating-asc" | "completed-desc" | "completed-asc";
 
@@ -40,6 +44,8 @@ const AdminRutinas = () => {
   // Fetch only RUTINAS from DB (tipo = "rutina")
   const { data: routinesData, isLoading, error } = useAllRoutinesWithDetails("rutina");
   const deleteRoutineMutation = useDeleteRoutine();
+  const createRoutineMutation = useCreateRoutine();
+  const updateRoutineMutation = useUpdateRoutine();
 
   // Transform DB routines to Admin Rutina format
   const rutinas = useMemo(() => {
@@ -69,8 +75,165 @@ const AdminRutinas = () => {
     return `${minutos} min`;
   };
 
-  const handleSaveRutina = (rutina: Rutina, publish: boolean) => {
-    // This will be handled by the modal which uses the mutation hooks
+  // Convert admin Rutina to DB format and save
+  const handleSaveRutina = async (rutina: Rutina & { _dbId?: string }, publish: boolean) => {
+    const dbId = rutina._dbId || (editingRutina as any)?._dbId;
+    const isUpdate = !!dbId;
+
+    try {
+      // Prepare routine data
+      const portadaUrl = rutina.portadaType === "custom" 
+        ? rutina.portadaCustomUrl 
+        : rutina.portadaType === "ejercicio" 
+          ? rutina.bloques.flatMap(b => b.ejercicios).find(e => e.ejercicio.id === rutina.portadaEjercicioId)?.ejercicio.thumbnail || null
+          : null;
+
+      if (isUpdate) {
+        // Update existing routine
+        await updateRoutineMutation.mutateAsync({
+          id: dbId,
+          nombre: rutina.nombre,
+          descripcion: rutina.descripcion || null,
+          categoria: rutina.categoria as "Funcional" | "Kinesiología" | "Activación",
+          tipo: "rutina",
+          dificultad: rutina.dificultad as "Principiante" | "Intermedio" | "Avanzado",
+          dificultad_mode: rutina.dificultadMode,
+          objetivo_mode: rutina.objetivoMode,
+          objetivo: rutina.objetivo,
+          estado: publish ? "publicada" : "borrador",
+          descanso_entre_bloques: rutina.descansoEntreBloques,
+          portada_type: rutina.portadaType || "",
+          portada_url: portadaUrl,
+        });
+
+        // Update blocks - delete old ones and create new
+        await supabase.from("routine_blocks").delete().eq("routine_id", dbId);
+
+        for (let i = 0; i < rutina.bloques.length; i++) {
+          const bloque = rutina.bloques[i];
+          const { data: blockData, error: blockError } = await supabase
+            .from("routine_blocks")
+            .insert({
+              routine_id: dbId,
+              nombre: bloque.nombre,
+              orden: i,
+              repetir_bloque: bloque.repetirBloque,
+              series: bloque.series,
+              descanso_entre_ejercicios: bloque.descansoEntreEjercicios,
+              descanso_entre_series: bloque.descansoEntreSeries,
+              usar_mismo_descanso: bloque.usarMismoDescanso,
+            })
+            .select()
+            .single();
+
+          if (blockError) throw blockError;
+
+          // Insert exercises for this block
+          for (let j = 0; j < bloque.ejercicios.length; j++) {
+            const ej = bloque.ejercicios[j];
+            // We need to find the exercise UUID from the DB
+            const { data: exerciseData } = await supabase
+              .from("exercises")
+              .select("id")
+              .ilike("nombre", ej.ejercicio.nombre)
+              .single();
+
+            if (exerciseData) {
+              await supabase.from("block_exercises").insert({
+                block_id: blockData.id,
+                exercise_id: exerciseData.id,
+                orden: j,
+                tipo_ejecucion: ej.tipoEjecucion,
+                tiempo: ej.tiempo,
+                repeticiones: ej.repeticiones,
+              });
+            }
+          }
+        }
+
+        toast({
+          title: publish ? "Rutina publicada" : "Borrador guardado",
+          description: `"${rutina.nombre}" actualizada correctamente.`,
+        });
+      } else {
+        // Create new routine
+        const { data: newRoutine, error: routineError } = await supabase
+          .from("routines")
+          .insert({
+            nombre: rutina.nombre,
+            descripcion: rutina.descripcion || null,
+            categoria: rutina.categoria as "Funcional" | "Kinesiología" | "Activación",
+            tipo: "rutina",
+            dificultad: rutina.dificultad as "Principiante" | "Intermedio" | "Avanzado",
+            dificultad_mode: rutina.dificultadMode,
+            objetivo_mode: rutina.objetivoMode,
+            objetivo: rutina.objetivo as unknown as Json,
+            estado: publish ? "publicada" : "borrador",
+            descanso_entre_bloques: rutina.descansoEntreBloques,
+            portada_type: rutina.portadaType || "",
+            portada_url: portadaUrl,
+          })
+          .select()
+          .single();
+
+        if (routineError) throw routineError;
+
+        // Create blocks
+        for (let i = 0; i < rutina.bloques.length; i++) {
+          const bloque = rutina.bloques[i];
+          const { data: blockData, error: blockError } = await supabase
+            .from("routine_blocks")
+            .insert({
+              routine_id: newRoutine.id,
+              nombre: bloque.nombre,
+              orden: i,
+              repetir_bloque: bloque.repetirBloque,
+              series: bloque.series,
+              descanso_entre_ejercicios: bloque.descansoEntreEjercicios,
+              descanso_entre_series: bloque.descansoEntreSeries,
+              usar_mismo_descanso: bloque.usarMismoDescanso,
+            })
+            .select()
+            .single();
+
+          if (blockError) throw blockError;
+
+          // Insert exercises
+          for (let j = 0; j < bloque.ejercicios.length; j++) {
+            const ej = bloque.ejercicios[j];
+            const { data: exerciseData } = await supabase
+              .from("exercises")
+              .select("id")
+              .ilike("nombre", ej.ejercicio.nombre)
+              .single();
+
+            if (exerciseData) {
+              await supabase.from("block_exercises").insert({
+                block_id: blockData.id,
+                exercise_id: exerciseData.id,
+                orden: j,
+                tipo_ejecucion: ej.tipoEjecucion,
+                tiempo: ej.tiempo,
+                repeticiones: ej.repeticiones,
+              });
+            }
+          }
+        }
+
+        toast({
+          title: publish ? "Rutina publicada" : "Borrador guardado",
+          description: `"${rutina.nombre}" creada correctamente.`,
+        });
+      }
+    } catch (err) {
+      console.error("Error saving routine:", err);
+      toast({
+        title: "Error al guardar",
+        description: "No se pudo guardar la rutina. Intenta de nuevo.",
+        variant: "destructive",
+      });
+    }
+
     setEditingRutina(null);
     setIsCreateModalOpen(false);
   };
