@@ -37,7 +37,10 @@ interface CoverPhotoModalProps {
 }
 
 const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const ASPECT_RATIO = 3 / 4; // Vertical 3:4
+
+// Aspect ratios for different views
+const CARD_ASPECT_RATIO = 3 / 4; // Vertical 3:4 for library cards
+const DETAIL_ASPECT_RATIO = 16 / 10; // Horizontal for routine detail header
 
 interface ImageDimensions {
   naturalWidth: number;
@@ -70,9 +73,13 @@ const CoverPhotoModal = ({
   
   const editorRef = useRef<HTMLDivElement>(null);
   
-  // Viewport dimensions (the visible crop area)
-  const VIEWPORT_WIDTH = 180;
-  const VIEWPORT_HEIGHT = VIEWPORT_WIDTH / ASPECT_RATIO;
+  // Viewport dimensions for card preview (the main editable area)
+  const CARD_VIEWPORT_WIDTH = 180;
+  const CARD_VIEWPORT_HEIGHT = CARD_VIEWPORT_WIDTH / CARD_ASPECT_RATIO;
+  
+  // Viewport dimensions for detail preview (read-only preview)
+  const DETAIL_VIEWPORT_WIDTH = 200;
+  const DETAIL_VIEWPORT_HEIGHT = DETAIL_VIEWPORT_WIDTH / DETAIL_ASPECT_RATIO;
 
   // Reset local state when modal opens
   useEffect(() => {
@@ -121,15 +128,15 @@ const CoverPhotoModal = ({
     img.src = currentImage;
   }, [currentImage]);
 
-  // Calculate the minimum scale where image covers the viewport completely (cover behavior)
+  // Calculate the minimum scale where image covers the card viewport completely (cover behavior)
   const getMinScale = useCallback(() => {
     if (!imageDimensions) return 1;
     
     const { naturalWidth, naturalHeight } = imageDimensions;
     
-    // Calculate scale needed to cover viewport in each dimension
-    const scaleX = VIEWPORT_WIDTH / naturalWidth;
-    const scaleY = VIEWPORT_HEIGHT / naturalHeight;
+    // Calculate scale needed to cover card viewport in each dimension
+    const scaleX = CARD_VIEWPORT_WIDTH / naturalWidth;
+    const scaleY = CARD_VIEWPORT_HEIGHT / naturalHeight;
     
     // Use the larger scale to ensure full coverage (cover behavior)
     return Math.max(scaleX, scaleY);
@@ -142,7 +149,7 @@ const CoverPhotoModal = ({
 
   // Get the displayed image dimensions at current scale
   const getScaledDimensions = useCallback(() => {
-    if (!imageDimensions) return { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
+    if (!imageDimensions) return { width: CARD_VIEWPORT_WIDTH, height: CARD_VIEWPORT_HEIGHT };
     
     const { naturalWidth, naturalHeight } = imageDimensions;
     const totalScale = getTotalScale();
@@ -153,13 +160,13 @@ const CoverPhotoModal = ({
     };
   }, [imageDimensions, getTotalScale]);
 
-  // Calculate pan limits based on image size and viewport
+  // Calculate pan limits based on image size and card viewport
   const getPanLimits = useCallback(() => {
     const { width: imgWidth, height: imgHeight } = getScaledDimensions();
     
-    // How much the image extends beyond viewport
-    const overflowX = Math.max(0, (imgWidth - VIEWPORT_WIDTH) / 2);
-    const overflowY = Math.max(0, (imgHeight - VIEWPORT_HEIGHT) / 2);
+    // How much the image extends beyond card viewport
+    const overflowX = Math.max(0, (imgWidth - CARD_VIEWPORT_WIDTH) / 2);
+    const overflowY = Math.max(0, (imgHeight - CARD_VIEWPORT_HEIGHT) / 2);
     
     return {
       minX: -overflowX,
@@ -276,8 +283,8 @@ const CoverPhotoModal = ({
     const newWidth = naturalWidth * totalScale;
     const newHeight = naturalHeight * totalScale;
     
-    const overflowX = Math.max(0, (newWidth - VIEWPORT_WIDTH) / 2);
-    const overflowY = Math.max(0, (newHeight - VIEWPORT_HEIGHT) / 2);
+    const overflowX = Math.max(0, (newWidth - CARD_VIEWPORT_WIDTH) / 2);
+    const overflowY = Math.max(0, (newHeight - CARD_VIEWPORT_HEIGHT) / 2);
     
     setLocalCrop(prev => ({
       scale: newScale,
@@ -412,53 +419,83 @@ const CoverPhotoModal = ({
             </div>
 
             {/* Preview Container */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center overflow-auto">
               {showEditor && imageDimensions ? (
-                <div className="space-y-4 w-full max-w-xs">
-                  {/* Crop Editor - Viewport acts as a window into the full image */}
-                  <div
-                    ref={editorRef}
-                    className="relative mx-auto overflow-hidden rounded-lg border border-border bg-muted"
-                    style={{ width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }}
-                    onMouseDown={handlePanStart}
-                    onMouseMove={handlePanMove}
-                    onMouseUp={handlePanEnd}
-                    onMouseLeave={handlePanEnd}
-                  >
-                    {/* 
-                      Image scaled using transform (not width/height) to preserve aspect ratio.
-                      The minScale ensures the image covers the viewport completely.
-                      User zoom (localCrop.scale) is applied on top of that.
-                    */}
-                    <img
-                      src={currentImage}
-                      alt="Preview"
-                      className="absolute select-none"
-                      style={{
-                        // Use natural dimensions - let transform handle scaling
-                        width: imageDimensions.naturalWidth,
-                        height: imageDimensions.naturalHeight,
-                        // Position at center of viewport
-                        left: '50%',
-                        top: '50%',
-                        // Transform: center, then pan, then scale uniformly
-                        transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px) scale(${getTotalScale()})`,
-                        transformOrigin: 'center center',
-                        cursor: localType === "auto" ? "default" : isPanning ? "grabbing" : "grab",
-                      }}
-                      draggable={false}
-                    />
-                    {localType !== "auto" && (
-                      <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm rounded px-2 py-0.5 flex items-center gap-1 text-[10px] text-muted-foreground pointer-events-none">
-                        <Move className="h-3 w-3" />
-                        Arrastra para ajustar
+                <div className="space-y-4 w-full">
+                  {/* Both Previews Side by Side */}
+                  <div className="flex items-start justify-center gap-6">
+                    {/* Card Preview (3:4 vertical) - Editable */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-muted-foreground text-center font-medium uppercase tracking-wide">Card Biblioteca</p>
+                      <div
+                        ref={editorRef}
+                        className="relative mx-auto overflow-hidden rounded-lg border-2 border-primary bg-muted"
+                        style={{ width: CARD_VIEWPORT_WIDTH, height: CARD_VIEWPORT_HEIGHT }}
+                        onMouseDown={handlePanStart}
+                        onMouseMove={handlePanMove}
+                        onMouseUp={handlePanEnd}
+                        onMouseLeave={handlePanEnd}
+                      >
+                        <img
+                          src={currentImage}
+                          alt="Preview Card"
+                          className="absolute select-none"
+                          style={{
+                            width: imageDimensions.naturalWidth,
+                            height: imageDimensions.naturalHeight,
+                            left: '50%',
+                            top: '50%',
+                            transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px) scale(${getTotalScale()})`,
+                            transformOrigin: 'center center',
+                            cursor: localType === "auto" ? "default" : isPanning ? "grabbing" : "grab",
+                          }}
+                          draggable={false}
+                        />
+                        {localType !== "auto" && (
+                          <div className="absolute bottom-1.5 right-1.5 bg-background/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1 text-[9px] text-muted-foreground pointer-events-none">
+                            <Move className="h-2.5 w-2.5" />
+                            Arrastra
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Detail Preview (16:10 horizontal) - Read-only */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-muted-foreground text-center font-medium uppercase tracking-wide">Detalle Rutina</p>
+                      <div
+                        className="relative mx-auto overflow-hidden rounded-lg border border-border bg-muted"
+                        style={{ width: DETAIL_VIEWPORT_WIDTH, height: DETAIL_VIEWPORT_HEIGHT }}
+                      >
+                        <img
+                          src={currentImage}
+                          alt="Preview Detalle"
+                          className="absolute select-none pointer-events-none"
+                          style={{
+                            width: imageDimensions.naturalWidth,
+                            height: imageDimensions.naturalHeight,
+                            left: '50%',
+                            top: '50%',
+                            // Calculate scale for detail viewport (cover behavior)
+                            transform: `translate(-50%, -50%) translate(${localCrop.x * (DETAIL_VIEWPORT_WIDTH / CARD_VIEWPORT_WIDTH)}px, ${localCrop.y * (DETAIL_VIEWPORT_HEIGHT / CARD_VIEWPORT_HEIGHT)}px) scale(${(() => {
+                              const scaleX = DETAIL_VIEWPORT_WIDTH / imageDimensions.naturalWidth;
+                              const scaleY = DETAIL_VIEWPORT_HEIGHT / imageDimensions.naturalHeight;
+                              const baseScale = Math.max(scaleX, scaleY);
+                              return baseScale * localCrop.scale;
+                            })()})`,
+                            transformOrigin: 'center center',
+                          }}
+                          draggable={false}
+                        />
+                        {/* Gradient overlay like in actual detail page */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50 pointer-events-none" />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Zoom Slider */}
                   {localType !== "auto" && (
-                    <div className="space-y-2">
+                    <div className="max-w-xs mx-auto space-y-2">
                       <div className="flex items-center gap-2">
                         <ZoomIn className="h-4 w-4 text-muted-foreground" />
                         <Slider
