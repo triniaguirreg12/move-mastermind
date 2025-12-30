@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ import { useAvailableRoutines, useCreateProgram, useUpdateProgram } from "@/hook
 import { useAllProfiles } from "@/hooks/useProfiles";
 import ObjectiveRadarChart from "@/components/admin/routines/ObjectiveRadarChart";
 import EditProgramRoutineModal from "./EditProgramRoutineModal";
+import CoverPhotoModal from "./CoverPhotoModal";
 import { 
   RutinaObjetivo, 
   APTITUDES_KEYS, 
@@ -70,13 +71,21 @@ interface ProgramWeek {
   routines: ProgramRoutine[];
 }
 
+interface CropData {
+  x: number;
+  y: number;
+  scale: number;
+}
+
 interface ProgramFormData {
   id?: string;
   nombre: string;
   descripcion: string;
   portada_url: string;
-  portada_type: "routine" | "external" | "";
-  portada_routine_id?: string;
+  portada_type: "auto" | "rutina" | "custom" | "";
+  portada_rutina_id?: string;
+  portada_crop_card?: CropData;
+  portada_crop_detail?: CropData;
   duracion_semanas: number;
   dificultad: DificultadRutina | "";
   estado: "borrador" | "publicada";
@@ -138,12 +147,14 @@ export default function CreateProgramModal({
     nombre: "",
     descripcion: "",
     portada_url: "",
-    portada_type: "",
+    portada_type: "auto",
     duracion_semanas: 4,
     dificultad: "",
     estado: "borrador",
     weeks: [createEmptyWeek(1), createEmptyWeek(2), createEmptyWeek(3), createEmptyWeek(4)],
   });
+
+  const [coverPhotoModalOpen, setCoverPhotoModalOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategoria, setFilterCategoria] = useState<string>("");
@@ -193,6 +204,57 @@ export default function CreateProgramModal({
   // Check if there are any scored aptitudes
   const hasAptitudes = APTITUDES_KEYS.some(key => calculatedObjetivo[key] > 0);
 
+  // Get routines with covers for the cover photo modal
+  const rutinasConPortadaEnPrograma = useMemo(() => {
+    const allRoutineIds = formData.weeks.flatMap(w => w.routines.map(r => r.routine_id));
+    const uniqueIds = [...new Set(allRoutineIds)];
+    return (availableRoutines || [])
+      .filter(r => uniqueIds.includes(r.id) && r.portada_url)
+      .map(r => ({ id: r.id, nombre: r.nombre, portada_url: r.portada_url }));
+  }, [formData.weeks, availableRoutines]);
+
+  // Get the current program cover image
+  const getCurrentProgramCoverImage = useCallback((): string | null => {
+    if (formData.portada_type === "auto") {
+      const firstRoutineWithCover = rutinasConPortadaEnPrograma[0];
+      return firstRoutineWithCover?.portada_url || null;
+    }
+    if (formData.portada_type === "rutina") {
+      return rutinasConPortadaEnPrograma.find(r => r.id === formData.portada_rutina_id)?.portada_url || null;
+    }
+    if (formData.portada_type === "custom") {
+      return formData.portada_url || null;
+    }
+    return null;
+  }, [formData.portada_type, formData.portada_rutina_id, formData.portada_url, rutinasConPortadaEnPrograma]);
+
+  // Handle cover photo save
+  const handleCoverPhotoSave = (
+    type: "auto" | "rutina" | "custom" | "",
+    rutinaId?: string,
+    customUrl?: string,
+    cropCard?: CropData,
+    cropDetail?: CropData
+  ) => {
+    let portadaUrl = "";
+    if (type === "auto") {
+      portadaUrl = rutinasConPortadaEnPrograma[0]?.portada_url || "";
+    } else if (type === "rutina") {
+      portadaUrl = rutinasConPortadaEnPrograma.find(r => r.id === rutinaId)?.portada_url || "";
+    } else if (type === "custom") {
+      portadaUrl = customUrl || "";
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      portada_type: type,
+      portada_rutina_id: rutinaId,
+      portada_url: portadaUrl,
+      portada_crop_card: cropCard,
+      portada_crop_detail: cropDetail,
+    }));
+  };
+
   // Reset form when opening/closing or when program changes
   useEffect(() => {
     if (open) {
@@ -219,7 +281,7 @@ export default function CreateProgramModal({
           nombre: program.nombre,
           descripcion: program.descripcion || "",
           portada_url: program.portada_url || "",
-          portada_type: program.portada_url ? "external" : "",
+          portada_type: program.portada_url ? "custom" : "auto",
           duracion_semanas: program.duracion_semanas || 4,
           dificultad: (program.dificultad as DificultadRutina) || "",
           estado: program.estado as "borrador" | "publicada",
@@ -232,7 +294,7 @@ export default function CreateProgramModal({
           nombre: "",
           descripcion: "",
           portada_url: "",
-          portada_type: "",
+          portada_type: "auto",
           duracion_semanas: 4,
           dificultad: "",
           estado: "borrador",
@@ -667,114 +729,39 @@ export default function CreateProgramModal({
                 {/* Cover Photo */}
                 <div className="space-y-2">
                   <Label>Portada del programa</Label>
-                  <div className="flex gap-2">
-                    {/* Cover preview or drop zone */}
-                    <div 
-                      className={`h-20 w-20 rounded-lg border-2 border-dashed flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${
-                        formData.portada_url ? "border-border" : "border-border/50 hover:border-primary/50"
+                  <div className="flex gap-2 items-center">
+                    {/* Cover preview */}
+                    <button
+                      type="button"
+                      onClick={() => setCoverPhotoModalOpen(true)}
+                      className={`h-20 w-16 rounded-lg border-2 flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors cursor-pointer ${
+                        getCurrentProgramCoverImage() ? "border-border hover:border-primary/50" : "border-dashed border-border/50 hover:border-primary/50"
                       }`}
-                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const files = e.dataTransfer.files;
-                        if (files.length > 0 && files[0].type.startsWith("image/")) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              portada_url: event.target?.result as string,
-                              portada_type: "external"
-                            }));
-                          };
-                          reader.readAsDataURL(files[0]);
-                        }
-                      }}
                     >
-                      {formData.portada_url ? (
+                      {getCurrentProgramCoverImage() ? (
                         <img 
-                          src={formData.portada_url} 
+                          src={getCurrentProgramCoverImage()!} 
                           alt="Portada"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
                         />
                       ) : (
                         <div className="text-center p-1">
-                          <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-                          <span className="text-[10px] text-muted-foreground">Drop image</span>
+                          <ImageIcon className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                          <span className="text-[10px] text-muted-foreground">Configurar</span>
                         </div>
                       )}
-                    </div>
+                    </button>
                     
-                    {/* Options */}
-                    <div className="flex-1 space-y-1.5">
-                      <Select
-                        value={formData.portada_type}
-                        onValueChange={(value) => {
-                          if (value === "routine" && availableRoutines && availableRoutines.length > 0) {
-                            const routineWithThumb = availableRoutines.find(r => r.portada_url);
-                            if (routineWithThumb) {
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                portada_type: "routine",
-                                portada_url: routineWithThumb.portada_url || "",
-                                portada_routine_id: routineWithThumb.id
-                              }));
-                            }
-                          } else if (value === "external") {
-                            setFormData(prev => ({ ...prev, portada_type: "external", portada_url: "", portada_routine_id: undefined }));
-                          } else {
-                            setFormData(prev => ({ ...prev, portada_type: "", portada_url: "", portada_routine_id: undefined }));
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="bg-card border-border h-8 text-xs">
-                          <SelectValue placeholder="Seleccionar tipo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="routine">De una rutina</SelectItem>
-                          <SelectItem value="external">Imagen externa</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      {formData.portada_type === "routine" && (
-                        <Select
-                          value={formData.portada_routine_id || ""}
-                          onValueChange={(routineId) => {
-                            const routine = availableRoutines?.find(r => r.id === routineId);
-                            if (routine) {
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                portada_url: routine.portada_url || "",
-                                portada_routine_id: routineId
-                              }));
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="bg-card border-border h-8 text-xs">
-                            <SelectValue placeholder="Seleccionar rutina..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(availableRoutines || []).filter(r => r.portada_url).map((routine) => (
-                              <SelectItem key={routine.id} value={routine.id}>
-                                {routine.nombre}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      
-                      {formData.portada_type === "external" && (
-                        <Input
-                          value={formData.portada_url}
-                          onChange={(e) => setFormData(prev => ({ ...prev, portada_url: e.target.value }))}
-                          placeholder="URL o arrastra imagen..."
-                          className="bg-card border-border h-8 text-xs"
-                        />
-                      )}
-                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCoverPhotoModalOpen(true)}
+                      className="text-xs"
+                    >
+                      <ImageIcon className="h-3 w-3 mr-1" />
+                      Configurar portada
+                    </Button>
                   </div>
                 </div>
 
@@ -1079,6 +1066,19 @@ export default function CreateProgramModal({
           isAssigned={!!formData.assigned_user_id}
         />
       )}
+
+      {/* Cover photo modal */}
+      <CoverPhotoModal
+        open={coverPhotoModalOpen}
+        onOpenChange={setCoverPhotoModalOpen}
+        portadaType={formData.portada_type}
+        portadaRutinaId={formData.portada_rutina_id}
+        portadaCustomUrl={formData.portada_type === "custom" ? formData.portada_url : undefined}
+        portadaCropCard={formData.portada_crop_card}
+        portadaCropDetail={formData.portada_crop_detail}
+        rutinasEnPrograma={rutinasConPortadaEnPrograma}
+        onSave={handleCoverPhotoSave}
+      />
     </Dialog>
   );
 }
