@@ -131,17 +131,23 @@ const AdminRutinas = () => {
           // Insert exercises for this block
           for (let j = 0; j < bloque.ejercicios.length; j++) {
             const ej = bloque.ejercicios[j];
-            // We need to find the exercise UUID from the DB
-            const { data: exerciseData } = await supabase
-              .from("exercises")
-              .select("id")
-              .ilike("nombre", ej.ejercicio.nombre)
-              .single();
+            // Use the preserved UUID if available, otherwise search by name
+            let exerciseId = (ej.ejercicio as any)?._dbId;
+            
+            if (!exerciseId) {
+              // Fallback: search by name
+              const { data: exerciseData } = await supabase
+                .from("exercises")
+                .select("id")
+                .ilike("nombre", ej.ejercicio.nombre)
+                .maybeSingle();
+              exerciseId = exerciseData?.id;
+            }
 
-            if (exerciseData) {
+            if (exerciseId) {
               await supabase.from("block_exercises").insert({
                 block_id: blockData.id,
-                exercise_id: exerciseData.id,
+                exercise_id: exerciseId,
                 orden: j,
                 tipo_ejecucion: ej.tipoEjecucion,
                 tiempo: ej.tiempo,
@@ -201,16 +207,23 @@ const AdminRutinas = () => {
           // Insert exercises
           for (let j = 0; j < bloque.ejercicios.length; j++) {
             const ej = bloque.ejercicios[j];
-            const { data: exerciseData } = await supabase
-              .from("exercises")
-              .select("id")
-              .ilike("nombre", ej.ejercicio.nombre)
-              .single();
+            // Use the preserved UUID if available, otherwise search by name
+            let exerciseId = (ej.ejercicio as any)?._dbId;
+            
+            if (!exerciseId) {
+              // Fallback: search by name
+              const { data: exerciseData } = await supabase
+                .from("exercises")
+                .select("id")
+                .ilike("nombre", ej.ejercicio.nombre)
+                .maybeSingle();
+              exerciseId = exerciseData?.id;
+            }
 
-            if (exerciseData) {
+            if (exerciseId) {
               await supabase.from("block_exercises").insert({
                 block_id: blockData.id,
-                exercise_id: exerciseData.id,
+                exercise_id: exerciseId,
                 orden: j,
                 tipo_ejecucion: ej.tipoEjecucion,
                 tiempo: ej.tiempo,
