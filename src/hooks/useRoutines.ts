@@ -181,8 +181,13 @@ export function calcularImplementosUnicos(
 }
 
 // ============ ADMIN TYPE TRANSFORMATIONS ============
+// Extended Ejercicio type that includes the DB UUID for saving
+export interface EjercicioWithDbId extends Ejercicio {
+  _dbId?: string; // Original UUID from database
+}
+
 // Transform DB Exercise to Admin Ejercicio format
-function dbExerciseToAdminEjercicio(dbExercise: Exercise): Ejercicio {
+function dbExerciseToAdminEjercicio(dbExercise: Exercise): EjercicioWithDbId {
   return {
     id: parseInt(dbExercise.id.replace(/\D/g, '').slice(0, 8)) || Math.random() * 1000000,
     nombre: dbExercise.nombre,
@@ -196,6 +201,7 @@ function dbExerciseToAdminEjercicio(dbExercise: Exercise): Ejercicio {
     implementos: dbExercise.implementos || [],
     video: dbExercise.video_url,
     thumbnail: dbExercise.thumbnail_url,
+    _dbId: dbExercise.id, // Preserve the UUID for saving
   };
 }
 
@@ -678,6 +684,7 @@ export function routineToLibraryCard(routine: RoutineWithCalculated) {
     id: routine.id,
     title: routine.nombre,
     subtitle: routine.descripcion || "",
+    imageUrl: routine.portada_url || undefined,
     duration,
     durationValue,
     difficulty: routine.dificultad,
