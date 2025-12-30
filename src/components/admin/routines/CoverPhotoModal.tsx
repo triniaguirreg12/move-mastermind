@@ -121,9 +121,8 @@ const CoverPhotoModal = ({
     img.src = currentImage;
   }, [currentImage]);
 
-  // Calculate the base scale factor so image covers the viewport while maintaining aspect ratio
-  // This is the minimum scale where image fills the viewport completely (cover behavior)
-  const getBaseScale = useCallback(() => {
+  // Calculate the minimum scale where image covers the viewport completely (cover behavior)
+  const getMinScale = useCallback(() => {
     if (!imageDimensions) return 1;
     
     const { naturalWidth, naturalHeight } = imageDimensions;
@@ -136,23 +135,27 @@ const CoverPhotoModal = ({
     return Math.max(scaleX, scaleY);
   }, [imageDimensions]);
 
-  // Get the displayed image dimensions (natural size * base scale * user zoom)
-  const getImageDisplaySize = useCallback(() => {
+  // The actual scale applied to the image (base cover scale * user zoom)
+  const getTotalScale = useCallback(() => {
+    return getMinScale() * localCrop.scale;
+  }, [getMinScale, localCrop.scale]);
+
+  // Get the displayed image dimensions at current scale
+  const getScaledDimensions = useCallback(() => {
     if (!imageDimensions) return { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
     
     const { naturalWidth, naturalHeight } = imageDimensions;
-    const baseScale = getBaseScale();
-    const totalScale = baseScale * localCrop.scale;
+    const totalScale = getTotalScale();
     
     return {
       width: naturalWidth * totalScale,
       height: naturalHeight * totalScale,
     };
-  }, [imageDimensions, getBaseScale, localCrop.scale]);
+  }, [imageDimensions, getTotalScale]);
 
   // Calculate pan limits based on image size and viewport
   const getPanLimits = useCallback(() => {
-    const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
+    const { width: imgWidth, height: imgHeight } = getScaledDimensions();
     
     // How much the image extends beyond viewport
     const overflowX = Math.max(0, (imgWidth - VIEWPORT_WIDTH) / 2);
@@ -164,7 +167,7 @@ const CoverPhotoModal = ({
       minY: -overflowY,
       maxY: overflowY,
     };
-  }, [getImageDisplaySize]);
+  }, [getScaledDimensions]);
 
   // Clamp position to valid limits
   const clampPosition = useCallback((x: number, y: number) => {
@@ -267,8 +270,8 @@ const CoverPhotoModal = ({
     if (!imageDimensions) return;
     
     const { naturalWidth, naturalHeight } = imageDimensions;
-    const baseScale = getBaseScale();
-    const totalScale = baseScale * newScale;
+    const minScale = getMinScale();
+    const totalScale = minScale * newScale;
     
     const newWidth = naturalWidth * totalScale;
     const newHeight = naturalHeight * totalScale;
@@ -289,7 +292,7 @@ const CoverPhotoModal = ({
   };
 
   const showEditor = localType !== "" && currentImage;
-  const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
+  const { width: imgWidth, height: imgHeight } = getScaledDimensions();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
