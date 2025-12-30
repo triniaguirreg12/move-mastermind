@@ -47,9 +47,14 @@ export interface Rutina {
   bloques: RutinaBloque[];
   estado: "borrador" | "publicada";
   descansoEntreBloques: number; // seconds
-  portadaType: "ejercicio" | "custom" | "";
+  portadaType: "auto" | "ejercicio" | "custom" | "";
   portadaEjercicioId?: number;
   portadaCustomUrl?: string;
+  portadaCrop?: {
+    x: number;
+    y: number;
+    scale: number;
+  };
   // New fields for library display
   calificacion?: number; // average rating (0-5)
   vecesRealizada?: number; // times completed
@@ -117,9 +122,10 @@ export const createEmptyRutina = (): Rutina => ({
   bloques: [],
   estado: "borrador",
   descansoEntreBloques: 60,
-  portadaType: "",
+  portadaType: "auto",
   portadaEjercicioId: undefined,
   portadaCustomUrl: undefined,
+  portadaCrop: undefined,
   calificacion: undefined,
   vecesRealizada: 0,
 });
