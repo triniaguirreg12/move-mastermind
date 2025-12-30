@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, Wand2, Dumbbell, RotateCcw, Check, ZoomIn, Move } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +39,11 @@ interface CoverPhotoModalProps {
 const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ASPECT_RATIO = 3 / 4; // Vertical 3:4
 
+interface ImageDimensions {
+  naturalWidth: number;
+  naturalHeight: number;
+}
+
 const CoverPhotoModal = ({
   open,
   onOpenChange,
@@ -62,8 +66,13 @@ const CoverPhotoModal = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [imageDimensions, setImageDimensions] = useState<ImageDimensions | null>(null);
   
   const editorRef = useRef<HTMLDivElement>(null);
+  
+  // Viewport dimensions (the visible crop area)
+  const VIEWPORT_WIDTH = 180;
+  const VIEWPORT_HEIGHT = VIEWPORT_WIDTH / ASPECT_RATIO;
 
   // Reset local state when modal opens
   useEffect(() => {
@@ -72,6 +81,7 @@ const CoverPhotoModal = ({
       setLocalEjercicioId(portadaEjercicioId);
       setLocalCustomUrl(portadaCustomUrl);
       setLocalCrop(portadaCrop || { x: 0, y: 0, scale: 1 });
+      setImageDimensions(null);
     }
   }, [open, portadaType, portadaEjercicioId, portadaCustomUrl, portadaCrop]);
 
@@ -80,7 +90,6 @@ const CoverPhotoModal = ({
   // Get current preview image
   const getCurrentImage = useCallback((): string | null => {
     if (localType === "auto") {
-      // Use first exercise with thumbnail
       const firstWithThumb = ejerciciosConThumbnail[0];
       return firstWithThumb?.thumbnail || null;
     }
@@ -92,6 +101,78 @@ const CoverPhotoModal = ({
     }
     return null;
   }, [localType, localEjercicioId, localCustomUrl, ejerciciosEnRutina, ejerciciosConThumbnail]);
+
+  // Load image dimensions when image changes
+  const currentImage = getCurrentImage();
+  
+  useEffect(() => {
+    if (!currentImage) {
+      setImageDimensions(null);
+      return;
+    }
+    
+    const img = new Image();
+    img.onload = () => {
+      setImageDimensions({
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+      });
+    };
+    img.src = currentImage;
+  }, [currentImage]);
+
+  // Calculate image size that fits the viewport while maintaining aspect ratio
+  // Image must be at least as large as viewport in both dimensions (cover behavior)
+  const getImageDisplaySize = useCallback(() => {
+    if (!imageDimensions) return { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
+    
+    const { naturalWidth, naturalHeight } = imageDimensions;
+    const imageAspect = naturalWidth / naturalHeight;
+    const viewportAspect = ASPECT_RATIO;
+    
+    let baseWidth: number;
+    let baseHeight: number;
+    
+    // Scale image to cover the viewport (minimum size to fill it)
+    if (imageAspect > viewportAspect) {
+      // Image is wider - fit to height
+      baseHeight = VIEWPORT_HEIGHT;
+      baseWidth = baseHeight * imageAspect;
+    } else {
+      // Image is taller - fit to width
+      baseWidth = VIEWPORT_WIDTH;
+      baseHeight = baseWidth / imageAspect;
+    }
+    
+    return { width: baseWidth, height: baseHeight };
+  }, [imageDimensions]);
+
+  // Calculate pan limits based on image size, viewport, and scale
+  const getPanLimits = useCallback(() => {
+    const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
+    const scaledWidth = imgWidth * localCrop.scale;
+    const scaledHeight = imgHeight * localCrop.scale;
+    
+    // How much the image extends beyond viewport
+    const overflowX = Math.max(0, (scaledWidth - VIEWPORT_WIDTH) / 2);
+    const overflowY = Math.max(0, (scaledHeight - VIEWPORT_HEIGHT) / 2);
+    
+    return {
+      minX: -overflowX,
+      maxX: overflowX,
+      minY: -overflowY,
+      maxY: overflowY,
+    };
+  }, [getImageDisplaySize, localCrop.scale]);
+
+  // Clamp position to valid limits
+  const clampPosition = useCallback((x: number, y: number) => {
+    const limits = getPanLimits();
+    return {
+      x: Math.max(limits.minX, Math.min(limits.maxX, x)),
+      y: Math.max(limits.minY, Math.min(limits.maxY, y)),
+    };
+  }, [getPanLimits]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,6 +194,7 @@ const CoverPhotoModal = ({
       setLocalType("custom");
       setLocalCustomUrl(e.target?.result as string);
       setLocalCrop({ x: 0, y: 0, scale: 1 });
+      setImageDimensions(null);
     };
     reader.readAsDataURL(file);
   };
@@ -146,11 +228,13 @@ const CoverPhotoModal = ({
     setLocalType("ejercicio");
     setLocalEjercicioId(ejercicioId);
     setLocalCrop({ x: 0, y: 0, scale: 1 });
+    setImageDimensions(null);
   };
 
   const handleSelectAuto = () => {
     setLocalType("auto");
     setLocalCrop({ x: 0, y: 0, scale: 1 });
+    setImageDimensions(null);
   };
 
   const resetCrop = () => {
@@ -160,6 +244,7 @@ const CoverPhotoModal = ({
   // Pan handling
   const handlePanStart = (e: React.MouseEvent) => {
     if (localType === "auto") return;
+    e.preventDefault();
     setIsPanning(true);
     setPanStart({ x: e.clientX - localCrop.x, y: e.clientY - localCrop.y });
   };
@@ -168,17 +253,31 @@ const CoverPhotoModal = ({
     if (!isPanning) return;
     const newX = e.clientX - panStart.x;
     const newY = e.clientY - panStart.y;
-    // Limit pan range
-    const maxPan = 100 * localCrop.scale;
-    setLocalCrop(prev => ({
-      ...prev,
-      x: Math.max(-maxPan, Math.min(maxPan, newX)),
-      y: Math.max(-maxPan, Math.min(maxPan, newY)),
-    }));
+    const clamped = clampPosition(newX, newY);
+    setLocalCrop(prev => ({ ...prev, x: clamped.x, y: clamped.y }));
   };
 
   const handlePanEnd = () => {
     setIsPanning(false);
+  };
+
+  // Handle scale change - also clamp position
+  const handleScaleChange = (newScale: number) => {
+    setLocalCrop(prev => {
+      const newCrop = { ...prev, scale: newScale };
+      // Recalculate limits with new scale and clamp position
+      const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
+      const scaledWidth = imgWidth * newScale;
+      const scaledHeight = imgHeight * newScale;
+      const overflowX = Math.max(0, (scaledWidth - VIEWPORT_WIDTH) / 2);
+      const overflowY = Math.max(0, (scaledHeight - VIEWPORT_HEIGHT) / 2);
+      
+      return {
+        ...newCrop,
+        x: Math.max(-overflowX, Math.min(overflowX, prev.x)),
+        y: Math.max(-overflowY, Math.min(overflowY, prev.y)),
+      };
+    });
   };
 
   const handleSave = () => {
@@ -186,8 +285,8 @@ const CoverPhotoModal = ({
     onOpenChange(false);
   };
 
-  const currentImage = getCurrentImage();
   const showEditor = localType !== "" && currentImage;
+  const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -309,30 +408,37 @@ const CoverPhotoModal = ({
 
             {/* Preview Container */}
             <div className="flex-1 flex items-center justify-center">
-              {showEditor ? (
+              {showEditor && imageDimensions ? (
                 <div className="space-y-4 w-full max-w-xs">
-                  {/* Crop Editor */}
+                  {/* Crop Editor - Viewport acts as a window into the full image */}
                   <div
                     ref={editorRef}
                     className="relative mx-auto overflow-hidden rounded-lg border border-border bg-muted"
-                    style={{ width: 180, height: 180 / ASPECT_RATIO }}
+                    style={{ width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }}
                     onMouseDown={handlePanStart}
                     onMouseMove={handlePanMove}
                     onMouseUp={handlePanEnd}
                     onMouseLeave={handlePanEnd}
                   >
+                    {/* Image positioned absolutely, centered, with pan/zoom transforms */}
                     <img
                       src={currentImage}
                       alt="Preview"
-                      className="absolute w-full h-full object-cover select-none"
+                      className="absolute select-none"
                       style={{
-                        transform: `translate(${localCrop.x}px, ${localCrop.y}px) scale(${localCrop.scale})`,
-                        cursor: localType === "auto" ? "default" : "grab",
+                        width: imgWidth,
+                        height: imgHeight,
+                        // Center the image, then apply pan offset and scale
+                        left: '50%',
+                        top: '50%',
+                        transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px) scale(${localCrop.scale})`,
+                        transformOrigin: 'center center',
+                        cursor: localType === "auto" ? "default" : isPanning ? "grabbing" : "grab",
                       }}
                       draggable={false}
                     />
                     {localType !== "auto" && (
-                      <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm rounded px-2 py-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm rounded px-2 py-0.5 flex items-center gap-1 text-[10px] text-muted-foreground pointer-events-none">
                         <Move className="h-3 w-3" />
                         Arrastra para ajustar
                       </div>
@@ -347,9 +453,9 @@ const CoverPhotoModal = ({
                         <Slider
                           value={[localCrop.scale]}
                           min={1}
-                          max={2}
+                          max={2.5}
                           step={0.05}
-                          onValueChange={([value]) => setLocalCrop(prev => ({ ...prev, scale: value }))}
+                          onValueChange={([value]) => handleScaleChange(value)}
                           className="flex-1"
                         />
                         <span className="text-xs text-muted-foreground w-10 text-right">
@@ -367,6 +473,11 @@ const CoverPhotoModal = ({
                       {localType === "custom" && "Imagen personalizada"}
                     </Badge>
                   </div>
+                </div>
+              ) : showEditor ? (
+                <div className="text-center text-muted-foreground">
+                  <div className="w-32 h-40 border border-border rounded-lg flex items-center justify-center mx-auto mb-2 animate-pulse bg-muted" />
+                  <p className="text-sm">Cargando imagen...</p>
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground">
