@@ -16,13 +16,15 @@ interface CoverPhotoSectionProps {
   portadaType: "auto" | "ejercicio" | "custom" | "";
   portadaEjercicioId?: number;
   portadaCustomUrl?: string;
-  portadaCrop?: CropData;
+  portadaCropCard?: CropData;
+  portadaCropDetail?: CropData;
   ejerciciosEnRutina: Ejercicio[];
   onPortadaChange: (
     type: "auto" | "ejercicio" | "custom" | "",
     ejercicioId?: number,
     customUrl?: string,
-    crop?: CropData
+    cropCard?: CropData,
+    cropDetail?: CropData
   ) => void;
 }
 
@@ -32,7 +34,8 @@ const CoverPhotoSection = ({
   portadaType,
   portadaEjercicioId,
   portadaCustomUrl,
-  portadaCrop,
+  portadaCropCard,
+  portadaCropDetail,
   ejerciciosEnRutina,
   onPortadaChange,
 }: CoverPhotoSectionProps) => {
@@ -57,7 +60,7 @@ const CoverPhotoSection = ({
 
   const currentImage = getCurrentImage();
   const effectiveType = portadaType || "auto";
-  const crop = portadaCrop || { x: 0, y: 0, scale: 1 };
+  const cropCard = portadaCropCard || { x: 0, y: 0, scale: 1 };
 
   const getTypeLabel = () => {
     switch (effectiveType) {
@@ -92,7 +95,7 @@ const CoverPhotoSection = ({
                 alt="Portada preview"
                 className="absolute w-full h-full object-cover"
                 style={{
-                  transform: `translate(${crop.x * 0.5}px, ${crop.y * 0.5}px) scale(${crop.scale})`,
+                  transform: `translate(${cropCard.x * 0.5}px, ${cropCard.y * 0.5}px) scale(${cropCard.scale})`,
                 }}
               />
             ) : (
@@ -138,7 +141,8 @@ const CoverPhotoSection = ({
         portadaType={effectiveType}
         portadaEjercicioId={portadaEjercicioId}
         portadaCustomUrl={portadaCustomUrl}
-        portadaCrop={portadaCrop}
+        portadaCropCard={portadaCropCard}
+        portadaCropDetail={portadaCropDetail}
         ejerciciosEnRutina={ejerciciosEnRutina}
         onSave={onPortadaChange}
       />

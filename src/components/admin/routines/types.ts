@@ -50,7 +50,12 @@ export interface Rutina {
   portadaType: "auto" | "ejercicio" | "custom" | "";
   portadaEjercicioId?: number;
   portadaCustomUrl?: string;
-  portadaCrop?: {
+  portadaCropCard?: {
+    x: number;
+    y: number;
+    scale: number;
+  };
+  portadaCropDetail?: {
     x: number;
     y: number;
     scale: number;
@@ -125,7 +130,8 @@ export const createEmptyRutina = (): Rutina => ({
   portadaType: "auto",
   portadaEjercicioId: undefined,
   portadaCustomUrl: undefined,
-  portadaCrop: undefined,
+  portadaCropCard: undefined,
+  portadaCropDetail: undefined,
   calificacion: undefined,
   vecesRealizada: 0,
 });

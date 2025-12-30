@@ -26,13 +26,15 @@ interface CoverPhotoModalProps {
   portadaType: "auto" | "ejercicio" | "custom" | "";
   portadaEjercicioId?: number;
   portadaCustomUrl?: string;
-  portadaCrop?: CropData;
+  portadaCropCard?: CropData;
+  portadaCropDetail?: CropData;
   ejerciciosEnRutina: Ejercicio[];
   onSave: (
     type: "auto" | "ejercicio" | "custom" | "",
     ejercicioId?: number,
     customUrl?: string,
-    crop?: CropData
+    cropCard?: CropData,
+    cropDetail?: CropData
   ) => void;
 }
 
@@ -47,13 +49,16 @@ interface ImageDimensions {
   naturalHeight: number;
 }
 
+const DEFAULT_CROP: CropData = { x: 0, y: 0, scale: 1 };
+
 const CoverPhotoModal = ({
   open,
   onOpenChange,
   portadaType,
   portadaEjercicioId,
   portadaCustomUrl,
-  portadaCrop,
+  portadaCropCard,
+  portadaCropDetail,
   ejerciciosEnRutina,
   onSave,
 }: CoverPhotoModalProps) => {
@@ -64,20 +69,22 @@ const CoverPhotoModal = ({
   const [localType, setLocalType] = useState<"auto" | "ejercicio" | "custom" | "">(portadaType || "auto");
   const [localEjercicioId, setLocalEjercicioId] = useState<number | undefined>(portadaEjercicioId);
   const [localCustomUrl, setLocalCustomUrl] = useState<string | undefined>(portadaCustomUrl);
-  const [localCrop, setLocalCrop] = useState<CropData>(portadaCrop || { x: 0, y: 0, scale: 1 });
+  const [localCropCard, setLocalCropCard] = useState<CropData>(portadaCropCard || DEFAULT_CROP);
+  const [localCropDetail, setLocalCropDetail] = useState<CropData>(portadaCropDetail || DEFAULT_CROP);
+  
+  // Which preview is currently being panned
+  const [activePanTarget, setActivePanTarget] = useState<"card" | "detail" | null>(null);
   
   const [isDragging, setIsDragging] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<ImageDimensions | null>(null);
   
-  const editorRef = useRef<HTMLDivElement>(null);
-  
-  // Viewport dimensions for card preview (the main editable area)
-  const CARD_VIEWPORT_WIDTH = 180;
+  // Viewport dimensions for card preview
+  const CARD_VIEWPORT_WIDTH = 160;
   const CARD_VIEWPORT_HEIGHT = CARD_VIEWPORT_WIDTH / CARD_ASPECT_RATIO;
   
-  // Viewport dimensions for detail preview (read-only preview)
+  // Viewport dimensions for detail preview
   const DETAIL_VIEWPORT_WIDTH = 200;
   const DETAIL_VIEWPORT_HEIGHT = DETAIL_VIEWPORT_WIDTH / DETAIL_ASPECT_RATIO;
 
@@ -87,10 +94,12 @@ const CoverPhotoModal = ({
       setLocalType(portadaType || "auto");
       setLocalEjercicioId(portadaEjercicioId);
       setLocalCustomUrl(portadaCustomUrl);
-      setLocalCrop(portadaCrop || { x: 0, y: 0, scale: 1 });
+      setLocalCropCard(portadaCropCard || DEFAULT_CROP);
+      setLocalCropDetail(portadaCropDetail || DEFAULT_CROP);
       setImageDimensions(null);
+      setActivePanTarget(null);
     }
-  }, [open, portadaType, portadaEjercicioId, portadaCustomUrl, portadaCrop]);
+  }, [open, portadaType, portadaEjercicioId, portadaCustomUrl, portadaCropCard, portadaCropDetail]);
 
   const ejerciciosConThumbnail = ejerciciosEnRutina.filter((ej) => ej.thumbnail);
 
@@ -128,62 +137,31 @@ const CoverPhotoModal = ({
     img.src = currentImage;
   }, [currentImage]);
 
-  // Calculate the minimum scale where image covers the card viewport completely (cover behavior)
-  const getMinScale = useCallback(() => {
+  // Calculate min scale for a given viewport
+  const getMinScale = useCallback((viewportWidth: number, viewportHeight: number) => {
     if (!imageDimensions) return 1;
-    
     const { naturalWidth, naturalHeight } = imageDimensions;
-    
-    // Calculate scale needed to cover card viewport in each dimension
-    const scaleX = CARD_VIEWPORT_WIDTH / naturalWidth;
-    const scaleY = CARD_VIEWPORT_HEIGHT / naturalHeight;
-    
-    // Use the larger scale to ensure full coverage (cover behavior)
+    const scaleX = viewportWidth / naturalWidth;
+    const scaleY = viewportHeight / naturalHeight;
     return Math.max(scaleX, scaleY);
   }, [imageDimensions]);
 
-  // The actual scale applied to the image (base cover scale * user zoom)
-  const getTotalScale = useCallback(() => {
-    return getMinScale() * localCrop.scale;
-  }, [getMinScale, localCrop.scale]);
-
-  // Get the displayed image dimensions at current scale
-  const getScaledDimensions = useCallback(() => {
-    if (!imageDimensions) return { width: CARD_VIEWPORT_WIDTH, height: CARD_VIEWPORT_HEIGHT };
+  // Calculate pan limits for a given viewport and crop
+  const getPanLimits = useCallback((viewportWidth: number, viewportHeight: number, crop: CropData) => {
+    if (!imageDimensions) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
     
     const { naturalWidth, naturalHeight } = imageDimensions;
-    const totalScale = getTotalScale();
+    const minScale = getMinScale(viewportWidth, viewportHeight);
+    const totalScale = minScale * crop.scale;
     
-    return {
-      width: naturalWidth * totalScale,
-      height: naturalHeight * totalScale,
-    };
-  }, [imageDimensions, getTotalScale]);
-
-  // Calculate pan limits based on image size and card viewport
-  const getPanLimits = useCallback(() => {
-    const { width: imgWidth, height: imgHeight } = getScaledDimensions();
+    const scaledWidth = naturalWidth * totalScale;
+    const scaledHeight = naturalHeight * totalScale;
     
-    // How much the image extends beyond card viewport
-    const overflowX = Math.max(0, (imgWidth - CARD_VIEWPORT_WIDTH) / 2);
-    const overflowY = Math.max(0, (imgHeight - CARD_VIEWPORT_HEIGHT) / 2);
+    const overflowX = Math.max(0, (scaledWidth - viewportWidth) / 2);
+    const overflowY = Math.max(0, (scaledHeight - viewportHeight) / 2);
     
-    return {
-      minX: -overflowX,
-      maxX: overflowX,
-      minY: -overflowY,
-      maxY: overflowY,
-    };
-  }, [getScaledDimensions]);
-
-  // Clamp position to valid limits
-  const clampPosition = useCallback((x: number, y: number) => {
-    const limits = getPanLimits();
-    return {
-      x: Math.max(limits.minX, Math.min(limits.maxX, x)),
-      y: Math.max(limits.minY, Math.min(limits.maxY, y)),
-    };
-  }, [getPanLimits]);
+    return { minX: -overflowX, maxX: overflowX, minY: -overflowY, maxY: overflowY };
+  }, [imageDimensions, getMinScale]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -204,7 +182,8 @@ const CoverPhotoModal = ({
     reader.onload = (e) => {
       setLocalType("custom");
       setLocalCustomUrl(e.target?.result as string);
-      setLocalCrop({ x: 0, y: 0, scale: 1 });
+      setLocalCropCard(DEFAULT_CROP);
+      setLocalCropDetail(DEFAULT_CROP);
       setImageDimensions(null);
     };
     reader.readAsDataURL(file);
@@ -238,67 +217,99 @@ const CoverPhotoModal = ({
   const handleSelectEjercicio = (ejercicioId: number) => {
     setLocalType("ejercicio");
     setLocalEjercicioId(ejercicioId);
-    setLocalCrop({ x: 0, y: 0, scale: 1 });
+    setLocalCropCard(DEFAULT_CROP);
+    setLocalCropDetail(DEFAULT_CROP);
     setImageDimensions(null);
   };
 
   const handleSelectAuto = () => {
     setLocalType("auto");
-    setLocalCrop({ x: 0, y: 0, scale: 1 });
+    setLocalCropCard(DEFAULT_CROP);
+    setLocalCropDetail(DEFAULT_CROP);
     setImageDimensions(null);
   };
 
-  const resetCrop = () => {
-    setLocalCrop({ x: 0, y: 0, scale: 1 });
-  };
+  const resetCropCard = () => setLocalCropCard(DEFAULT_CROP);
+  const resetCropDetail = () => setLocalCropDetail(DEFAULT_CROP);
 
-  // Pan handling
-  const handlePanStart = (e: React.MouseEvent) => {
+  // Pan handling for Card
+  const handleCardPanStart = (e: React.MouseEvent) => {
     if (localType === "auto") return;
     e.preventDefault();
     setIsPanning(true);
-    setPanStart({ x: e.clientX - localCrop.x, y: e.clientY - localCrop.y });
+    setActivePanTarget("card");
+    setPanStart({ x: e.clientX - localCropCard.x, y: e.clientY - localCropCard.y });
+  };
+
+  // Pan handling for Detail
+  const handleDetailPanStart = (e: React.MouseEvent) => {
+    if (localType === "auto") return;
+    e.preventDefault();
+    setIsPanning(true);
+    setActivePanTarget("detail");
+    setPanStart({ x: e.clientX - localCropDetail.x, y: e.clientY - localCropDetail.y });
   };
 
   const handlePanMove = (e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanning || !activePanTarget) return;
+    
     const newX = e.clientX - panStart.x;
     const newY = e.clientY - panStart.y;
-    const clamped = clampPosition(newX, newY);
-    setLocalCrop(prev => ({ ...prev, x: clamped.x, y: clamped.y }));
+    
+    if (activePanTarget === "card") {
+      const limits = getPanLimits(CARD_VIEWPORT_WIDTH, CARD_VIEWPORT_HEIGHT, localCropCard);
+      setLocalCropCard(prev => ({
+        ...prev,
+        x: Math.max(limits.minX, Math.min(limits.maxX, newX)),
+        y: Math.max(limits.minY, Math.min(limits.maxY, newY)),
+      }));
+    } else {
+      const limits = getPanLimits(DETAIL_VIEWPORT_WIDTH, DETAIL_VIEWPORT_HEIGHT, localCropDetail);
+      setLocalCropDetail(prev => ({
+        ...prev,
+        x: Math.max(limits.minX, Math.min(limits.maxX, newX)),
+        y: Math.max(limits.minY, Math.min(limits.maxY, newY)),
+      }));
+    }
   };
 
   const handlePanEnd = () => {
     setIsPanning(false);
+    setActivePanTarget(null);
   };
 
-  // Handle scale change - also clamp position based on new limits
-  const handleScaleChange = (newScale: number) => {
+  // Handle scale change for Card
+  const handleCardScaleChange = (newScale: number) => {
     if (!imageDimensions) return;
-    
-    const { naturalWidth, naturalHeight } = imageDimensions;
-    const minScale = getMinScale();
-    const totalScale = minScale * newScale;
-    
-    const newWidth = naturalWidth * totalScale;
-    const newHeight = naturalHeight * totalScale;
-    
-    const overflowX = Math.max(0, (newWidth - CARD_VIEWPORT_WIDTH) / 2);
-    const overflowY = Math.max(0, (newHeight - CARD_VIEWPORT_HEIGHT) / 2);
-    
-    setLocalCrop(prev => ({
+    const limits = getPanLimits(CARD_VIEWPORT_WIDTH, CARD_VIEWPORT_HEIGHT, { ...localCropCard, scale: newScale });
+    setLocalCropCard(prev => ({
       scale: newScale,
-      x: Math.max(-overflowX, Math.min(overflowX, prev.x)),
-      y: Math.max(-overflowY, Math.min(overflowY, prev.y)),
+      x: Math.max(limits.minX, Math.min(limits.maxX, prev.x)),
+      y: Math.max(limits.minY, Math.min(limits.maxY, prev.y)),
+    }));
+  };
+
+  // Handle scale change for Detail
+  const handleDetailScaleChange = (newScale: number) => {
+    if (!imageDimensions) return;
+    const limits = getPanLimits(DETAIL_VIEWPORT_WIDTH, DETAIL_VIEWPORT_HEIGHT, { ...localCropDetail, scale: newScale });
+    setLocalCropDetail(prev => ({
+      scale: newScale,
+      x: Math.max(limits.minX, Math.min(limits.maxX, prev.x)),
+      y: Math.max(limits.minY, Math.min(limits.maxY, prev.y)),
     }));
   };
 
   const handleSave = () => {
-    onSave(localType, localEjercicioId, localCustomUrl, localCrop);
+    onSave(localType, localEjercicioId, localCustomUrl, localCropCard, localCropDetail);
     onOpenChange(false);
   };
 
   const showEditor = localType !== "" && currentImage;
+
+  // Calculate total scales
+  const cardTotalScale = imageDimensions ? getMinScale(CARD_VIEWPORT_WIDTH, CARD_VIEWPORT_HEIGHT) * localCropCard.scale : 1;
+  const detailTotalScale = imageDimensions ? getMinScale(DETAIL_VIEWPORT_WIDTH, DETAIL_VIEWPORT_HEIGHT) * localCropDetail.scale : 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -309,7 +320,7 @@ const CoverPhotoModal = ({
 
         <div className="flex flex-1 overflow-hidden">
           {/* Left: Options */}
-          <div className="w-72 border-r border-border">
+          <div className="w-64 border-r border-border">
             <ScrollArea className="h-[60vh]">
               <div className="p-4 space-y-4">
                 {/* Auto Option */}
@@ -327,7 +338,7 @@ const CoverPhotoModal = ({
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Recomendado</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Se usará automáticamente una imagen de los ejercicios de la rutina
+                    Se usará automáticamente una imagen de los ejercicios
                   </p>
                 </button>
 
@@ -340,7 +351,7 @@ const CoverPhotoModal = ({
                   {ejerciciosConThumbnail.length === 0 ? (
                     <div className="p-4 border border-dashed border-border rounded-lg text-center">
                       <p className="text-xs text-muted-foreground">
-                        Agrega ejercicios con miniatura para elegir una
+                        Agrega ejercicios con miniatura
                       </p>
                     </div>
                   ) : (
@@ -407,15 +418,9 @@ const CoverPhotoModal = ({
           </div>
 
           {/* Right: Preview & Editor */}
-          <div className="flex-1 p-6 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 p-4 flex flex-col">
+            <div className="flex items-center justify-between mb-3">
               <Label className="text-sm font-medium">Vista previa</Label>
-              {showEditor && localType !== "auto" && (
-                <Button variant="ghost" size="sm" onClick={resetCrop} className="h-7 text-xs gap-1">
-                  <RotateCcw className="h-3 w-3" />
-                  Restablecer
-                </Button>
-              )}
             </div>
 
             {/* Preview Container */}
@@ -423,15 +428,23 @@ const CoverPhotoModal = ({
               {showEditor && imageDimensions ? (
                 <div className="space-y-4 w-full">
                   {/* Both Previews Side by Side */}
-                  <div className="flex items-start justify-center gap-6">
-                    {/* Card Preview (3:4 vertical) - Editable */}
+                  <div className="flex items-start justify-center gap-4">
+                    {/* Card Preview (3:4 vertical) */}
                     <div className="space-y-2">
-                      <p className="text-[10px] text-muted-foreground text-center font-medium uppercase tracking-wide">Card Biblioteca</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Card Biblioteca</p>
+                        {localType !== "auto" && (
+                          <Button variant="ghost" size="sm" onClick={resetCropCard} className="h-5 text-[10px] gap-0.5 px-1">
+                            <RotateCcw className="h-2.5 w-2.5" />
+                          </Button>
+                        )}
+                      </div>
                       <div
-                        ref={editorRef}
-                        className="relative mx-auto overflow-hidden rounded-lg border-2 border-primary bg-muted"
+                        className={`relative mx-auto overflow-hidden rounded-lg border-2 bg-muted transition-colors ${
+                          activePanTarget === "card" ? "border-primary" : "border-border"
+                        }`}
                         style={{ width: CARD_VIEWPORT_WIDTH, height: CARD_VIEWPORT_HEIGHT }}
-                        onMouseDown={handlePanStart}
+                        onMouseDown={handleCardPanStart}
                         onMouseMove={handlePanMove}
                         onMouseUp={handlePanEnd}
                         onMouseLeave={handlePanEnd}
@@ -445,73 +458,99 @@ const CoverPhotoModal = ({
                             height: imageDimensions.naturalHeight,
                             left: '50%',
                             top: '50%',
-                            transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px) scale(${getTotalScale()})`,
+                            transform: `translate(-50%, -50%) translate(${localCropCard.x}px, ${localCropCard.y}px) scale(${cardTotalScale})`,
                             transformOrigin: 'center center',
-                            cursor: localType === "auto" ? "default" : isPanning ? "grabbing" : "grab",
+                            cursor: localType === "auto" ? "default" : isPanning && activePanTarget === "card" ? "grabbing" : "grab",
                           }}
                           draggable={false}
                         />
                         {localType !== "auto" && (
-                          <div className="absolute bottom-1.5 right-1.5 bg-background/80 backdrop-blur-sm rounded px-1.5 py-0.5 flex items-center gap-1 text-[9px] text-muted-foreground pointer-events-none">
-                            <Move className="h-2.5 w-2.5" />
-                            Arrastra
+                          <div className="absolute bottom-1 right-1 bg-background/80 backdrop-blur-sm rounded px-1 py-0.5 flex items-center gap-0.5 text-[8px] text-muted-foreground pointer-events-none">
+                            <Move className="h-2 w-2" />
                           </div>
                         )}
                       </div>
+                      {/* Card Zoom Slider */}
+                      {localType !== "auto" && (
+                        <div className="flex items-center gap-1.5">
+                          <ZoomIn className="h-3 w-3 text-muted-foreground" />
+                          <Slider
+                            value={[localCropCard.scale]}
+                            min={1}
+                            max={2.5}
+                            step={0.05}
+                            onValueChange={([value]) => handleCardScaleChange(value)}
+                            className="flex-1"
+                          />
+                          <span className="text-[10px] text-muted-foreground w-8 text-right">
+                            {Math.round(localCropCard.scale * 100)}%
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Detail Preview (16:10 horizontal) - Read-only */}
+                    {/* Detail Preview (16:10 horizontal) */}
                     <div className="space-y-2">
-                      <p className="text-[10px] text-muted-foreground text-center font-medium uppercase tracking-wide">Detalle Rutina</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Detalle Rutina</p>
+                        {localType !== "auto" && (
+                          <Button variant="ghost" size="sm" onClick={resetCropDetail} className="h-5 text-[10px] gap-0.5 px-1">
+                            <RotateCcw className="h-2.5 w-2.5" />
+                          </Button>
+                        )}
+                      </div>
                       <div
-                        className="relative mx-auto overflow-hidden rounded-lg border border-border bg-muted"
+                        className={`relative mx-auto overflow-hidden rounded-lg border-2 bg-muted transition-colors ${
+                          activePanTarget === "detail" ? "border-primary" : "border-border"
+                        }`}
                         style={{ width: DETAIL_VIEWPORT_WIDTH, height: DETAIL_VIEWPORT_HEIGHT }}
+                        onMouseDown={handleDetailPanStart}
+                        onMouseMove={handlePanMove}
+                        onMouseUp={handlePanEnd}
+                        onMouseLeave={handlePanEnd}
                       >
                         <img
                           src={currentImage}
                           alt="Preview Detalle"
-                          className="absolute select-none pointer-events-none"
+                          className="absolute select-none"
                           style={{
                             width: imageDimensions.naturalWidth,
                             height: imageDimensions.naturalHeight,
                             left: '50%',
                             top: '50%',
-                            // Calculate scale for detail viewport (cover behavior)
-                            transform: `translate(-50%, -50%) translate(${localCrop.x * (DETAIL_VIEWPORT_WIDTH / CARD_VIEWPORT_WIDTH)}px, ${localCrop.y * (DETAIL_VIEWPORT_HEIGHT / CARD_VIEWPORT_HEIGHT)}px) scale(${(() => {
-                              const scaleX = DETAIL_VIEWPORT_WIDTH / imageDimensions.naturalWidth;
-                              const scaleY = DETAIL_VIEWPORT_HEIGHT / imageDimensions.naturalHeight;
-                              const baseScale = Math.max(scaleX, scaleY);
-                              return baseScale * localCrop.scale;
-                            })()})`,
+                            transform: `translate(-50%, -50%) translate(${localCropDetail.x}px, ${localCropDetail.y}px) scale(${detailTotalScale})`,
                             transformOrigin: 'center center',
+                            cursor: localType === "auto" ? "default" : isPanning && activePanTarget === "detail" ? "grabbing" : "grab",
                           }}
                           draggable={false}
                         />
                         {/* Gradient overlay like in actual detail page */}
                         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50 pointer-events-none" />
+                        {localType !== "auto" && (
+                          <div className="absolute bottom-1 right-1 bg-background/80 backdrop-blur-sm rounded px-1 py-0.5 flex items-center gap-0.5 text-[8px] text-muted-foreground pointer-events-none">
+                            <Move className="h-2 w-2" />
+                          </div>
+                        )}
                       </div>
+                      {/* Detail Zoom Slider */}
+                      {localType !== "auto" && (
+                        <div className="flex items-center gap-1.5">
+                          <ZoomIn className="h-3 w-3 text-muted-foreground" />
+                          <Slider
+                            value={[localCropDetail.scale]}
+                            min={1}
+                            max={2.5}
+                            step={0.05}
+                            onValueChange={([value]) => handleDetailScaleChange(value)}
+                            className="flex-1"
+                          />
+                          <span className="text-[10px] text-muted-foreground w-8 text-right">
+                            {Math.round(localCropDetail.scale * 100)}%
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Zoom Slider */}
-                  {localType !== "auto" && (
-                    <div className="max-w-xs mx-auto space-y-2">
-                      <div className="flex items-center gap-2">
-                        <ZoomIn className="h-4 w-4 text-muted-foreground" />
-                        <Slider
-                          value={[localCrop.scale]}
-                          min={1}
-                          max={2.5}
-                          step={0.05}
-                          onValueChange={([value]) => handleScaleChange(value)}
-                          className="flex-1"
-                        />
-                        <span className="text-xs text-muted-foreground w-10 text-right">
-                          {Math.round(localCrop.scale * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Type Badge */}
                   <div className="text-center">

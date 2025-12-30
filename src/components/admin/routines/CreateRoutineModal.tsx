@@ -315,13 +315,15 @@ const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina, defaultTipo = 
                     portadaType={formData.portadaType}
                     portadaEjercicioId={formData.portadaEjercicioId}
                     portadaCustomUrl={formData.portadaCustomUrl}
-                    portadaCrop={formData.portadaCrop}
+                    portadaCropCard={formData.portadaCropCard}
+                    portadaCropDetail={formData.portadaCropDetail}
                     ejerciciosEnRutina={ejerciciosEnRutina}
-                    onPortadaChange={(type, ejId, customUrl, crop) => {
+                    onPortadaChange={(type, ejId, customUrl, cropCard, cropDetail) => {
                       updateFormData("portadaType", type);
                       updateFormData("portadaEjercicioId", ejId);
                       updateFormData("portadaCustomUrl", customUrl);
-                      updateFormData("portadaCrop", crop);
+                      updateFormData("portadaCropCard", cropCard);
+                      updateFormData("portadaCropDetail", cropDetail);
                     }}
                   />
 
