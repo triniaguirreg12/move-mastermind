@@ -121,41 +121,42 @@ const CoverPhotoModal = ({
     img.src = currentImage;
   }, [currentImage]);
 
-  // Calculate image size that fits the viewport while maintaining aspect ratio
-  // Image must be at least as large as viewport in both dimensions (cover behavior)
+  // Calculate the base scale factor so image covers the viewport while maintaining aspect ratio
+  // This is the minimum scale where image fills the viewport completely (cover behavior)
+  const getBaseScale = useCallback(() => {
+    if (!imageDimensions) return 1;
+    
+    const { naturalWidth, naturalHeight } = imageDimensions;
+    
+    // Calculate scale needed to cover viewport in each dimension
+    const scaleX = VIEWPORT_WIDTH / naturalWidth;
+    const scaleY = VIEWPORT_HEIGHT / naturalHeight;
+    
+    // Use the larger scale to ensure full coverage (cover behavior)
+    return Math.max(scaleX, scaleY);
+  }, [imageDimensions]);
+
+  // Get the displayed image dimensions (natural size * base scale * user zoom)
   const getImageDisplaySize = useCallback(() => {
     if (!imageDimensions) return { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
     
     const { naturalWidth, naturalHeight } = imageDimensions;
-    const imageAspect = naturalWidth / naturalHeight;
-    const viewportAspect = ASPECT_RATIO;
+    const baseScale = getBaseScale();
+    const totalScale = baseScale * localCrop.scale;
     
-    let baseWidth: number;
-    let baseHeight: number;
-    
-    // Scale image to cover the viewport (minimum size to fill it)
-    if (imageAspect > viewportAspect) {
-      // Image is wider - fit to height
-      baseHeight = VIEWPORT_HEIGHT;
-      baseWidth = baseHeight * imageAspect;
-    } else {
-      // Image is taller - fit to width
-      baseWidth = VIEWPORT_WIDTH;
-      baseHeight = baseWidth / imageAspect;
-    }
-    
-    return { width: baseWidth, height: baseHeight };
-  }, [imageDimensions]);
+    return {
+      width: naturalWidth * totalScale,
+      height: naturalHeight * totalScale,
+    };
+  }, [imageDimensions, getBaseScale, localCrop.scale]);
 
-  // Calculate pan limits based on image size, viewport, and scale
+  // Calculate pan limits based on image size and viewport
   const getPanLimits = useCallback(() => {
     const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
-    const scaledWidth = imgWidth * localCrop.scale;
-    const scaledHeight = imgHeight * localCrop.scale;
     
     // How much the image extends beyond viewport
-    const overflowX = Math.max(0, (scaledWidth - VIEWPORT_WIDTH) / 2);
-    const overflowY = Math.max(0, (scaledHeight - VIEWPORT_HEIGHT) / 2);
+    const overflowX = Math.max(0, (imgWidth - VIEWPORT_WIDTH) / 2);
+    const overflowY = Math.max(0, (imgHeight - VIEWPORT_HEIGHT) / 2);
     
     return {
       minX: -overflowX,
@@ -163,7 +164,7 @@ const CoverPhotoModal = ({
       minY: -overflowY,
       maxY: overflowY,
     };
-  }, [getImageDisplaySize, localCrop.scale]);
+  }, [getImageDisplaySize]);
 
   // Clamp position to valid limits
   const clampPosition = useCallback((x: number, y: number) => {
@@ -261,23 +262,25 @@ const CoverPhotoModal = ({
     setIsPanning(false);
   };
 
-  // Handle scale change - also clamp position
+  // Handle scale change - also clamp position based on new limits
   const handleScaleChange = (newScale: number) => {
-    setLocalCrop(prev => {
-      const newCrop = { ...prev, scale: newScale };
-      // Recalculate limits with new scale and clamp position
-      const { width: imgWidth, height: imgHeight } = getImageDisplaySize();
-      const scaledWidth = imgWidth * newScale;
-      const scaledHeight = imgHeight * newScale;
-      const overflowX = Math.max(0, (scaledWidth - VIEWPORT_WIDTH) / 2);
-      const overflowY = Math.max(0, (scaledHeight - VIEWPORT_HEIGHT) / 2);
-      
-      return {
-        ...newCrop,
-        x: Math.max(-overflowX, Math.min(overflowX, prev.x)),
-        y: Math.max(-overflowY, Math.min(overflowY, prev.y)),
-      };
-    });
+    if (!imageDimensions) return;
+    
+    const { naturalWidth, naturalHeight } = imageDimensions;
+    const baseScale = getBaseScale();
+    const totalScale = baseScale * newScale;
+    
+    const newWidth = naturalWidth * totalScale;
+    const newHeight = naturalHeight * totalScale;
+    
+    const overflowX = Math.max(0, (newWidth - VIEWPORT_WIDTH) / 2);
+    const overflowY = Math.max(0, (newHeight - VIEWPORT_HEIGHT) / 2);
+    
+    setLocalCrop(prev => ({
+      scale: newScale,
+      x: Math.max(-overflowX, Math.min(overflowX, prev.x)),
+      y: Math.max(-overflowY, Math.min(overflowY, prev.y)),
+    }));
   };
 
   const handleSave = () => {
@@ -428,11 +431,10 @@ const CoverPhotoModal = ({
                       style={{
                         width: imgWidth,
                         height: imgHeight,
-                        // Center the image, then apply pan offset and scale
+                        // Center the image, then apply pan offset
                         left: '50%',
                         top: '50%',
-                        transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px) scale(${localCrop.scale})`,
-                        transformOrigin: 'center center',
+                        transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px)`,
                         cursor: localType === "auto" ? "default" : isPanning ? "grabbing" : "grab",
                       }}
                       draggable={false}
