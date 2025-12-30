@@ -292,7 +292,6 @@ const CoverPhotoModal = ({
   };
 
   const showEditor = localType !== "" && currentImage;
-  const { width: imgWidth, height: imgHeight } = getScaledDimensions();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -426,18 +425,25 @@ const CoverPhotoModal = ({
                     onMouseUp={handlePanEnd}
                     onMouseLeave={handlePanEnd}
                   >
-                    {/* Image positioned absolutely, centered, with pan/zoom transforms */}
+                    {/* 
+                      Image scaled using transform (not width/height) to preserve aspect ratio.
+                      The minScale ensures the image covers the viewport completely.
+                      User zoom (localCrop.scale) is applied on top of that.
+                    */}
                     <img
                       src={currentImage}
                       alt="Preview"
                       className="absolute select-none"
                       style={{
-                        width: imgWidth,
-                        height: imgHeight,
-                        // Center the image, then apply pan offset
+                        // Use natural dimensions - let transform handle scaling
+                        width: imageDimensions.naturalWidth,
+                        height: imageDimensions.naturalHeight,
+                        // Position at center of viewport
                         left: '50%',
                         top: '50%',
-                        transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px)`,
+                        // Transform: center, then pan, then scale uniformly
+                        transform: `translate(-50%, -50%) translate(${localCrop.x}px, ${localCrop.y}px) scale(${getTotalScale()})`,
+                        transformOrigin: 'center center',
                         cursor: localType === "auto" ? "default" : isPanning ? "grabbing" : "grab",
                       }}
                       draggable={false}
