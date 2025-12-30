@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Save, Send, X, Clock, Dumbbell } from "lucide-react";
+import { Plus, Save, Send, X, Clock, Dumbbell, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Ejercicio } from "@/components/admin/CreateExerciseModal";
 import {
@@ -48,18 +48,44 @@ import DifficultySection from "./DifficultySection";
 import CoverPhotoSection from "./CoverPhotoSection";
 import BlockEditor from "./BlockEditor";
 import ExerciseLibraryMini from "./ExerciseLibraryMini";
+import { useExercises } from "@/hooks/useExercises";
 
-// Mock exercises - in real app, this would come from API
-const ejerciciosIniciales: Ejercicio[] = [
-  { id: 1, nombre: "Sentadilla con mancuerna", tips: "Mantén la espalda recta.", dificultad: "Intermedio", mecanicas: ["Compuesto"], grupoMuscular: ["Tren Inferior"], musculosPrincipales: ["Glúteos", "Cuádriceps"], aptitudesPrimarias: ["Fuerza"], aptitudesSecundarias: ["Estabilidad"], implementos: ["Mancuerna"], video: null, thumbnail: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=200&h=150&fit=crop" },
-  { id: 2, nombre: "Peso muerto rumano", tips: "Controla el descenso.", dificultad: "Intermedio", mecanicas: ["Tracción"], grupoMuscular: ["Tren Inferior"], musculosPrincipales: ["Glúteos", "Espalda"], aptitudesPrimarias: ["Fuerza"], aptitudesSecundarias: ["Movilidad"], implementos: ["Mancuerna"], video: null, thumbnail: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200&h=150&fit=crop" },
-  { id: 3, nombre: "Press de banca", tips: "No rebotes.", dificultad: "Avanzado", mecanicas: ["Empuje"], grupoMuscular: ["Tren Superior"], musculosPrincipales: ["Pectoral", "Tríceps"], aptitudesPrimarias: ["Fuerza", "Potencia"], aptitudesSecundarias: [], implementos: ["Mancuerna"], video: null, thumbnail: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=200&h=150&fit=crop" },
-  { id: 4, nombre: "Plancha frontal", tips: "Mantén el cuerpo en línea recta.", dificultad: "Principiante", mecanicas: ["Anti-movimiento"], grupoMuscular: ["Core"], musculosPrincipales: ["Zona media"], aptitudesPrimarias: ["Estabilidad", "Resistencia"], aptitudesSecundarias: ["Fuerza"], implementos: ["Sin implemento"], video: null, thumbnail: "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=200&h=150&fit=crop" },
-  { id: 5, nombre: "Burpees", tips: "Explosivo en la subida.", dificultad: "Avanzado", mecanicas: ["Compuesto", "Locomoción"], grupoMuscular: ["Full Body"], musculosPrincipales: ["Cuádriceps", "Pectoral", "Zona media"], aptitudesPrimarias: ["Resistencia", "Potencia"], aptitudesSecundarias: ["Agilidad", "Coordinación"], implementos: ["Sin implemento"], video: null, thumbnail: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=200&h=150&fit=crop" },
-  { id: 6, nombre: "Elevación de gemelos", tips: "Sube hasta la máxima contracción.", dificultad: "Principiante", mecanicas: ["Empuje"], grupoMuscular: ["Tren Inferior"], musculosPrincipales: ["Gemelos"], aptitudesPrimarias: ["Fuerza"], aptitudesSecundarias: ["Estabilidad"], implementos: ["Mancuerna"], video: null, thumbnail: null },
-  { id: 7, nombre: "Rotación con banda", tips: "Mantén el core activado.", dificultad: "Intermedio", mecanicas: ["Rotacional"], grupoMuscular: ["Core"], musculosPrincipales: ["Zona media", "Espalda"], aptitudesPrimarias: ["Coordinación", "Estabilidad"], aptitudesSecundarias: ["Fuerza"], implementos: ["Banda"], video: null, thumbnail: null },
-  { id: 8, nombre: "Caminata lateral con miniband", tips: "Mantén tensión constante.", dificultad: "Principiante", mecanicas: ["Locomoción"], grupoMuscular: ["Tren Inferior"], musculosPrincipales: ["Glúteos"], aptitudesPrimarias: ["Estabilidad"], aptitudesSecundarias: ["Fuerza", "Coordinación"], implementos: ["Miniband"], video: null, thumbnail: null },
-];
+// Extended Ejercicio type that includes the DB UUID for saving
+export interface EjercicioWithDbId extends Ejercicio {
+  _dbId?: string;
+}
+
+// Transform DB exercise to Ejercicio format with _dbId preserved
+function dbExerciseToEjercicio(dbExercise: {
+  id: string;
+  nombre: string;
+  tips: string | null;
+  dificultad: string;
+  mecanicas: string[];
+  grupo_muscular: string[];
+  musculos_principales: string[];
+  aptitudes_primarias: string[];
+  aptitudes_secundarias: string[];
+  implementos: string[];
+  video_url: string | null;
+  thumbnail_url: string | null;
+}): EjercicioWithDbId {
+  return {
+    id: parseInt(dbExercise.id.replace(/\D/g, '').slice(0, 8)) || Math.random() * 1000000,
+    nombre: dbExercise.nombre,
+    tips: dbExercise.tips || "",
+    dificultad: dbExercise.dificultad as Ejercicio["dificultad"],
+    mecanicas: dbExercise.mecanicas || [],
+    grupoMuscular: dbExercise.grupo_muscular || [],
+    musculosPrincipales: dbExercise.musculos_principales || [],
+    aptitudesPrimarias: dbExercise.aptitudes_primarias || [],
+    aptitudesSecundarias: dbExercise.aptitudes_secundarias || [],
+    implementos: dbExercise.implementos || [],
+    video: dbExercise.video_url,
+    thumbnail: dbExercise.thumbnail_url,
+    _dbId: dbExercise.id, // Preserve the UUID for saving
+  };
+}
 
 interface CreateRoutineModalProps {
   open: boolean;
@@ -76,7 +102,16 @@ const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina, defaultTipo = 
   const [formData, setFormData] = useState<Rutina>(createEmptyRutina());
   const [hasChanges, setHasChanges] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const [draggedEjercicio, setDraggedEjercicio] = useState<Ejercicio | null>(null);
+  const [draggedEjercicio, setDraggedEjercicio] = useState<EjercicioWithDbId | null>(null);
+
+  // Fetch exercises from database
+  const { data: dbExercises, isLoading: exercisesLoading } = useExercises();
+  
+  // Transform DB exercises to Ejercicio format with _dbId
+  const ejerciciosParaBiblioteca = useMemo(() => {
+    if (!dbExercises) return [];
+    return dbExercises.map(dbExerciseToEjercicio);
+  }, [dbExercises]);
 
   useEffect(() => {
     if (open) {
@@ -369,7 +404,13 @@ const CreateRoutineModal = ({ open, onOpenChange, onSave, rutina, defaultTipo = 
             </div>
 
             <div className="w-[320px] border-l border-border bg-muted/10">
-              <ExerciseLibraryMini ejercicios={ejerciciosIniciales} onDragStart={handleDragStart} />
+              {exercisesLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <ExerciseLibraryMini ejercicios={ejerciciosParaBiblioteca} onDragStart={handleDragStart} />
+              )}
             </div>
           </div>
         </DialogContent>
